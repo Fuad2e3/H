@@ -114,11 +114,13 @@ OC.reports = (function () {
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks complete'), h('div', { class: 'v tabular' }, String(done.length))]),
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks left'), h('div', { class: 'v tabular' }, String(left.length))]),
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Due today'), h('div', { class: 'v tabular' }, String(dueToday.length))]),
-        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Overdue'), h('div', { class: 'v tabular', style: overdue.length ? 'color:var(--signal)' : '' }, String(overdue.length))])
+        h('div', { class: 'stat' + (overdue.length ? ' alert' : '') }, [
+          h('span', { class: 'k' }, 'Overdue'), h('div', { class: 'v tabular' }, String(overdue.length))])
       ]),
 
       h('div', { class: 'row', style: 'margin-bottom:14px' }, [
-        h('button', { class: 'btn', type: 'button', onClick: function () { exportTodos(todos); } }, 'Export todos to CSV')
+        h('button', { class: 'btn', type: 'button', onClick: function () { exportTodos(todos); } },
+          [OC.icon('board'), 'Export todos to CSV'])
       ]),
 
       h('div', { class: 'tablewrap', style: 'margin-bottom:22px' }, [

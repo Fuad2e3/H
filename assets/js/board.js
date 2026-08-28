@@ -141,12 +141,12 @@ OC.board = (function () {
     var mine = OC.store.state.saved_filters.filter(function (f) { return f.owner === OC.store.session(); });
     if (!mine.length) return null;
     return h('div', { class: 'savedbar' }, [
-      h('span', { class: 'mono muted', style: 'font-size:11px;text-transform:uppercase;letter-spacing:0.1em' }, 'Pinned'),
+      h('span', { class: 'eyebrow' }, 'Pinned'),
       mine.map(function (f) {
         return h('span', { class: 'chip client', onClick: function () { filters = JSON.parse(JSON.stringify(f.filters)); rerender(); } }, [
           f.name,
           h('button', {
-            class: 'btn link', style: 'font-size:11px;padding:0 0 0 6px', type: 'button',
+            type: 'button',
             'aria-label': 'Remove pinned filter ' + f.name,
             onClick: function (e) {
               e.stopPropagation();
@@ -241,7 +241,10 @@ OC.board = (function () {
       return s.step.split(',')[0] + ' (' + s.users.map(OC.ui.personName).join(', ') + ')';
     });
     if (!steps.length) return null;
-    return h('div', { class: 'escalation' }, 'Escalated to ' + steps.join(' → ') + ' — ' + OC.ui.dueLabel(todo.due) + '.');
+    return h('div', { class: 'escalation' }, [
+      OC.icon('users'),
+      h('span', {}, 'Escalated to ' + steps.join(' → ') + ' — ' + OC.ui.dueLabel(todo.due) + '.')
+    ]);
   }
 
   function todoItem(todo) {
@@ -272,7 +275,9 @@ OC.board = (function () {
         todo.archived ? h('span', { class: 'chip custom' }, 'archived') : null,
         (todo.tags || []).map(OC.ui.tagChip)
       ]),
-      todo.blocked_reason ? h('div', { class: 'blocked-note' }, 'Blocked: ' + todo.blocked_reason) : null,
+      todo.blocked_reason
+        ? h('div', { class: 'blocked-note' }, [OC.icon('alert'), h('span', {}, 'Blocked: ' + todo.blocked_reason)])
+        : null,
       escalationNote(todo),
       h('div', { class: 'actions' }, actions)
     ]);
@@ -548,18 +553,22 @@ OC.board = (function () {
     var notes = visibleInstructions();
     var unreadCount = notes.filter(function (n) { return n.read_by.indexOf(user.id) === -1; }).length;
 
+    var groupControl = h('div', { class: 'segmented', role: 'group', 'aria-label': 'Group todos by', title: 'Group todos by' },
+      [['person', 'Person'], ['client', 'Client'], ['department', 'Department']].map(function (opt) {
+        return h('button', {
+          type: 'button', 'aria-pressed': String(grouping === opt[0]),
+          onClick: function () { grouping = opt[0]; rerender(); }
+        }, opt[1]);
+      }));
+
     var todoPanel = h('section', { class: 'panel panel--todos' }, [
       h('div', { class: 'panel-head' }, [
         h('h2', {}, 'Todos'),
-        h('span', { class: 'sub' }, todos.length + ' visible'),
-        h('div', { class: 'row push' }, [
-          OC.ui.select([
-            { value: 'person', label: 'Group by person' },
-            { value: 'client', label: 'Group by client' },
-            { value: 'department', label: 'Group by department' }
-          ], grouping, { onChange: function (e) { grouping = e.target.value; rerender(); } }),
-          h('button', { class: 'btn small', type: 'button', onClick: copyYesterday }, 'Copy yesterday'),
-          h('button', { class: 'btn small primary', type: 'button', onClick: function () { newTodo(); } }, 'New todo')
+        h('span', { class: 'chip count' }, todos.length + ' visible'),
+        h('div', { class: 'tools' }, [
+          groupControl,
+          h('button', { class: 'btn small primary', type: 'button', onClick: function () { newTodo(); } },
+            [OC.icon('plus'), 'New todo'])
         ])
       ]),
       h('div', { class: 'panel-body scroll' }, todos.length
@@ -571,20 +580,22 @@ OC.board = (function () {
                 .map(todoItem)
             ]);
           })
-        : h('div', { class: 'empty' }, 'No todos match these filters.'))
+        : h('div', { class: 'empty' }, [OC.icon('filter'), 'No todos match these filters.']))
     ]);
 
     var notePanel = h('section', { class: 'panel panel--instructions' }, [
       h('div', { class: 'panel-head' }, [
         h('h2', {}, 'Instructions'),
-        h('span', { class: 'sub' }, notes.length + ' visible' + (unreadCount ? ', ' + unreadCount + ' unread' : '')),
-        h('div', { class: 'row push' }, [
-          h('button', { class: 'btn small primary', type: 'button', onClick: newInstruction }, 'Post instruction')
+        h('span', { class: 'chip count' }, notes.length + ' visible'),
+        unreadCount ? h('span', { class: 'chip overdue' }, unreadCount + ' unread') : null,
+        h('div', { class: 'tools' }, [
+          h('button', { class: 'btn small primary', type: 'button', onClick: newInstruction },
+            [OC.icon('plus'), 'Post instruction'])
         ])
       ]),
       h('div', { class: 'panel-body scroll' }, notes.length
         ? notes.map(function (n) { return instructionItem(n, rerender); })
-        : h('div', { class: 'empty' }, 'No instructions match these filters.'))
+        : h('div', { class: 'empty' }, [OC.icon('filter'), 'No instructions match these filters.']))
     ]);
 
     OC.ui.clear(host);
@@ -596,7 +607,7 @@ OC.board = (function () {
       ]),
       filterBar(rerender),
       savedBar(rerender),
-      h('div', { class: 'row', style: 'margin-bottom:12px' }, [
+      h('div', { class: 'boardbar' }, [
         h('label', { class: 'checkline' }, [
           h('input', { type: 'checkbox', checked: showDone, onChange: function (e) { showDone = e.target.checked; rerender(); } }),
           'Show completed'
@@ -604,7 +615,9 @@ OC.board = (function () {
         h('label', { class: 'checkline' }, [
           h('input', { type: 'checkbox', checked: showArchived, onChange: function (e) { showArchived = e.target.checked; rerender(); } }),
           'Show archived'
-        ])
+        ]),
+        h('button', { class: 'btn small push', type: 'button', onClick: copyYesterday },
+          [OC.icon('reset'), 'Copy yesterday'])
       ]),
       h('div', { class: 'panel-tabs' }, [
         h('button', { type: 'button', 'aria-pressed': String(panel === 'todos'), onClick: function () { panel = 'todos'; rerender(); } }, 'Todos'),

@@ -91,7 +91,8 @@ OC.groups = (function () {
             : 'Creation is limited to the system admin and department heads under the working default in section 13 — your role may not create one.'))
       ]),
       canCreate
-        ? h('button', { class: 'btn primary', type: 'button', style: 'margin-bottom:16px', onClick: newGroup }, 'New group')
+        ? h('button', { class: 'btn primary', type: 'button', style: 'margin-bottom:16px', onClick: newGroup },
+            [OC.icon('plus'), 'New group'])
         : null,
       h('div', { class: 'grid-2' }, groups.map(function (g) {
         return h('div', { class: 'card' }, [

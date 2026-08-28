@@ -64,7 +64,8 @@ OC.dashboard = (function () {
 
       h('div', { class: 'grid-3', style: 'margin-bottom:20px' }, [
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Open todos'), h('div', { class: 'v tabular' }, String(todos.length))]),
-        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Overdue'), h('div', { class: 'v tabular', style: overdue.length ? 'color:var(--signal)' : '' }, String(overdue.length))]),
+        h('div', { class: 'stat' + (overdue.length ? ' alert' : '') }, [
+          h('span', { class: 'k' }, 'Overdue'), h('div', { class: 'v tabular' }, String(overdue.length))]),
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Unread instructions'), h('div', { class: 'v tabular' }, String(unread.length))]),
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Active clients'), h('div', { class: 'v tabular' }, String(clients.length))])
       ]),
@@ -74,7 +75,9 @@ OC.dashboard = (function () {
           h('div', { class: 'panel-head' }, [
             h('h2', {}, 'My todos'),
             h('span', { class: 'sub' }, 'by client, oldest due first'),
-            h('button', { class: 'btn small primary push', type: 'button', onClick: function () { OC.board.newTodo(); } }, 'New todo')
+            h('div', { class: 'tools' }, [
+              h('button', { class: 'btn small primary', type: 'button', onClick: function () { OC.board.newTodo(); } },
+                [OC.icon('plus'), 'New todo'])])
           ]),
           h('div', { class: 'panel-body' }, todos.length
             ? Object.keys(byClient).sort().map(function (name) {
@@ -94,14 +97,16 @@ OC.dashboard = (function () {
                   })
                 ]);
               })
-            : h('div', { class: 'empty' }, 'Nothing assigned to you right now.'))
+            : h('div', { class: 'empty' }, [OC.icon('check'), 'Nothing assigned to you right now.']))
         ]),
 
         h('section', { class: 'panel' }, [
           h('div', { class: 'panel-head' }, [
             h('h2', {}, 'My instructions'),
             h('span', { class: 'sub' }, unread.length ? unread.length + ' unread first' : 'all read'),
-            h('button', { class: 'btn small primary push', type: 'button', onClick: function () { OC.board.newInstruction(); } }, 'Post instruction')
+            h('div', { class: 'tools' }, [
+              h('button', { class: 'btn small primary', type: 'button', onClick: function () { OC.board.newInstruction(); } },
+                [OC.icon('plus'), 'Post instruction'])])
           ]),
           h('div', { class: 'panel-body' }, notes.length
             ? notes.slice(0, 8).map(function (n) {
@@ -123,7 +128,7 @@ OC.dashboard = (function () {
                   ]) : null
                 ]);
               })
-            : h('div', { class: 'empty' }, 'No instructions are addressed to you.'))
+            : h('div', { class: 'empty' }, [OC.icon('inbox'), 'No instructions are addressed to you.']))
         ])
       ]),
 

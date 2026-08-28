@@ -77,12 +77,57 @@
   --shadow:0 1px 2px rgba(0,0,0,0.3),0 8px 24px rgba(0,0,0,0.35);
 }
 
-/* application-specific tokens ------------------------------------------- */
+/* application tokens ------------------------------------------------------
+   One scale for spacing, one for control heights, one for radii. Nothing in
+   the interface should invent its own number: if a value is not here, it
+   probably should be. */
 :root{
+  /* state colours */
   --state-open:var(--blueprint);
   --state-progress:var(--brass);
   --state-done:var(--success);
   --state-blocked:var(--signal);
-  --radius:2px;
-  --topbar-h:56px;
+
+  /* spacing scale */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+
+  /* radii — kept tight, this is a drafting aesthetic, not a consumer app */
+  --r1:3px;   /* controls */
+  --r2:4px;   /* cards and panels */
+  --r-pill:999px;
+
+  /* control heights */
+  --ctl:34px; --ctl-sm:27px;
+
+  /* structure */
+  --topbar-h:60px;
+  --rule-strong:rgba(18,24,43,0.26);
+  --tint:rgba(61,107,148,0.06);      /* hover wash */
+  --tint-strong:rgba(61,107,148,0.11);
+
+  /* elevation */
+  --sh1:0 1px 2px rgba(18,24,43,0.05);
+  --sh2:0 1px 2px rgba(18,24,43,0.06), 0 4px 12px rgba(18,24,43,0.07);
+  --sh3:0 8px 34px rgba(18,24,43,0.18);
+
+  --t:120ms ease;
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --rule-strong:rgba(236,231,218,0.26);
+    --tint:rgba(134,180,216,0.07);
+    --tint-strong:rgba(134,180,216,0.13);
+    --sh1:0 1px 2px rgba(0,0,0,0.34);
+    --sh2:0 1px 2px rgba(0,0,0,0.34), 0 4px 12px rgba(0,0,0,0.34);
+    --sh3:0 8px 34px rgba(0,0,0,0.5);
+  }
+}
+:root[data-theme="dark"]{
+  --rule-strong:rgba(236,231,218,0.26);
+  --tint:rgba(134,180,216,0.07);
+  --tint-strong:rgba(134,180,216,0.13);
+  --sh1:0 1px 2px rgba(0,0,0,0.34);
+  --sh2:0 1px 2px rgba(0,0,0,0.34), 0 4px 12px rgba(0,0,0,0.34);
+  --sh3:0 8px 34px rgba(0,0,0,0.5);
 }

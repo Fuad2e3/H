@@ -117,9 +117,9 @@ OC.people = (function () {
 
       h('div', { class: 'row', style: 'margin-bottom:16px' }, [
         OC.can.invite(user)
-          ? h('button', { class: 'btn primary', type: 'button', onClick: invite }, 'Invite someone')
+          ? h('button', { class: 'btn primary', type: 'button', onClick: invite }, [OC.icon('plus'), 'Invite someone'])
           : h('p', { class: 'muted' }, 'Invites are sent by the system admin or a department head (6.1).'),
-        h('button', { class: 'btn', type: 'button', onClick: editPrefs }, 'My notification preferences')
+        h('button', { class: 'btn', type: 'button', onClick: editPrefs }, [OC.icon('bell'), 'My notification preferences'])
       ]),
 
       h('div', { class: 'grid-2', style: 'margin-bottom:22px' }, OC.store.state.departments.map(function (d) {

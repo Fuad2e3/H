@@ -54,11 +54,15 @@ OC.app = (function () {
     var content = list.length
       ? h('div', {}, list.slice(0, 30).map(function (n) {
           return h('div', { class: 'notif' + (n.read ? '' : ' unread') }, [
-            h('div', { class: 'what' }, n.text),
-            h('div', { class: 'when' }, OC.ui.fmtWhen(n.at))
+            h('span', { class: 'marker' }),
+            h('div', {}, [
+              h('div', { class: 'what' }, n.text),
+              h('div', { class: 'when' }, OC.ui.fmtWhen(n.at))
+            ])
           ]);
         }))
-      : h('div', { class: 'empty' }, 'Nothing yet. Assign a todo or post an instruction and the people it reaches are notified here.');
+      : h('div', { class: 'empty' }, [OC.icon('inbox'),
+          'Nothing yet. Assign a todo or post an instruction and the people it reaches are notified here.']);
 
     OC.ui.modal({
       title: 'Notifications',
@@ -98,17 +102,27 @@ OC.app = (function () {
       }
     );
 
-    var themeButton = h('button', { class: 'toggle-theme', type: 'button' }, THEME_LABELS[themeIndex]);
+    var THEME_ICONS = ['monitor', 'moon', 'sun'];
+    function paintThemeButton(btn) {
+      OC.ui.clear(btn);
+      OC.ui.append(btn, [OC.icon(THEME_ICONS[themeIndex]), THEME_LABELS[themeIndex]]);
+    }
+    var themeButton = h('button', { class: 'toggle-theme', type: 'button' });
+    paintThemeButton(themeButton);
     themeButton.addEventListener('click', function () {
       themeIndex = (themeIndex + 1) % THEMES.length;
-      applyTheme(themeButton);
+      applyTheme(null);
+      paintThemeButton(themeButton);
       writeTheme(THEMES[themeIndex]);
     });
 
     return h('header', { class: 'topbar' }, [
       h('a', { class: 'brand', href: '#dashboard' }, [
-        h('b', {}, 'Originate Command'),
-        h('span', {}, 'OM SRS 001')
+        h('span', { class: 'mark' }, 'OC'),
+        h('span', { class: 'lockup' }, [
+          h('b', {}, 'Originate Command'),
+          h('span', {}, 'OM SRS 001')
+        ])
       ]),
       h('div', { class: 'who push' }, [
         h('span', { class: 'mono muted', style: 'font-size:11px' }, 'Viewing as'),
@@ -117,7 +131,7 @@ OC.app = (function () {
       h('button', {
         class: 'iconbtn', type: 'button', onClick: openNotifications,
         'aria-label': 'Notifications' + (unread ? ', ' + unread + ' unread' : '')
-      }, ['Alerts', unread ? h('span', { class: 'count' }, String(unread)) : null]),
+      }, [OC.icon('bell'), 'Alerts', unread ? h('span', { class: 'count' }, String(unread)) : null]),
       themeButton
     ]);
   }

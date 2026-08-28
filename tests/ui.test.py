@@ -90,10 +90,12 @@ with sync_playwright() as pw:
     page.click('.filters button:has-text("Clear")'); page.wait_for_timeout(300)
 
     print("\n=== board.js: grouping and toggles ===")
-    for mode,label in [('person','Group by person'),('client','Group by client'),('department','Group by department')]:
-        page.locator('.panel--todos .panel-head select').select_option(label=label); page.wait_for_timeout(350)
+    for mode,label in [('person','Person'),('client','Client'),('department','Department')]:
+        page.locator('.panel--todos .segmented button', has_text=label).first.click(); page.wait_for_timeout(350)
         ok(f"grouping by {mode} renders headings", page.locator('.panel--todos .group-head').count()>0)
-    page.locator('.panel--todos .panel-head select').select_option(label='Group by person'); page.wait_for_timeout(300)
+        ok(f"grouping by {mode} marks the active segment",
+           page.locator('.panel--todos .segmented button[aria-pressed="true"]').inner_text(), label)
+    page.locator('.panel--todos .segmented button', has_text='Person').first.click(); page.wait_for_timeout(300)
     base=page.locator('.panel--todos .item').count()
     page.check('.checkline:has-text("Show completed") input'); page.wait_for_timeout(350)
     ok("show completed reveals done work", page.locator('.panel--todos .item').count()>base)

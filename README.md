@@ -38,10 +38,13 @@ data" in the footer restores the seeded workspace.
 
 ```
 index.html                     application shell, no inline style or script
-assets/css/01-tokens.css       design tokens, light and dark themes
-assets/css/02-base.css         element defaults, form controls, utilities
+assets/css/01-tokens.css       colour, spacing, radius, control-height and
+                               elevation scales, light and dark themes
+assets/css/02-base.css         element defaults, form controls, buttons, utilities
 assets/css/03-layout.css       top bar, nav, page, two-panel board, breakpoints
-assets/css/04-components.css   chips, cards, todo and note items, modal, toasts
+assets/css/04-components.css   chips, segmented controls, cards, todo and note
+                               items, filter bar, tables, modal, toasts
+assets/js/icons.js             inline SVG icon set, drawn on a 16px grid
 assets/js/store.js             every entity in 5.0, seed data, persistence, audit
 assets/js/permissions.js       the permission engine of 3.0
 assets/js/ui.js                element construction, dates, chips, modal, toasts
@@ -92,3 +95,9 @@ Security Rules, because a UI check is not a security boundary.
 
 Adding a department, a level, a client or a tag is data, not code: add it in
 `seed()` (or through the app) and the permission engine follows it.
+
+Nothing in the interface should invent its own spacing, radius or control
+height — those live as scales in `01-tokens.css`. If a value is not there, it
+probably belongs there. Both breakpoints are set by content rather than by
+device: 1100px is where the two panels stop fitting side by side, 720px is
+where the top bar has to wrap.

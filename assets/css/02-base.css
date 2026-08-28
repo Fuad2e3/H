@@ -1,7 +1,8 @@
 /* =========================================================================
    02-base.css — element defaults
-   Reset, document and body defaults, form control defaults, links, focus
-   states, reduced motion, and shared utility classes.
+   Reset, document and body defaults, the faint blueprint ground shared with
+   the specification document, form controls on one height scale, buttons,
+   and shared utilities.
    Originate Command · application
    ========================================================================= */
 
@@ -15,65 +16,151 @@ body{
   font-size:15px;
   line-height:1.55;
   -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
 }
+
+/* the same drafting grid the specification uses, at a whisper */
+body::before{
+  content:"";
+  position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  background-size:48px 48px;
+  opacity:0.22;
+  -webkit-mask-image:linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image:linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+}
+
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
 }
 
-h1,h2,h3,h4{font-family:'Zilla Slab',serif; color:var(--ink); margin:0;}
+h1,h2,h3,h4{font-family:'Zilla Slab',serif; color:var(--ink); margin:0; letter-spacing:-0.005em;}
 p{margin:0;}
-a{color:var(--blueprint);}
+a{color:var(--blueprint); text-underline-offset:2px;}
 
 button,input,select,textarea{font:inherit; color:inherit;}
 :focus-visible{outline:2px solid var(--brass); outline-offset:2px;}
 
+/* ---- utilities ---------------------------------------------------------- */
 .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
 .muted{color:var(--text-secondary);}
 .tabular{font-variant-numeric:tabular-nums;}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
+  color:var(--text-secondary);
+}
 .visually-hidden{
   position:absolute; width:1px; height:1px; overflow:hidden;
   clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap;
 }
-.stack{display:flex; flex-direction:column; gap:10px;}
-.row{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.stack{display:flex; flex-direction:column; gap:var(--s3);}
+.row{display:flex; align-items:center; gap:var(--s2); flex-wrap:wrap;}
 .push{margin-left:auto;}
+
+.icon{width:15px; height:15px; flex:none; stroke:currentColor; fill:none;
+      stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round;}
+.icon-lg{width:22px; height:22px;}
+
 .empty{
-  border:1px dashed var(--rule);
-  border-radius:var(--radius);
-  padding:22px 16px;
+  border:1px dashed var(--rule-strong);
+  border-radius:var(--r2);
+  padding:var(--s6) var(--s4);
   text-align:center;
   color:var(--text-secondary);
   font-size:13.5px;
+  display:flex; flex-direction:column; align-items:center; gap:var(--s2);
 }
+.empty .icon{width:20px; height:20px; opacity:0.55;}
 
-/* form controls ---------------------------------------------------------- */
-.field{display:block; margin-bottom:12px;}
+/* ---- form controls ------------------------------------------------------ */
+.field{display:block; margin-bottom:var(--s3);}
 .field > .label{
   display:block; margin-bottom:5px;
   font-family:'IBM Plex Mono',monospace;
-  font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase;
+  font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
   color:var(--text-secondary);
 }
 .field .req{color:var(--signal);}
+
 input[type=text],input[type=date],input[type=search],select,textarea{
   width:100%;
+  height:var(--ctl);
   background:var(--card-bg);
-  border:1px solid var(--rule);
-  border-radius:var(--radius);
-  padding:8px 10px;
+  border:1px solid var(--rule-strong);
+  border-radius:var(--r1);
+  padding:0 10px;
   font-size:14px;
+  transition:border-color var(--t), box-shadow var(--t);
 }
-textarea{min-height:88px; resize:vertical;}
-select{cursor:pointer;}
-.checkline{display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:8px;}
-.checkline input{accent-color:var(--blueprint);}
-.hint{font-size:12px; color:var(--text-secondary); margin-top:4px;}
+input[type=search]{-webkit-appearance:none; appearance:none;}
+textarea{height:auto; min-height:96px; padding:9px 10px; resize:vertical; line-height:1.5;}
+input:hover,select:hover,textarea:hover{border-color:var(--blueprint);}
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:var(--blueprint);
+  box-shadow:0 0 0 3px var(--tint-strong);
+}
+input::placeholder,textarea::placeholder{color:var(--text-secondary); opacity:0.75;}
+
+select{
+  cursor:pointer;
+  -webkit-appearance:none; appearance:none;
+  padding-right:28px;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),
+                   linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 15px) calc(50% + 1px), calc(100% - 10px) calc(50% + 1px);
+  background-size:5px 5px, 5px 5px;
+  background-repeat:no-repeat;
+}
+
+.checkline{
+  display:flex; align-items:center; gap:var(--s2);
+  font-size:14px; margin-bottom:var(--s2);
+  cursor:pointer;
+}
+.checkline input{accent-color:var(--blueprint); width:15px; height:15px; cursor:pointer;}
+.hint{font-size:12px; color:var(--text-secondary); margin-top:5px; line-height:1.45;}
+
 .error{
-  border-left:3px solid var(--signal);
+  display:flex; gap:var(--s2); align-items:flex-start;
+  border:1px solid var(--signal);
+  border-left-width:3px;
   background:var(--signal-soft);
   color:var(--signal);
-  padding:8px 12px;
+  padding:9px 12px;
   font-size:13px;
-  border-radius:var(--radius);
-  margin-bottom:12px;
+  border-radius:var(--r1);
+  margin-bottom:var(--s3);
 }
+
+/* ---- buttons ------------------------------------------------------------ */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  height:var(--ctl);
+  padding:0 13px;
+  background:var(--card-bg); color:var(--text);
+  border:1px solid var(--rule-strong); border-radius:var(--r1);
+  font-size:13.5px; font-weight:500;
+  cursor:pointer; white-space:nowrap;
+  transition:background var(--t), border-color var(--t), color var(--t);
+}
+.btn:hover{border-color:var(--blueprint); background:var(--tint);}
+.btn:active{background:var(--tint-strong);}
+.btn[disabled]{opacity:0.45; cursor:not-allowed;}
+.btn[disabled]:hover{border-color:var(--rule-strong); background:var(--card-bg);}
+
+.btn.primary{background:var(--blueprint); border-color:var(--blueprint); color:#fff;}
+:root[data-theme="dark"] .btn.primary{color:#0B1120;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.primary{color:#0B1120;}}
+.btn.primary:hover{filter:brightness(1.08); background:var(--blueprint);}
+
+.btn.small{height:var(--ctl-sm); padding:0 10px; font-size:12.5px;}
+.btn.small .icon{width:13px; height:13px;}
+.btn.link{
+  height:auto; border:none; background:none; padding:0 2px;
+  color:var(--blueprint); text-decoration:underline; font-size:inherit;
+}
+.btn.link:hover{background:none; filter:brightness(1.15);}

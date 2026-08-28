@@ -139,6 +139,9 @@ OC.ui = (function () {
   function modal(opts) {
     var dlg = h('dialog', { class: 'modal' });
     var errorBox = h('div', { class: 'error', hidden: true });
+    var errorText = h('span', {});
+    errorBox.appendChild(OC.icon('alert'));
+    errorBox.appendChild(errorText);
 
     function close() {
       if (dlg.open) dlg.close();
@@ -152,7 +155,7 @@ OC.ui = (function () {
         onClick: function () {
           var problem = a.onClick ? a.onClick(close) : null;
           if (problem) {
-            errorBox.textContent = problem;
+            errorText.textContent = problem;
             errorBox.hidden = false;
           }
         }
@@ -192,7 +195,8 @@ OC.ui = (function () {
       host = h('div', { class: 'toasts' });
       document.body.appendChild(host);
     }
-    var t = h('div', { class: 'toast' + (warn ? ' warn' : '') }, message);
+    var t = h('div', { class: 'toast' + (warn ? ' warn' : '') },
+      [OC.icon(warn ? 'alert' : 'check'), h('span', {}, message)]);
     host.appendChild(t);
     setTimeout(function () { t.remove(); }, 4200);
   }

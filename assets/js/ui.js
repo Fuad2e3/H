@@ -1,0 +1,208 @@
+/* =========================================================================
+   ui.js — shared interface helpers
+   Element construction, date formatting, the chips used to render tags and
+   states, the modal dialog, and toasts. No view logic lives here; every
+   view file builds its markup out of these.
+   Originate Command · application
+   ========================================================================= */
+
+window.OC = window.OC || {};
+
+OC.ui = (function () {
+  'use strict';
+
+  /* ---- element construction -------------------------------------------- */
+  function h(tag, attrs, children) {
+    var el = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'html') el.innerHTML = v;
+      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2).toLowerCase(), v);
+      else if (k === 'value') el.value = v;
+      else if (v === true) el.setAttribute(k, '');
+      else el.setAttribute(k, v);
+    });
+    append(el, children);
+    return el;
+  }
+
+  function append(el, children) {
+    if (children === null || children === undefined || children === false) return;
+    if (Array.isArray(children)) { children.forEach(function (c) { append(el, c); }); return; }
+    el.appendChild(children.nodeType ? children : document.createTextNode(String(children)));
+  }
+
+  function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
+
+  /* ---- dates ------------------------------------------------------------ */
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function today() { return new Date().toISOString().slice(0, 10); }
+
+  function fmtDate(isoDate) {
+    if (!isoDate) return '—';
+    var p = isoDate.slice(0, 10).split('-');
+    return Number(p[2]) + ' ' + MONTHS[Number(p[1]) - 1];
+  }
+
+  function daysLate(dueDate) {
+    if (!dueDate) return 0;
+    var due = new Date(dueDate + 'T12:00:00');
+    var now = new Date(); now.setHours(12, 0, 0, 0);
+    return Math.round((now - due) / 86400000);
+  }
+
+  function dueLabel(dueDate) {
+    var late = daysLate(dueDate);
+    if (late === 0) return 'due today';
+    if (late === 1) return '1 day overdue';
+    if (late > 1) return late + ' days overdue';
+    if (late === -1) return 'due tomorrow';
+    return 'due ' + fmtDate(dueDate);
+  }
+
+  function fmtWhen(isoStamp) {
+    var then = new Date(isoStamp), now = new Date();
+    var mins = Math.round((now - then) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    if (mins < 60 * 24) return Math.round(mins / 60) + 'h ago';
+    var days = Math.round(mins / 1440);
+    if (days < 7) return days + 'd ago';
+    return fmtDate(isoStamp);
+  }
+
+  /* ---- chips ------------------------------------------------------------ */
+  function clientChip(id) {
+    var c = OC.store.client(id);
+    return h('span', { class: 'chip client', title: 'Client' }, c ? c.name : 'No client');
+  }
+
+  function deptChip(id) {
+    var d = OC.store.department(id);
+    return h('span', { class: 'chip dept', title: 'Department' }, d ? d.name : 'No department');
+  }
+
+  function tagChip(id) {
+    var t = OC.store.tag(id);
+    if (!t) return null;
+    return h('span', { class: 'chip custom', title: t.kind }, t.label);
+  }
+
+  var STATE_LABEL = { open: 'Open', progress: 'In progress', done: 'Done', blocked: 'Blocked' };
+  var STATE_CLASS = { open: 'state-open', progress: 'state-progress', done: 'state-done', blocked: 'state-blocked' };
+
+  function stateChip(state) {
+    return h('span', { class: 'chip state ' + STATE_CLASS[state] }, [
+      h('span', { class: 'dot' }), STATE_LABEL[state]
+    ]);
+  }
+
+  function personName(id) {
+    var u = OC.store.user(id);
+    return u ? u.name : 'Unknown';
+  }
+
+  function assigneeName(item) {
+    if (item.assignee_type === 'group') {
+      var g = OC.store.group(item.assignee);
+      return g ? g.name : 'Unknown group';
+    }
+    return personName(item.assignee);
+  }
+
+  /* ---- form pieces ------------------------------------------------------ */
+  function field(labelText, control, opts) {
+    opts = opts || {};
+    var label = h('label', { class: 'field' }, [
+      h('span', { class: 'label' }, [labelText, opts.required ? h('span', { class: 'req' }, ' *') : null]),
+      control,
+      opts.hint ? h('span', { class: 'hint' }, opts.hint) : null
+    ]);
+    return label;
+  }
+
+  function select(options, value, attrs) {
+    var el = h('select', attrs || {});
+    options.forEach(function (o) {
+      el.appendChild(h('option', { value: o.value, selected: o.value === value }, o.label));
+    });
+    if (value !== undefined && value !== null) el.value = value;
+    return el;
+  }
+
+  /* ---- modal ------------------------------------------------------------ */
+  function modal(opts) {
+    var dlg = h('dialog', { class: 'modal' });
+    var errorBox = h('div', { class: 'error', hidden: true });
+
+    function close() {
+      if (dlg.open) dlg.close();
+      dlg.remove();
+    }
+
+    var actions = (opts.actions || []).map(function (a) {
+      return h('button', {
+        class: 'btn' + (a.primary ? ' primary' : ''),
+        type: 'button',
+        onClick: function () {
+          var problem = a.onClick ? a.onClick(close) : null;
+          if (problem) {
+            errorBox.textContent = problem;
+            errorBox.hidden = false;
+          }
+        }
+      }, a.label);
+    });
+
+    dlg.appendChild(h('div', { class: 'modal-head' }, [
+      h('h2', {}, opts.title),
+      h('button', { class: 'iconbtn push', type: 'button', 'aria-label': 'Close', onClick: close }, 'Close')
+    ]));
+    dlg.appendChild(h('div', { class: 'modal-body' }, [errorBox, opts.content]));
+    if (actions.length) dlg.appendChild(h('div', { class: 'modal-foot' }, actions));
+
+    document.body.appendChild(dlg);
+    dlg.addEventListener('close', function () { dlg.remove(); });
+    dlg.showModal();
+    var first = dlg.querySelector('input,textarea,select');
+    if (first) first.focus();
+    return { close: close, root: dlg };
+  }
+
+  function confirm(message, onYes) {
+    modal({
+      title: 'Confirm',
+      content: h('p', {}, message),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } },
+        { label: 'Confirm', primary: true, onClick: function (close) { onYes(); close(); } }
+      ]
+    });
+  }
+
+  /* ---- toasts ----------------------------------------------------------- */
+  function toast(message, warn) {
+    var host = document.querySelector('.toasts');
+    if (!host) {
+      host = h('div', { class: 'toasts' });
+      document.body.appendChild(host);
+    }
+    var t = h('div', { class: 'toast' + (warn ? ' warn' : '') }, message);
+    host.appendChild(t);
+    setTimeout(function () { t.remove(); }, 4200);
+  }
+
+  return {
+    h: h, clear: clear, append: append,
+    today: today, fmtDate: fmtDate, fmtWhen: fmtWhen, daysLate: daysLate, dueLabel: dueLabel,
+    clientChip: clientChip, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
+    personName: personName, assigneeName: assigneeName,
+    STATE_LABEL: STATE_LABEL,
+    field: field, select: select, modal: modal, confirm: confirm, toast: toast
+  };
+})();

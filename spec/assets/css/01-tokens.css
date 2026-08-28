@@ -4,7 +4,7 @@
    palette on :root, the dark palette under prefers-color-scheme, and the same
    dark palette again under [data-theme="dark"] so the manual toggle wins.
    Loaded first — every other stylesheet reads these custom properties.
-   Originate Command · application
+   Originate Command · OM SRS 001
    ========================================================================= */
 
 :root{
@@ -75,14 +75,4 @@
   --border:rgba(236,231,218,0.14);
   --rule:rgba(236,231,218,0.14);
   --shadow:0 1px 2px rgba(0,0,0,0.3),0 8px 24px rgba(0,0,0,0.35);
-}
-
-/* application-specific tokens ------------------------------------------- */
-:root{
-  --state-open:var(--blueprint);
-  --state-progress:var(--brass);
-  --state-done:var(--success);
-  --state-blocked:var(--signal);
-  --radius:2px;
-  --topbar-h:56px;
 }

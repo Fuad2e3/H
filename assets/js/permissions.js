@@ -132,11 +132,24 @@ OC.can = (function () {
     return todo.assignee_type === 'user' && assignTo(user, todo.assignee);
   }
 
+  /* whether this account has authority over anyone at all besides itself.
+     assignTo() lets anyone take work themselves, which must not be mistaken
+     for the authority to move work between people (6.2). */
+  function assignsOthers(user) {
+    if (!user) return false;
+    if (user.admin) return true;
+    return S().state.users.some(function (t) { return t.id !== user.id && assignTo(user, t.id); });
+  }
+
   function reassign(user, todo) {
     if (!user || !todo) return false;
     if (user.admin) return true;
-    if (todo.assignee_type === 'user' && assignTo(user, todo.assignee)) return true;
-    return isHead(user, todo.department);
+    if (!assignsOthers(user)) return false;              /* members and seniors: never */
+    if (isHead(user, todo.department)) return true;
+    if (todo.assignee_type === 'user') {
+      return todo.assignee === user.id || assignTo(user, todo.assignee);
+    }
+    return assignToGroup(user, todo.assignee);
   }
 
   function archiveInstruction(user, note) {
@@ -199,7 +212,7 @@ OC.can = (function () {
     assignTo: assignTo, assignableUsers: assignableUsers,
     assignToGroup: assignToGroup, assignableGroups: assignableGroups,
     createGroup: createGroup, postInstruction: postInstruction, createTodo: createTodo,
-    changeState: changeState, reassign: reassign, archiveInstruction: archiveInstruction,
+    changeState: changeState, reassign: reassign, assignsOthers: assignsOthers, archiveInstruction: archiveInstruction,
     manageDepartment: manageDepartment, invite: invite, seeAudit: seeAudit,
     visibleUsers: visibleUsers,
     escalationChain: escalationChain, escalationReached: escalationReached

@@ -58,6 +58,26 @@ Scripts load in that order and it matters: `store.js` and `permissions.js` must
 exist before any view runs. Stylesheets are numbered because the cascade depends
 on their order — tokens first, every later file reads those properties.
 
+## Tests
+
+```
+node tests/logic.test.js     # 119 checks, no browser needed
+python3 tests/ui.test.py     # 82 checks, drives a real browser
+```
+
+`logic.test.js` covers `store.js` and `permissions.js` directly: every lookup,
+persistence, the audit stamp, and the full permission matrix across all eleven
+accounts — who may see, assign, reassign, create groups, invite, and where each
+rule stops at a department boundary.
+
+`ui.test.py` drives the interface: routing and deep links, theme cycling and
+persistence, every filter, pinned filters, all three groupings, all four
+recurrence periods, blocked reasons, convert-to-todo including cancellation,
+read receipts, archiving, group creation validation, report figures checked
+against the underlying data, CSV contents, invite validation, notification
+persistence across reload, and reset. It needs Chromium; set `CHROME_PATH` if
+Playwright cannot find one.
+
 ## Working on it
 
 `store.js` is the only file that touches storage. Everything else asks it for

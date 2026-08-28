@@ -316,7 +316,7 @@ OC.board = (function () {
   }
 
   /* ---- create a todo ---------------------------------------------------- */
-  function newTodo(preset) {
+  function newTodo(preset, onCreated) {
     var user = me();
     preset = preset || {};
     var title = h('input', { type: 'text', value: preset.title || '' });
@@ -381,6 +381,7 @@ OC.board = (function () {
             });
             var targets = parts[0] === 'user' ? [parts[1]] : (OC.store.group(parts[1]) || { members: [] }).members;
             OC.store.notify(targets.filter(function (id) { return id !== user.id; }), user.name + ' assigned you: ' + todo.title, todo.id);
+            if (onCreated) onCreated(todo);
             OC.ui.toast('Todo created.');
             close();
           }
@@ -473,8 +474,12 @@ OC.board = (function () {
       title: note.body.slice(0, 70) + (note.body.length > 70 ? '…' : ''),
       description: 'From an instruction posted by ' + OC.ui.personName(note.author) + ' on ' + OC.ui.fmtDate(note.posted_at) + '.',
       client: note.client, department: note.department
+    }, function (todo) {
+      /* only once the todo actually exists — cancelling must leave the
+         instruction unconverted */
+      OC.store.mutate({ actor: OC.store.session(), action: 'instruction.convert', target: todo.title },
+        function () { note.linked_todo = todo.id; });
     });
-    OC.store.mutate(null, function () { note.linked_todo = true; });
   }
 
   /* ---- post an instruction ----------------------------------------------- */
@@ -609,5 +614,9 @@ OC.board = (function () {
     ]);
   }
 
-  return { render: render, newTodo: newTodo, newInstruction: newInstruction, filters: filters };
+  return {
+    render: render, newTodo: newTodo, newInstruction: newInstruction,
+    /* a getter, because applying a pinned filter rebinds the object */
+    get filters() { return filters; }
+  };
 })();

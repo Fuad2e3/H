@@ -294,7 +294,10 @@ OC.store = (function () {
       emit();
     },
 
+    /* callers invoke this after mutate(), so it persists and re-renders on its
+       own — otherwise a notification lives only until the page reloads */
     notify: function (userIds, text, ref) {
+      if (!userIds || !userIds.length) return;
       var at = new Date().toISOString();
       userIds.forEach(function (uid_) {
         state.notifications.unshift({
@@ -302,6 +305,8 @@ OC.store = (function () {
           user: uid_, text: text, ref: ref || null, at: at, read: false
         });
       });
+      write();
+      emit();
     }
   };
 

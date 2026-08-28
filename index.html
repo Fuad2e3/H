@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>Originate Command</title>
-<meta name="description" content="Software Requirements Specification for Originate Command, a unified todo board and instruction system for Originate Marketing.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<meta name="description" content="Software Requirements Specification OM SRS 001 for Originate Command, a unified todo board and instruction system for Originate Marketing.">
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
 :root{
+  color-scheme:light;
   --ink:#12182B;
   --paper:#F6F3EC;
   --surface:#FFFFFF;
@@ -35,6 +36,7 @@
 
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
+    color-scheme:dark;
     --ink:#ECE7DA;
     --text:#ECE7DA;
     --text-secondary:#A9B0BE;
@@ -56,6 +58,7 @@
   }
 }
 :root[data-theme="dark"]{
+  color-scheme:dark;
   --ink:#ECE7DA;
   --text:#ECE7DA;
   --text-secondary:#A9B0BE;
@@ -222,6 +225,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--brass); outline-off
   margin-left:-1px;
 }
 .index-rail a:hover{color:var(--ink); border-left-color:var(--blueprint);}
+.index-rail a[aria-current="true"]{color:var(--ink); border-left-color:var(--blueprint); background:var(--blueprint-soft);}
 .index-rail .num{font-family:'IBM Plex Mono',monospace; color:var(--blueprint); margin-right:8px;}
 
 /* ---- main content ---- */
@@ -254,8 +258,15 @@ section.sec:first-child{border-top:none; padding-top:8px;}
   margin:34px 0 12px;
   color:var(--ink);
 }
+.sec h3 .subnum{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:14px; font-weight:500;
+  color:var(--blueprint);
+  margin-right:10px;
+}
 .sec p{max-width:70ch; margin:0 0 16px; color:var(--text);}
 .sec p.lead{font-size:17.5px; color:var(--text-secondary);}
+.sec p.closing{margin-top:28px;}
 .sec ul, .sec ol.speclist{max-width:70ch; margin:0 0 18px; padding-left:22px;}
 .sec li{margin-bottom:8px;}
 .sec strong{color:var(--ink);}
@@ -286,6 +297,15 @@ section.sec:first-child{border-top:none; padding-top:8px;}
 /* tables */
 .tablewrap{overflow-x:auto; margin:0 0 24px; border:1px solid var(--rule); border-radius:2px;}
 table{border-collapse:collapse; width:100%; min-width:560px; font-size:14px;}
+caption{
+  caption-side:top; text-align:left;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--text-secondary);
+  background:var(--card-bg-alt);
+  padding:10px 14px;
+  border-bottom:1px solid var(--rule);
+}
 thead th{
   font-family:'IBM Plex Mono',monospace;
   font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
@@ -295,14 +315,15 @@ thead th{
   border-bottom:1px solid var(--rule);
   white-space:nowrap;
 }
-tbody td{
+tbody td, tbody th{
   padding:10px 14px;
   border-bottom:1px solid var(--rule);
   vertical-align:top;
 }
-tbody tr:last-child td{border-bottom:none;}
+tbody th{text-align:left; font-weight:600; color:var(--ink);}
+tbody tr:last-child td, tbody tr:last-child th{border-bottom:none;}
 td.mono, th.mono{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums;}
-.rolenote{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-secondary);}
+.rolenote{font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:400; color:var(--text-secondary);}
 
 .pill{
   display:inline-block;
@@ -329,7 +350,7 @@ td.mono, th.mono{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tab
 .entity h4{
   font-family:'IBM Plex Mono',monospace;
   font-size:13px; margin:0 0 8px; color:var(--ink);
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px;
 }
 .entity h4 span{font-size:10px; color:var(--text-secondary); font-weight:400; text-align:right;}
 .entity ul{list-style:none; margin:0; padding:0; font-size:12.8px; color:var(--text-secondary);}
@@ -371,6 +392,16 @@ footer.doc-footer{
   z-index:5;
 }
 .toggle-theme:hover{color:var(--ink);}
+
+@media print{
+  .grid-ground,.toggle-theme,.index-rail,.skip{display:none !important;}
+  body{background:#fff; color:#000; font-size:11pt;}
+  .shell{display:block; max-width:none; padding:0;}
+  .titleblock{box-shadow:none; break-inside:avoid;}
+  section.sec{padding-top:24px;}
+  .callout,.entity,.phase,.tablewrap,tr{break-inside:avoid;}
+  .sec h2,.sec h3{break-after:avoid;}
+}
 </style>
 </head>
 <body>
@@ -420,16 +451,36 @@ footer.doc-footer{
     <section class="sec" id="s0">
       <p class="sec-eyebrow">0.0</p>
       <h2>Reading this document</h2>
-      <p class="lead">This is a working draft, not a finished spec. Two architecture questions are still open (marked in section 13) and everything downstream of them is written against the recommended default, clearly labeled as such, so the rest of the document is usable while those get confirmed.</p>
-      <p>Every section is numbered like an engineering drawing set so it can be referenced precisely in conversation and in commit messages later ("see 6.3" instead of re-explaining the instruction board each time). The permission tables and data model are the two sections worth reading most carefully, since almost everything else in the system is built on top of them.</p>
+      <p class="lead">This is a working draft, not an approved specification. Two architectural questions remain open, recorded in section 13, and every requirement downstream of them is written against a recommended default and labelled as such, so the remainder of the document can be reviewed and estimated while those decisions are confirmed.</p>
+      <p>Sections are numbered in the manner of an engineering drawing set so that any requirement can be cited precisely in review and in commit messages later ("see 6.3" rather than restating the instruction board each time). Subsections carry the section number; tables are numbered by section independently. The permission matrix in table 3.1 and the data model in section 5.0 warrant the closest reading, as almost everything else in the system is derived from them.</p>
+
+      <div class="tablewrap">
+        <table>
+          <caption>Table 0.1 &mdash; Revision history</caption>
+          <thead>
+            <tr><th scope="col">Rev.</th><th scope="col">Date</th><th scope="col">Author</th><th scope="col">Summary of change</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row" class="mono">0.1</th>
+              <td class="mono">28 Aug 2026</td>
+              <td>Delivery team</td>
+              <td>First issue for review. Sections 1.0 to 12.0 complete against recommended defaults; two decisions recorded as open in section 13.0.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section class="sec" id="s1">
       <p class="sec-eyebrow">1.0</p>
       <h2>Purpose and scope</h2>
-      <p>Originate Marketing currently runs task tracking on a single flat board (outreachtaskforce.netlify.app) and shares instructions through chat threads that are not searchable by client, department, or date. As the team and client roster grow past what one person can hold in memory, that combination breaks down in two specific ways: a new team member cannot find the instructions that apply to them, and a department head cannot see everything happening in their department without asking around.</p>
-      <p>Originate Command replaces both with one system built around four things every item in the company already has: a client it relates to, a department it belongs to, a person or group responsible for it, and a moment it was said. The system does not manage projects or campaigns in the marketing sense; it manages who was told to do what, and who was told what to know.</p>
-      <h3>In scope</h3>
+
+      <h3><span class="subnum">1.1</span>Current state</h3>
+      <p>Originate Marketing currently tracks tasks on a single flat board (outreachtaskforce.netlify.app) and distributes instructions through chat threads that cannot be searched by client, department, or date. As the team and client roster grow past what one person can hold in memory, that combination breaks down in two specific ways: a new team member cannot find the instructions that apply to them, and a department head cannot see everything happening in their department without asking around.</p>
+      <p>Originate Command replaces both with one system built around four attributes every item of work already has: a client it relates to, a department it belongs to, a person or group responsible for it, and a moment it was recorded. The system does not manage projects or campaigns in the marketing sense; it manages who was told to do what, and who was told what to know.</p>
+
+      <h3><span class="subnum">1.2</span>In scope</h3>
       <ul>
         <li>Todo tracking per person, per department, per client, replacing the existing daily board</li>
         <li>An instruction and notice board: any team member can post an instruction, tag it, and it becomes permanently searchable by whoever it was tagged to</li>
@@ -437,12 +488,13 @@ footer.doc-footer{
         <li>An invite only account system with per person profile dashboards</li>
         <li>Notifications by email, browser push, and optionally Discord</li>
       </ul>
-      <h3>Out of scope for version one</h3>
+
+      <h3><span class="subnum">1.3</span>Out of scope for version one</h3>
       <ul>
         <li>Client facing access. Nobody outside Originate Marketing logs into this system</li>
         <li>Payroll, invoicing, or time tracking for pay purposes</li>
-        <li>Replacing ActiveCampaign, Instantly, or other outreach execution tools. Originate Command tells people what to do in those tools; it does not do the outreach itself</li>
-        <li>A native mobile app. Version one is a responsive web app that works well on a phone browser</li>
+        <li>Replacing ActiveCampaign, Instantly, or other outreach execution tools. Originate Command records what is to be done in those tools; it does not perform the outreach itself</li>
+        <li>A native mobile app. Version one is a responsive web app that works well in a phone browser</li>
       </ul>
     </section>
 
@@ -451,11 +503,11 @@ footer.doc-footer{
       <h2>System overview</h2>
       <p class="lead">One screen, two panels. The left panel is what needs doing. The right panel is what people need to know. Both are filtered by the same tag system, so a client, a department, or a person always means the same thing on both sides.</p>
 
-      <h3>Left panel: Todos</h3>
-      <p>A direct evolution of the existing daily board. Every todo belongs to exactly one client and one department, is assigned to a person or a group, and moves through a small set of states. Todos are grouped by person by default (matching how the team already reads the current board) with a toggle to regroup by client instead.</p>
+      <h3><span class="subnum">2.1</span>Left panel: Todos</h3>
+      <p>A direct evolution of the existing daily board. Every todo belongs to exactly one client and one department, is assigned to a person or a group, and moves through a small set of states. Todos are grouped by person by default, matching how the team already reads the current board, with a toggle to regroup by client instead.</p>
 
-      <h3>Right panel: Instructions</h3>
-      <p>A running feed, newest first, of anything someone needs to record and have found again later: a client's standing rule, a correction, a policy, a one time notice. Each entry is short form text (the Chaim example about documenting context in ActiveCampaign before booking a meeting is the reference case) tagged the same way a todo is, and it stays in the feed permanently rather than disappearing once read. An instruction is not a todo; it does not have a done state, though it can optionally spawn one.</p>
+      <h3><span class="subnum">2.2</span>Right panel: Instructions</h3>
+      <p>A running feed, newest first, of anything that needs to be recorded and found again later: a client's standing rule, a correction, a policy, a one time notice. Each entry is short form text, tagged the same way a todo is, and it remains in the feed permanently rather than disappearing once read. The reference case is the Chaim instruction about documenting context in ActiveCampaign before a meeting is booked. An instruction is not a todo; it has no done state, though it may optionally spawn one.</p>
 
       <div class="callout">
         <span class="tag">Terminology used throughout this document</span>
@@ -465,8 +517,8 @@ footer.doc-footer{
         <p><strong>Group</strong>: a named set of people assembled for a purpose, independent of department. A todo or instruction can be assigned to a group the same way it is assigned to a person.</p>
       </div>
 
-      <h3>The profile dashboard</h3>
-      <p>Every person, on login, lands on a dashboard scoped to them: their assigned clients, their open todos across those clients, the instructions tagged to them personally or to their department, and any groups they belong to. What a department head or team lead sees additionally is covered in section 3.</p>
+      <h3><span class="subnum">2.3</span>The profile dashboard</h3>
+      <p>Every person, on login, lands on a dashboard scoped to them: their assigned clients, their open todos across those clients, the instructions tagged to them personally or to their department, and any groups they belong to. What a department head or team lead sees in addition is covered in section 3.0.</p>
     </section>
 
     <section class="sec" id="s3">
@@ -474,62 +526,66 @@ footer.doc-footer{
       <h2>Roles and permissions</h2>
       <p class="lead">Four roles. Authority flows down a department, never sideways into another department, unless a group has been explicitly built to cross that line.</p>
 
+      <h3><span class="subnum">3.1</span>Role capability matrix</h3>
       <div class="tablewrap">
         <table>
-          <caption class="mono" style="caption-side:top; text-align:left; padding:10px 14px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-secondary); background:var(--card-bg-alt); border-bottom:1px solid var(--rule);">Table 3.1 &mdash; Role capability matrix</caption>
+          <caption>Table 3.1 &mdash; Role capability matrix</caption>
           <thead>
             <tr><th scope="col">Role</th><th scope="col">Can see</th><th scope="col">Can assign to</th><th scope="col">Can manage people</th></tr>
           </thead>
           <tbody>
             <tr>
-              <th scope="row" style="text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top;"><strong>System Admin</strong><br><span class="rolenote">Shohag, and anyone he designates</span></th>
+              <th scope="row">System Admin<br><span class="rolenote">Shohag Munshe, and anyone they designate</span></th>
               <td><span class="pill p-full">Everything, every department</span></td>
               <td>Anyone, any department, any group</td>
               <td>Full: invites, roles, departments, custom hierarchy levels</td>
             </tr>
             <tr>
-              <th scope="row" style="text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top;"><strong>Department Head</strong></th>
+              <th scope="row">Department Head</th>
               <td><span class="pill p-scoped">Their department(s) only</span></td>
               <td>Team leads and members within their department(s)</td>
               <td>Within their department: assign team leads, move members, edit hierarchy for that department</td>
             </tr>
             <tr>
-              <th scope="row" style="text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top;"><strong>Team Lead</strong></th>
+              <th scope="row">Team Lead</th>
               <td><span class="pill p-scoped">Their team within the department</span></td>
               <td>Team members on their team</td>
               <td>Within their team: reassign tasks between members</td>
             </tr>
             <tr>
-              <th scope="row" style="text-align:left; padding:10px 14px; vertical-align:top;"><strong>Team Member</strong></th>
+              <th scope="row">Team Member</th>
               <td><span class="pill p-own">Their own assignments, plus anything tagged to their department at large</span></td>
-              <td><span class="pill p-none">Nobody by default</span> see note below</td>
+              <td><span class="pill p-none">Nobody by default</span> see 3.2</td>
               <td><span class="pill p-none">None</span></td>
             </tr>
           </tbody>
         </table>
       </div>
 
+      <h3><span class="subnum">3.2</span>Who may create, and who may assign</h3>
       <div class="callout decision">
         <span class="tag">Decision point</span>
-        <p>Your brief says "any one got a new instruction and todo can do that, and then tag/assign the department." Read literally, that means any team member can post an instruction and assign it to any department, not just their own, since instructions often originate from a client and need to reach whichever department the client's request actually concerns. Recommendation: keep instruction <em>creation</em> and tagging open to everyone (anyone can hear something from a client and log it), but keep todo <em>assignment</em> restricted to admin, department heads, and team leads, so a team member cannot hand work to a peer outside the normal chain. This is what section 6.2 and 6.3 are written against.</p>
+        <p>The source brief states that "any one got a new instruction and todo can do that, and then tag/assign the department." Read literally, any team member could post an instruction and assign it to any department, not only their own, which is reasonable given that instructions frequently originate with a client and must reach whichever department the request actually concerns. Recommendation: keep instruction <em>creation</em> and tagging open to every authenticated user, since any team member may be the one who hears a client instruction, but keep todo <em>assignment</em> restricted to the system admin, department heads, and team leads, so work cannot be handed to a peer outside the normal chain of command. Sections 6.2 and 6.3 are written against this recommendation.</p>
       </div>
 
       <div class="callout">
         <span class="tag">Leadership is a tier, not one person</span>
-        <p>System Admin above is written as a tier, not a single account. It covers whoever sits above every department head, Shohag today, and Founder, CEO, or other executives as the company grows. Anyone in this tier sees everything and receives every escalation (section 9); nobody outside the tier does, and nobody is added to it by default when they join, it is granted explicitly the same way department head is.</p>
+        <p>System Admin in table 3.1 is a tier, not a single account. It covers whoever sits above every department head: Shohag Munshe today, and Founder, CEO, or other executive roles as the company grows. Anyone in this tier sees everything and receives every escalation under section 9.0; nobody outside the tier does. No account joins this tier by default, it is granted explicitly, in the same way as department head.</p>
       </div>
 
-      <h3>Department head is a grant, not a job title</h3>
-      <p>One person can be department head of more than one department at once, exactly as described. This is modeled as a many to many relationship (a person can hold the department head grant for zero, one, or several departments) rather than a single fixed job title field on the user, which is what makes it possible to add or remove that authority later without restructuring anyone's account.</p>
+      <h3><span class="subnum">3.3</span>Department head is a grant, not a job title</h3>
+      <p>One person can be department head of more than one department at once, as required by the source brief. This is modelled as a many to many relationship, in which a person holds the department head grant for zero, one, or several departments, rather than as a single fixed job title field on the user record. That is what makes it possible to add or remove the authority later without restructuring anyone's account.</p>
 
-      <h3>Custom hierarchy levels</h3>
-      <p>The three levels above (department head, team lead, team member) are the defaults every department starts with. A department can define additional levels between or alongside them (for example, a Senior Strategist level sitting between team lead and member in Outreach Operations) without touching the underlying permission engine, because permissions are computed from a level's position in that department's ordered hierarchy list, not from a hardcoded role name.</p>
+      <h3><span class="subnum">3.4</span>Custom hierarchy levels</h3>
+      <p>The three levels in table 3.1 below system admin are the defaults every department starts with. A department may define additional levels between or alongside them, for example a Senior Strategist level sitting between team lead and team member in Outreach Operations, without any change to the underlying permission engine, because permissions are computed from a level's position in that department's ordered hierarchy list rather than from a hardcoded role name.</p>
     </section>
 
     <section class="sec" id="s4">
       <p class="sec-eyebrow">4.0</p>
       <h2>Departments and hierarchy</h2>
-      <p>Six departments at launch, each independently structured. A person can belong to more than one department, and their role can differ between them (department head in one, team member in another).</p>
+
+      <h3><span class="subnum">4.1</span>Departments at launch</h3>
+      <p>Six departments at launch, each independently structured. A person may belong to more than one department, and their level may differ between them: department head in one, team member in another.</p>
 
       <div class="entity-grid">
         <div class="entity"><h4>Admin &amp; HR <span>internal</span></h4><ul><li>Hiring, onboarding, invites, people records</li></ul></div>
@@ -540,13 +596,13 @@ footer.doc-footer{
         <div class="entity"><h4>Web Development <span>delivery</span></h4><ul><li>Sites, landing pages, tracking, fixes</li></ul></div>
       </div>
 
-      <p>New departments can be created by the system admin at any time; this list is data, not a hardcoded schema, so adding "Paid Advertising" as a seventh department next quarter requires no development work.</p>
+      <p>New departments can be created by the system admin at any time. This list is data, not a hardcoded schema, so adding Paid Advertising as a seventh department next quarter requires no development work.</p>
 
-      <h3>Groups: the cross cutting layer</h3>
-      <p>A group is separate from the department tree. It exists for the case your brief did not explicitly name but that follows naturally from real work: a client project that needs one person from Outreach Operations, one from Web Development, and Shohag, for the duration of that project only. A group has its own member list, can be assigned todos and instructions exactly like a department can, and disbands (is archived, never hard deleted) when the work ends.</p>
+      <h3><span class="subnum">4.2</span>Groups: the cross cutting layer</h3>
+      <p>A group is separate from the department tree. It exists for a case the source brief does not name explicitly but which follows from ordinary delivery work: a client project that needs one person from Outreach Operations, one from Web Development, and the account owner, for the duration of that project only. A group holds its own member list, can be assigned todos and instructions exactly as a department can, and is archived rather than hard deleted when the work ends.</p>
       <div class="callout decision">
         <span class="tag">Decision point</span>
-        <p>Who can create a group is one of the two open questions in section 13. This document is written against <strong>Admin plus Department Heads</strong> as the working default: it lets department heads self serve for their own initiatives without every cross functional group having to route through Shohag personally, while keeping team leads and members from spinning up ungoverned groups.</p>
+        <p>Who may create a group is one of the two open questions in section 13.0. This document is written against <strong>system admin plus department heads</strong> as the working default. That allows department heads to self serve for their own initiatives without every cross functional group routing through the account owner personally, while preventing team leads and members from creating ungoverned groups.</p>
       </div>
     </section>
 
@@ -555,6 +611,7 @@ footer.doc-footer{
       <h2>Data model</h2>
       <p class="lead">Ten entities. Everything else in the system is a view, a filter, or a permission rule computed from these.</p>
 
+      <h3><span class="subnum">5.1</span>Entities</h3>
       <div class="entity-grid">
         <div class="entity">
           <h4>User <span>people table</span></h4>
@@ -576,8 +633,8 @@ footer.doc-footer{
           <h4>Membership <span>denormalized both ways</span></h4>
           <ul>
             <li>each user document holds a <b>departments[]</b> array of <b>{department_id, level}</b></li>
-            <li>each department document holds a mirrored <b>members[]</b> array, kept in sync by a Cloud Function whenever one side changes</li>
-            <li>kept on both sides because Firestore cannot join collections; this is the one place that tradeoff shows up directly</li>
+            <li>each department document holds a mirrored <b>members[]</b> array, kept in sync by a Cloud Function whenever either side changes</li>
+            <li>held on both sides because Firestore cannot join collections; this is the one place that tradeoff shows up directly</li>
           </ul>
         </div>
         <div class="entity">
@@ -640,78 +697,79 @@ footer.doc-footer{
         </div>
       </div>
 
-      <p>Every todo and every instruction requires at least one client tag and one department tag before it can be posted. This is the single rule that makes "filter everything from Chaim" and "show my department's open items" work reliably from day one, instead of depending on people tagging things consistently by habit.</p>
+      <h3><span class="subnum">5.2</span>Mandatory tagging rule</h3>
+      <p>Every todo and every instruction requires at least one client tag and one department tag before it can be posted. This single rule is what makes "filter everything from Chaim" and "show my department's open items" work reliably from day one, rather than depending on people tagging things consistently by habit.</p>
     </section>
 
     <section class="sec" id="s6">
       <p class="sec-eyebrow">6.0</p>
       <h2>Functional requirements</h2>
 
-      <h3>6.1 Authentication and onboarding</h3>
+      <h3><span class="subnum">6.1</span>Authentication and onboarding</h3>
       <ul>
         <li>Accounts are invite only. There is no public sign up page.</li>
-        <li>System admin (or a department head, for their own department) sends an invite by email, choosing the person's department(s) and starting hierarchy level(s) at invite time.</li>
-        <li>The invite email contains a single use, time limited link (expires after 72 hours). Following it lets the person set a password and complete their profile: name, phone, photo, notification preferences.</li>
+        <li>The system admin, or a department head for their own department, sends an invite by email, choosing the person's department(s) and starting hierarchy level(s) at invite time.</li>
+        <li>The invite email contains a single use, time limited link that expires after 72 hours. Following it lets the person set a password and complete their profile: name, phone, photo, notification preferences.</li>
         <li>An unclaimed invite can be resent or revoked by whoever sent it, or by the system admin.</li>
-        <li>Department, hierarchy level, and group membership can all be changed after the fact by anyone with authority over that person, and every change is written to the audit log with who changed it and when.</li>
-        <li>Password reset by standard email link. Session length: 14 days on a trusted device, 12 hours otherwise, configurable by the admin.</li>
+        <li>Department, hierarchy level, and group membership can all be changed after the fact by anyone with authority over that person, and every change is written to the audit log with the actor and timestamp.</li>
+        <li>Password reset by standard email link. Session length: 14 days on a trusted device, 12 hours otherwise, configurable by the system admin.</li>
       </ul>
 
-      <h3>6.2 Todo management</h3>
+      <h3><span class="subnum">6.2</span>Todo management</h3>
       <ul>
         <li>Create a todo: title, description, client tag, department tag, assignee (person or group), due date, priority.</li>
-        <li>Assignment rights follow section 3: admin, department heads, and team leads can assign within their scope; team members can update status on what is assigned to them but cannot reassign it to someone else.</li>
+        <li>Assignment rights follow section 3.0: the system admin, department heads, and team leads can assign within their scope; team members can update status on what is assigned to them but cannot reassign it to someone else.</li>
         <li>Four states: open, in progress, done, blocked. Blocked requires a one line reason, visible to whoever assigned the task.</li>
-        <li>Default view groups by person, matching the current board; one click switches to group by client. A third view groups by department, for department heads.</li>
+        <li>The default view groups by person, matching the current board; one action switches to grouping by client. A third view groups by department, for department heads.</li>
         <li>"Copy yesterday's tasks" carries over the existing board's most used action.</li>
-        <li>Overdue todos are visually distinct and roll up into the daily report (6.8) without needing to be manually flagged.</li>
-        <li><strong>Recurrence.</strong> Every todo is created as one time by default, with a tick to make it recurring instead: daily, weekly, monthly, or quarterly. A recurring todo regenerates automatically on schedule as a fresh instance with its own done state, so a weekday task like Chaim's Manual Reply Check does not need to be recreated by hand each morning. Editing a recurrence rule only changes future instances; already generated ones keep their original history.</li>
-        <li><strong>Attachments.</strong> Out of scope for version one. Todos and instructions carry text and links only; files stay wherever they already live (Google Docs, ActiveCampaign, ClickUp) and get linked to, not uploaded. Revisit if the team finds this limiting in practice.</li>
+        <li>Overdue todos are visually distinct and roll up into the daily report in 6.8 without needing to be flagged manually.</li>
+        <li><strong>Recurrence.</strong> Every todo is created as one time by default, with a tick to make it recurring instead: daily, weekly, monthly, or quarterly. A recurring todo regenerates automatically on schedule as a fresh instance with its own done state, so a weekday task such as Chaim's Manual Reply Check does not need to be recreated by hand each morning. Editing a recurrence rule changes future instances only; instances already generated keep their original history.</li>
+        <li><strong>Attachments.</strong> Out of scope for version one. Todos and instructions carry text and links only; files remain wherever they already live, in Google Docs, ActiveCampaign, or ClickUp, and are linked to rather than uploaded. To be revisited if the team finds this limiting in practice.</li>
       </ul>
 
-      <h3>6.3 Instructions and notice board</h3>
+      <h3><span class="subnum">6.3</span>Instructions and notice board</h3>
       <ul>
-        <li>Any authenticated person can post an instruction. This is intentionally not restricted the way todo assignment is, because instructions most often originate from a client conversation that any team member might be the one hearing.</li>
-        <li>Posting requires at minimum a client tag and a department tag, exactly as with todos, plus free text body. Type and category tags are optional but encouraged.</li>
-        <li>The feed is reverse chronological by default, with a persistent filter bar (tag, client, department, person, date range) rather than a search box you have to remember to use.</li>
-        <li>Every instruction shows who has read it. This directly answers your Chaim example: Rafa does not have to "chase this or research," because the instruction sits in Chaim's tag, dated, permanently, and Rafa's read receipt proves whether he has seen it.</li>
-        <li>An instruction can be converted into a todo in one action (useful when a notice implies a specific task, like "document this in ActiveCampaign before booking").</li>
+        <li>Any authenticated person can post an instruction. This is deliberately not restricted the way todo assignment is, because instructions most often originate in a client conversation that any team member might be the one hearing.</li>
+        <li>Posting requires at minimum a client tag and a department tag, exactly as with todos, plus the free text body. Type and category tags are optional but encouraged.</li>
+        <li>The feed is reverse chronological by default, with a persistent filter bar covering tag, client, department, person, and date range, rather than a search box that has to be remembered and used.</li>
+        <li>Every instruction records who has read it. This addresses the Chaim case directly: the assigned team member has no need to chase or research the instruction, because it sits permanently under the Chaim tag, dated, and their read receipt establishes whether they have seen it.</li>
+        <li>An instruction can be converted into a todo in a single action, which is useful when a notice implies a specific task, such as documenting context in ActiveCampaign before a booking.</li>
         <li>Instructions are never deleted, only archived, so the historical record for a client is never silently lost.</li>
       </ul>
 
-      <h3>6.4 Tagging, search, and filtering</h3>
+      <h3><span class="subnum">6.4</span>Tagging, search, and filtering</h3>
       <ul>
         <li>Four built in tag categories: <span class="pill p-scoped">Client</span> <span class="pill p-scoped">Department</span> <span class="pill p-scoped">Type</span> <span class="pill p-scoped">Category</span>, plus unlimited custom tags.</li>
         <li>Every tag field is both a searchable dropdown and a tick list; typing narrows the list live rather than requiring an exact match.</li>
-        <li>New custom tags can be created inline at the point of tagging by anyone with posting rights, and immediately become available to everyone else, so the tag list grows with real use instead of needing to be pre populated.</li>
-        <li>A saved filter (for example, "everything tagged Chaim") can be pinned to a person's dashboard so they do not have to rebuild it each visit.</li>
-        <li>Filtering by client shows every instruction and todo for that client across every department in one combined, chronological view, exactly as described in your Chaim example.</li>
+        <li>New custom tags can be created inline at the point of tagging by anyone with posting rights, and become available to everyone else immediately, so the tag list grows with real use instead of needing to be pre populated.</li>
+        <li>A saved filter, for example everything tagged Chaim, can be pinned to a person's dashboard so it does not have to be rebuilt on each visit.</li>
+        <li>Filtering by client returns every instruction and todo for that client across every department in one combined chronological view, as described in the source brief.</li>
       </ul>
 
-      <h3>6.5 Groups</h3>
+      <h3><span class="subnum">6.5</span>Groups</h3>
       <ul>
-        <li>Creation restricted per the decision in section 4 (default: admin and department heads).</li>
-        <li>A group has a name, purpose, member list, and its own tag it can be assigned against.</li>
+        <li>Creation is restricted per the decision recorded in 4.2, defaulting to system admin and department heads.</li>
+        <li>A group has a name, purpose, member list, and its own tag that work can be assigned against.</li>
         <li>Todos and instructions can target a group exactly as they target a person; every member of the group sees it on their dashboard.</li>
-        <li>Groups are archived, not deleted, when work ends, preserving their history for reporting.</li>
+        <li>Groups are archived, not deleted, when the work ends, preserving their history for reporting.</li>
       </ul>
 
-      <h3>6.6 Notifications</h3>
-      <p>Covered in full in section 9. In short: in app feed always, browser push for anything assigned directly to you or your group, email as the reliable fallback channel, and an optional Discord bridge for teams that live in Discord day to day.</p>
+      <h3><span class="subnum">6.6</span>Notifications</h3>
+      <p>Specified in full in section 9.0. In summary: the in app feed always; browser push for anything assigned directly to a person or to a group they belong to; email as the reliable fallback channel; and an optional Discord bridge for teams that work in Discord day to day.</p>
 
-      <h3>6.7 Personal dashboard</h3>
+      <h3><span class="subnum">6.7</span>Personal dashboard</h3>
       <ul>
-        <li>On login: my open todos, grouped by client, oldest due date first.</li>
-        <li>My instructions: everything tagged to me personally, my department(s), or a group I belong to, unread items surfaced first.</li>
-        <li>My clients: every client I currently have an assigned todo or a tagged instruction for.</li>
-        <li>Department heads and team leads additionally see a scoped version of the daily report (6.8) limited to their department or team, without needing the admin's company wide view.</li>
+        <li>On login: open todos for the signed in person, grouped by client, oldest due date first.</li>
+        <li>Instructions: everything tagged to that person, their department(s), or a group they belong to, with unread items surfaced first.</li>
+        <li>Clients: every client for which that person currently holds an assigned todo or a tagged instruction.</li>
+        <li>Department heads and team leads additionally see a scoped version of the daily report in 6.8, limited to their department or team, without requiring the system admin's company wide view.</li>
       </ul>
 
-      <h3>6.8 Reporting</h3>
+      <h3><span class="subnum">6.8</span>Reporting</h3>
       <ul>
-        <li>Daily snapshot, matching what the current board already shows: clients complete, tasks complete, tasks left, per person status.</li>
-        <li>Historical log: every action (assigned, completed, reassigned, instruction posted) timestamped, filterable the same way as the live feed, for exactly the kind of "show me everything from Chaim, by date" review you described.</li>
-        <li>Export to CSV for anything a department head wants to bring into a client facing report.</li>
+        <li>Daily snapshot, matching what the current board already shows: clients complete, tasks complete, tasks remaining, per person status.</li>
+        <li>Historical log: every action, whether assigned, completed, reassigned, or instruction posted, timestamped and filterable in the same way as the live feed, supporting the "show me everything from Chaim, by date" review described in the source brief.</li>
+        <li>CSV export for anything a department head needs to carry into a client facing report.</li>
       </ul>
     </section>
 
@@ -720,15 +778,16 @@ footer.doc-footer{
       <h2>Non functional requirements</h2>
       <div class="tablewrap">
         <table>
+          <caption>Table 7.1 &mdash; Non functional requirements</caption>
           <thead><tr><th scope="col">Area</th><th scope="col">Requirement</th></tr></thead>
           <tbody>
-            <tr><td>Availability</td><td>Target 99.5 percent uptime. Acceptable for an internal tool; does not need multi region failover at this scale.</td></tr>
-            <tr><td>Performance</td><td>Dashboard loads under 1.5 seconds on a typical office connection; filtering and tagging feel instant (under 150ms) since they run against a small, indexed dataset.</td></tr>
-            <tr><td>Scalability</td><td>Designed for 10 to 50 users and a few hundred clients at launch, with headroom to 500 users before any architecture change is needed.</td></tr>
-            <tr><td>Usability</td><td>Anyone who can use the current board should be productive in the new system within one sitting, without training. The two panel layout and tag filters mirror language the team already uses (client, department).</td></tr>
-            <tr><td>Accessibility</td><td>Keyboard operable throughout, visible focus states, sufficient color contrast in both light and dark modes, and semantic markup so screen readers can navigate the todo and instruction lists.</td></tr>
-            <tr><td>Responsiveness</td><td>Full functionality on a phone browser; the two panel desktop layout collapses to a tab switcher on small screens.</td></tr>
-            <tr><td>Data retention</td><td>Nothing is hard deleted by a user action. Todos and instructions are archived, not destroyed, preserving the audit trail described in 5.0.</td></tr>
+            <tr><th scope="row">Availability</th><td>Target 99.5 percent uptime. Acceptable for an internal tool; multi region failover is not required at this scale.</td></tr>
+            <tr><th scope="row">Performance</th><td>Dashboard loads in under 1.5 seconds on a typical office connection; filtering and tagging respond in under 150ms, since both run against a small, indexed dataset.</td></tr>
+            <tr><th scope="row">Scalability</th><td>Designed for 10 to 50 users and a few hundred clients at launch, with headroom to 500 users before any architectural change is required.</td></tr>
+            <tr><th scope="row">Usability</th><td>Anyone able to use the current board should be productive in the new system within one sitting, without training. The two panel layout and tag filters mirror language the team already uses: client, department.</td></tr>
+            <tr><th scope="row">Accessibility</th><td>Keyboard operable throughout, visible focus states, sufficient colour contrast in both light and dark modes, and semantic markup so that screen readers can navigate the todo and instruction lists.</td></tr>
+            <tr><th scope="row">Responsiveness</th><td>Full functionality in a phone browser; the two panel desktop layout collapses to a tab switcher on small screens.</td></tr>
+            <tr><th scope="row">Data retention</th><td>Nothing is hard deleted by a user action. Todos and instructions are archived, not destroyed, preserving the audit trail described in 5.1.</td></tr>
           </tbody>
         </table>
       </div>
@@ -737,27 +796,29 @@ footer.doc-footer{
     <section class="sec" id="s8">
       <p class="sec-eyebrow">8.0</p>
       <h2>Security and access control</h2>
-      <p class="lead">This system will hold instructions clients gave in confidence and details about who on the team is behind on what. It is treated as sensitive internal data from day one, not hardened after the fact.</p>
+      <p class="lead">This system will hold instructions given by clients in confidence, and details of who on the team is behind on what. It is treated as sensitive internal data from day one, not hardened after the fact.</p>
 
-      <h3>Enforced at the database, not just hidden in the interface</h3>
-      <p>Every permission described in section 3 is enforced by Firestore Security Rules reading a person's custom claims (their department memberships and hierarchy level, set server side by a Cloud Function, never editable by the client), not only by hiding buttons in the interface. A team member's account is physically unable to query another department's instructions, regardless of what the client app does or does not render. This is the difference between "the app does not show it to you" and "the system will not give it to you," and it is the standard this document holds to throughout.</p>
+      <h3><span class="subnum">8.1</span>Enforced at the database, not only in the interface</h3>
+      <p>Every permission described in section 3.0 is enforced by Firestore Security Rules reading a person's custom claims, that is their department memberships and hierarchy level, set server side by a Cloud Function and never editable by the client, and not only by hiding controls in the interface. A team member's account is unable to query another department's instructions regardless of what the client application does or does not render. This is the difference between "the application does not show it to you" and "the system will not give it to you", and it is the standard this document holds to throughout.</p>
       <div class="callout risk">
-        <span class="tag">Honest tradeoff of this approach</span>
-        <p>Firestore has no server side joins, so a rule that needs to check "is this person a head of the department this instruction is tagged to" reads that fact from the person's own custom claims rather than looking it up from the department. That is fast and reliable, but it means claims must be refreshed (a forced token refresh, done automatically on the next login or role change) whenever someone's department or hierarchy level changes, or their old permissions can persist for a short window. The audit log in section 5 exists partly to make that window visible if it ever matters.</p>
+        <span class="tag">Risk: honest tradeoff of this approach</span>
+        <p>Firestore has no server side joins, so a rule that needs to establish whether a person is head of the department an instruction is tagged to reads that fact from the person's own custom claims rather than looking it up from the department record. That is fast and reliable, but it means claims must be refreshed, by a forced token refresh performed automatically on the next login or role change, whenever someone's department or hierarchy level changes. Otherwise their previous permissions can persist for a short window. The audit log in 5.1 exists partly to make that window visible if it ever matters.</p>
       </div>
 
+      <h3><span class="subnum">8.2</span>Security controls</h3>
       <div class="tablewrap">
         <table>
+          <caption>Table 8.1 &mdash; Security controls</caption>
           <thead><tr><th scope="col">Control</th><th scope="col">Approach</th></tr></thead>
           <tbody>
-            <tr><td>Transport</td><td>HTTPS everywhere, enforced by Netlify and the backend provider by default; no plaintext endpoints.</td></tr>
-            <tr><td>Data at rest</td><td>Encrypted at rest by Firebase/Google Cloud by default; not something this system implements itself.</td></tr>
-            <tr><td>Password storage</td><td>Never stored or seen by this application directly; handled by the auth provider's hashed, salted storage.</td></tr>
-            <tr><td>Session security</td><td>Short lived tokens, refreshed silently; forced re authentication for sensitive admin actions like changing someone's department.</td></tr>
-            <tr><td>Invite links</td><td>Single use, expiring, and revocable, per 6.1.</td></tr>
-            <tr><td>Audit trail</td><td>Immutable log of every permission change, assignment, and reassignment (section 5), reviewable by the admin.</td></tr>
-            <tr><td>Backups</td><td>Automated daily backups once the system holds real client data; the free tier of the recommended backend does not include this by default, noted again in section 10.</td></tr>
-            <tr><td>Least privilege</td><td>New accounts default to team member, the narrowest role, and are elevated explicitly, never the reverse.</td></tr>
+            <tr><th scope="row">Transport</th><td>HTTPS everywhere, enforced by Netlify and the backend provider by default; no plaintext endpoints.</td></tr>
+            <tr><th scope="row">Data at rest</th><td>Encrypted at rest by Firebase and Google Cloud by default; not implemented by this system itself.</td></tr>
+            <tr><th scope="row">Password storage</th><td>Never stored or seen by this application directly; handled by the authentication provider's hashed, salted storage.</td></tr>
+            <tr><th scope="row">Session security</th><td>Short lived tokens, refreshed silently; forced re authentication for sensitive administrative actions such as changing someone's department.</td></tr>
+            <tr><th scope="row">Invite links</th><td>Single use, expiring, and revocable, per 6.1.</td></tr>
+            <tr><th scope="row">Audit trail</th><td>Immutable log of every permission change, assignment, and reassignment, per 5.1, reviewable by the system admin.</td></tr>
+            <tr><th scope="row">Backups</th><td>Automated daily backups once the system holds real client data. The free tier of the recommended backend does not include this by default; noted again in section 10.0.</td></tr>
+            <tr><th scope="row">Least privilege</th><td>New accounts default to team member, the narrowest role, and are elevated explicitly, never the reverse.</td></tr>
           </tbody>
         </table>
       </div>
@@ -766,93 +827,97 @@ footer.doc-footer{
     <section class="sec" id="s9">
       <p class="sec-eyebrow">9.0</p>
       <h2>Notification architecture</h2>
-      <p class="lead">You asked for email, browser push, and Discord if possible. All three are achievable at no cost at this scale; here is how each works and what it actually costs in setup effort.</p>
+      <p class="lead">The source brief requires email, browser push, and Discord where feasible. All three are achievable at no cost at this scale; the mechanism and the real setup cost of each are set out below.</p>
 
-      <h3>Browser push</h3>
-      <p>Standard Web Push, no third party service or cost involved. The browser itself (with the user's one time permission) holds a subscription that the server can wake with a message even when the tab is closed. This is the fastest channel for "someone just assigned me something right now" and is the one most worth getting right first.</p>
+      <h3><span class="subnum">9.1</span>Browser push</h3>
+      <p>Standard Web Push, with no third party service or cost involved. The browser itself, with the user's one time permission, holds a subscription that the server can wake with a message even when the tab is closed. This is the fastest channel for "someone has just assigned me something" and is the one most worth getting right first.</p>
 
-      <h3>Email</h3>
-      <p>A transactional email provider (Resend or Postmark are both good fits) sends the actual messages; both have free tiers well above what a team this size would use. Email is the dependable fallback, the one that still reaches someone who has not opened the app in a day.</p>
+      <h3><span class="subnum">9.2</span>Email</h3>
+      <p>A transactional email provider, for which Resend and Postmark are both good fits, sends the messages; both have free tiers well above what a team this size would consume. Email is the dependable fallback, the channel that still reaches someone who has not opened the application in a day.</p>
 
-      <h3>Discord</h3>
-      <p>The simplest version is a Discord webhook: a channel like <span class="mono">#originate command</span> receives every new instruction as it is posted, no bot hosting required. A more capable version uses a lightweight Discord bot so notifications can be sent as direct messages to the specific person or group tagged, rather than everyone seeing everything in one channel. Recommendation: ship the webhook version first (an afternoon of work), add the bot and DM routing later once the team has confirmed Discord is actually where they want these alerts to land.</p>
+      <h3><span class="subnum">9.3</span>Discord</h3>
+      <p>The simplest implementation is a Discord webhook: a channel such as <span class="mono">#originate-command</span> receives every new instruction as it is posted, with no bot hosting required. A more capable implementation uses a lightweight Discord bot so that notifications can be delivered as direct messages to the specific person or group tagged, rather than everyone seeing everything in one channel. Recommendation: ship the webhook version first, roughly an afternoon of work, and add the bot and direct message routing later, once the team has confirmed that Discord is in fact where these alerts should land.</p>
 
-      <h3>Escalation on overdue todos</h3>
-      <p>When a todo passes its due date without being marked done, the system notifies up the assignee's actual chain of command, and only that chain, never a company wide alert. For a team member, that means their team lead. If it is still overdue the next day, their department head is added. If it is still overdue after that, the leadership tier defined in section 3 (Shohag, and any Founder, CEO, or other executive granted that tier) is added. Each step adds a recipient; it never removes the ones before it, so the original assignee and their lead always stay in the loop even once it reaches leadership.</p>
+      <h3><span class="subnum">9.4</span>Escalation on overdue todos</h3>
+      <p>When a todo passes its due date without being marked done, the system notifies up the assignee's actual chain of command, and only that chain, never by company wide alert. For a team member, the first step is their team lead. If the todo is still overdue the following day, their department head is added. If it remains overdue after that, the leadership tier defined in 3.2 is added. Each step adds a recipient and never removes the ones before it, so the original assignee and their lead remain in the loop even once the matter reaches leadership.</p>
 
       <div class="callout">
-        <span class="tag">How they combine</span>
-        <p>Default per person notification setting: browser push and email on for anything assigned directly to them, Discord webhook on for the team wide instruction feed. Every channel is a toggle in each person's own profile, so nobody is forced into a channel they do not use.</p>
+        <span class="tag">How the channels combine</span>
+        <p>Default per person notification setting: browser push and email on for anything assigned directly to that person, Discord webhook on for the team wide instruction feed. Every channel is a toggle in each person's own profile, so nobody is forced into a channel they do not use.</p>
       </div>
     </section>
 
     <section class="sec" id="s10">
       <p class="sec-eyebrow">10.0</p>
       <h2>Technology stack</h2>
+
+      <h3><span class="subnum">10.1</span>Recommended stack</h3>
       <div class="tablewrap">
         <table>
+          <caption>Table 10.1 &mdash; Recommended stack</caption>
           <thead><tr><th scope="col">Layer</th><th scope="col">Recommendation</th><th scope="col">Why</th></tr></thead>
           <tbody>
-            <tr><td>Hosting</td><td class="mono">Netlify</td><td>Already the standard for the team; free tier comfortably covers this traffic.</td></tr>
-            <tr><td>Database</td><td class="mono">Firestore</td><td>Firebase's NoSQL document database. Free Spark tier: 1GB stored, 50k reads and 20k writes a day, comfortable headroom for a team this size.</td></tr>
-            <tr><td>Auth</td><td class="mono">Firebase Authentication</td><td>Email link invites and email/password login, 50k monthly active users free. Custom claims carry each person's department memberships and hierarchy level for the security rules in section 8.</td></tr>
-            <tr><td>Server logic</td><td class="mono">Cloud Functions</td><td>Runs the invite flow, sets custom claims, generates recurring todos, checks for overdue escalations, and calls the email and Discord webhook. Requires upgrading to Firebase's Blaze (pay as you go) plan, since Cloud Functions are not available on the free Spark plan at all. Blaze still includes a monthly free quota (2 million invocations, 5GB outbound networking) large enough that actual cost at this scale should land at or very near $0, but a payment card has to be on file, unlike the rest of this stack.</td></tr>
-            <tr><td>Frontend framework</td><td class="mono">React with Vite</td><td>Fast to build, deploys cleanly to Netlify as a static bundle, large ecosystem for the dashboard and filter UI this needs.</td></tr>
-            <tr><td>Styling</td><td class="mono">Tailwind CSS</td><td>Keeps the two panel, tag heavy interface consistent without hand rolled CSS sprawl.</td></tr>
-            <tr><td>Realtime updates</td><td class="mono">Firestore listeners</td><td>New instructions and todo changes appear on other people's dashboards without a manual refresh, the same "Synced just now" feel as the current board, built in rather than a separate service.</td></tr>
-            <tr><td>Email</td><td class="mono">Resend</td><td>Called from a Cloud Function. Free tier suits this scale, simple API, good deliverability.</td></tr>
-            <tr><td>Push</td><td class="mono">Web Push API</td><td>No vendor, no cost, native browser support.</td></tr>
+            <tr><th scope="row">Hosting</th><td class="mono">Netlify</td><td>Already the standard for the team; the free tier comfortably covers this traffic.</td></tr>
+            <tr><th scope="row">Database</th><td class="mono">Firestore</td><td>Firebase's NoSQL document database. Free Spark tier: 1GB stored, 50k reads and 20k writes a day, comfortable headroom for a team this size.</td></tr>
+            <tr><th scope="row">Auth</th><td class="mono">Firebase Authentication</td><td>Email link invites and email/password login, 50k monthly active users free. Custom claims carry each person's department memberships and hierarchy level for the security rules in 8.1.</td></tr>
+            <tr><th scope="row">Server logic</th><td class="mono">Cloud Functions</td><td>Runs the invite flow, sets custom claims, generates recurring todos, checks for overdue escalations, and calls the email provider and Discord webhook. Requires the Firebase Blaze (pay as you go) plan, as Cloud Functions are not available on the free Spark plan at all. Blaze still includes a monthly free quota, 2 million invocations and 5GB outbound networking, large enough that actual cost at this scale should land at or very near zero, but a payment card must be on file, unlike the rest of this stack.</td></tr>
+            <tr><th scope="row">Frontend framework</th><td class="mono">React with Vite</td><td>Fast to build, deploys cleanly to Netlify as a static bundle, with a large ecosystem for the dashboard and filter interface this requires.</td></tr>
+            <tr><th scope="row">Styling</th><td class="mono">Tailwind CSS</td><td>Keeps the two panel, tag heavy interface consistent without hand rolled CSS sprawl.</td></tr>
+            <tr><th scope="row">Realtime updates</th><td class="mono">Firestore listeners</td><td>New instructions and todo changes appear on other people's dashboards without a manual refresh, giving the same "synced just now" behaviour as the current board, built in rather than as a separate service.</td></tr>
+            <tr><th scope="row">Email</th><td class="mono">Resend</td><td>Called from a Cloud Function. The free tier suits this scale, with a simple API and good deliverability.</td></tr>
+            <tr><th scope="row">Push</th><td class="mono">Web Push API</td><td>No vendor, no cost, native browser support.</td></tr>
           </tbody>
         </table>
       </div>
-      <h3>10.1 Getting from spec to a live system</h3>
-      <p>Two accounts need to exist before anything can go live, and only you can create them, account creation is not something to hand off, even to me. Firebase takes one extra step compared to before, adding a payment card for the Blaze plan, but nothing on this list is expected to actually cost anything at your scale.</p>
+
+      <h3><span class="subnum">10.2</span>Account handoff checklist</h3>
+      <p>Two external accounts must exist before implementation can begin, and both must be created by the document owner. Account creation is not delegated, including to the delivery team. Firebase requires one additional step compared with previous projects, a payment card on file for the Blaze plan, though nothing on this list is expected to incur cost at Originate Marketing's scale.</p>
       <ol class="speclist">
-        <li><strong>Firebase.</strong> Create a project at console.firebase.google.com, enable Authentication (email link and email/password) and Firestore Database in production mode, then upgrade the project to the Blaze plan (Cloud Functions require it, the table above explains why). Under Project settings, General, add a Web app to get its config object, and under Project settings, Service accounts, generate a new private key. Send me both.</li>
-        <li><strong>Netlify.</strong> Create a free account at netlify.com, then open User settings, Applications, Personal access tokens, and generate one.</li>
+        <li><strong>Firebase.</strong> Create a project at console.firebase.google.com; enable Authentication (email link and email/password) and Firestore Database in production mode; upgrade the project to the Blaze plan, which Cloud Functions require, as noted in table 10.1. Under Project settings, General, add a Web app to obtain its configuration object, and under Project settings, Service accounts, generate a new private key. Both are required by the delivery team.</li>
+        <li><strong>Netlify.</strong> Create a free account at netlify.com, then open User settings, Applications, Personal access tokens, and generate a token for the delivery team.</li>
       </ol>
-      <p>Once those are shared with me, everything else is mine to do: writing the codebase, setting up Firestore's schema, security rules, and Cloud Functions directly against your project, and deploying the frontend to Netlify with that token, no manual dragging files into a dashboard. You get back a live URL to test against. Nothing from these accounts is ever shown back to anyone else or written into this document.</p>
+      <p>On receipt of both, all remaining work sits with the delivery team: the codebase, the Firestore schema, the security rules, and the Cloud Functions written directly against the project, and the frontend deployed to Netlify by token rather than by manual upload. A live URL is returned for testing. Credentials are not reproduced in this document and are not disclosed to any other party.</p>
     </section>
 
     <section class="sec" id="s11">
       <p class="sec-eyebrow">11.0</p>
       <h2>Migration plan</h2>
-      <p>Which of the three approaches below to take is the first open decision in section 13. All three are written to be compatible with the data model in section 5, so picking one later does not require redesigning anything above.</p>
+      <p>Which of the three approaches below to adopt is the first open decision in section 13.0. All three are compatible with the data model in section 5.0, so selecting one later does not require redesigning anything above.</p>
       <ul>
-        <li><strong>Full replacement.</strong> Export the current board's open items, map each to a client and department tag, import as todos, then retire the old board. Cleanest end state, but the team has zero overlap window if something is wrong on day one.</li>
-        <li><strong>Run in parallel.</strong> New system goes live for instructions immediately (the current board has no equivalent for that at all, so there is nothing to conflict with) while todos stay on the existing board until the team trusts the new one, then a single cutover date is set.</li>
-        <li><strong>Decide after seeing it.</strong> Build both panels, seed them with the current board's real data in a staging environment, let the team use it for a few days before committing to a migration date.</li>
+        <li><strong>Full replacement.</strong> Export the current board's open items, map each to a client and department tag, import them as todos, then retire the old board. The cleanest end state, but the team has no overlap window if something proves wrong on day one.</li>
+        <li><strong>Run in parallel.</strong> The new system goes live for instructions immediately, as the current board has no equivalent capability and there is therefore nothing to conflict with, while todos remain on the existing board until the team trusts the new one, after which a single cutover date is set.</li>
+        <li><strong>Staged preview.</strong> Build both panels, seed them with the current board's real data in a staging environment, and let the team use it for several days before committing to a migration date.</li>
       </ul>
     </section>
 
     <section class="sec" id="s12">
       <p class="sec-eyebrow">12.0</p>
       <h2>Build roadmap</h2>
-      <p>Eight weeks end to end, sequenced so that each phase is usable on its own if the schedule slips. The permission engine comes first because everything after it assumes it is correct; rollout comes last because it depends on the migration decision in section 11.</p>
+      <p>Eight weeks end to end, sequenced so that each phase is usable on its own if the schedule slips. The permission engine comes first because everything after it assumes it is correct, and rollout comes last because it depends on the migration decision in section 11.0.</p>
 
       <div class="phase">
         <div class="phase-head"><span class="n">01</span><h3>Foundation</h3><span class="dur">Week 1 to 2</span></div>
-        <p>Auth, invites, departments, hierarchy, and the permission engine. Nothing user facing yet, but everything after this depends on it being correct.</p>
-        <ul><li>User, department, membership, and group collections with Firestore security rules and custom claims</li><li>Invite flow end to end</li><li>Admin screen to create departments and set hierarchy levels</li></ul>
+        <p>Authentication, invites, departments, hierarchy, and the permission engine. Nothing user facing yet, but everything after this depends on it being correct.</p>
+        <ul><li>User, department, membership, and group collections with Firestore security rules and custom claims</li><li>Invite flow end to end</li><li>Administration screen to create departments and set hierarchy levels</li></ul>
       </div>
       <div class="phase">
         <div class="phase-head"><span class="n">02</span><h3>Todos</h3><span class="dur">Week 3 to 4</span></div>
-        <p>The left panel, feature complete against section 6.2, including the group by person / client / department views and the daily report.</p>
-        <ul><li>Todo CRUD with client and department tagging</li><li>Assignment rules enforced per role</li><li>Recurring todo generation and overdue flagging</li><li>Daily snapshot report</li></ul>
+        <p>The left panel, feature complete against 6.2, including the group by person, client, and department views, and the daily report.</p>
+        <ul><li>Todo create, read, update, and archive with client and department tagging</li><li>Assignment rules enforced per role</li><li>Recurring todo generation and overdue flagging</li><li>Daily snapshot report</li></ul>
       </div>
       <div class="phase">
         <div class="phase-head"><span class="n">03</span><h3>Instructions</h3><span class="dur">Week 5 to 6</span></div>
-        <p>The right panel, plus the tag and filter system shared by both panels. This is where the Chaim use case becomes real: filter by client, see everything, by date.</p>
-        <ul><li>Instruction posting, tagging, read receipts</li><li>Combined client timeline view</li><li>Instruction to todo conversion</li></ul>
+        <p>The right panel, plus the tag and filter system shared by both panels. This is where the Chaim case becomes real: filter by client, see everything, in date order.</p>
+        <ul><li>Instruction posting, tagging, and read receipts</li><li>Combined client timeline view</li><li>Instruction to todo conversion</li></ul>
       </div>
       <div class="phase">
         <div class="phase-head"><span class="n">04</span><h3>Notifications</h3><span class="dur">Week 7</span></div>
-        <p>Browser push and email first, Discord webhook once the core loop is proven.</p>
-        <ul><li>Push subscription and delivery</li><li>Email via Resend</li><li>Overdue escalation chain per section 9</li><li>Discord webhook to the team channel</li></ul>
+        <p>Browser push and email first, with the Discord webhook once the core loop is proven.</p>
+        <ul><li>Push subscription and delivery</li><li>Email via Resend</li><li>Overdue escalation chain per 9.4</li><li>Discord webhook to the team channel</li></ul>
       </div>
       <div class="phase">
         <div class="phase-head"><span class="n">05</span><h3>Groups and rollout</h3><span class="dur">Week 8</span></div>
-        <p>Cross department groups, migration of real data per the plan chosen in section 11, and a short live pilot before the old board is retired.</p>
+        <p>Cross department groups, migration of real data per the plan selected in section 11.0, and a short live pilot before the old board is retired.</p>
         <ul><li>Group creation and assignment</li><li>Data migration script from the current board</li><li>One week parallel run with the team before cutover</li></ul>
       </div>
     </section>
@@ -860,23 +925,23 @@ footer.doc-footer{
     <section class="sec" id="s13">
       <p class="sec-eyebrow">13.0</p>
       <h2>Open decisions</h2>
-      <p>Two questions this document currently answers with a recommended default. Confirming or overriding each one is the only thing standing between this draft and a build ready spec.</p>
+      <p>Two questions this document currently answers with a recommended default. Confirming or overriding each is the only thing standing between this draft and a build ready specification.</p>
 
       <div class="callout">
         <span class="tag">Confirmed</span>
-        <p><strong>Backend and deployment:</strong> Firebase (Firestore, Authentication, Cloud Functions) plus Netlify for hosting, with the account and key handoff process in section 10.1. <strong>Attachments:</strong> text and links only for version one. <strong>Escalation:</strong> auto notify up the exact chain of command on an overdue todo, never the whole company, per section 9. <strong>Client to department relationship:</strong> flexible, any number of departments can be active on one client at once, nothing in the data model restricts this.</p>
+        <p><strong>Backend and deployment:</strong> Firebase (Firestore, Authentication, Cloud Functions) with Netlify for hosting, and the account handoff process in 10.2. <strong>Attachments:</strong> text and links only for version one. <strong>Escalation:</strong> automatic notification up the exact chain of command on an overdue todo, never company wide, per 9.4. <strong>Client to department relationship:</strong> flexible; any number of departments may be active on one client at once, and nothing in the data model restricts this.</p>
       </div>
 
       <div class="callout decision">
-        <span class="tag">Decision 1 of 2, migration approach</span>
-        <p>No default assumed. Section 11 lays out full replacement, parallel run, or decide after a staging preview. This affects the week 8 roadmap item directly and is worth a real answer rather than a guess.</p>
+        <span class="tag">Decision 1 of 2 &mdash; migration approach</span>
+        <p>No default assumed. Section 11.0 sets out full replacement, parallel run, and staged preview. This bears directly on the week 8 roadmap item and warrants a considered answer rather than an assumption.</p>
       </div>
       <div class="callout decision">
-        <span class="tag">Decision 2 of 2, who can create a group</span>
-        <p>Recommended default: <strong>admin plus department heads</strong>, per section 4. Team leads were left out of the default to keep the number of live groups manageable early on; easy to widen later since this is a permission flag, not a structural choice.</p>
+        <span class="tag">Decision 2 of 2 &mdash; who may create a group</span>
+        <p>Recommended default: <strong>system admin plus department heads</strong>, per 4.2. Team leads are excluded from the default to keep the number of live groups manageable early on. This is straightforward to widen later, as it is a permission flag rather than a structural choice.</p>
       </div>
 
-      <p style="margin-top:28px;">Everything else in this document, the data model, the permission table, the two panel layout, the tag system, is not waiting on anything and can move into design and build now.</p>
+      <p class="closing">Everything else in this document, the data model, the permission matrix, the two panel layout, and the tag system, is not waiting on anything and can proceed into design and build now.</p>
     </section>
 
   </main>
@@ -886,7 +951,7 @@ footer.doc-footer{
   </footer>
 </div>
 
-<button class="toggle-theme" id="themeToggle" type="button" aria-label="Toggle color theme">Theme: system</button>
+<button class="toggle-theme" id="themeToggle" type="button" aria-label="Toggle colour theme">Theme: system</button>
 <script>
 (function(){
   var root = document.documentElement;
@@ -894,12 +959,46 @@ footer.doc-footer{
   var states = [null, 'dark', 'light'];
   var labels = ['Theme: system', 'Theme: dark', 'Theme: light'];
   var i = 0;
-  btn.addEventListener('click', function(){
-    i = (i + 1) % states.length;
+
+  function store(v){
+    try{ v ? localStorage.setItem('oc-theme', v) : localStorage.removeItem('oc-theme'); }catch(e){}
+  }
+  function apply(){
     var s = states[i];
     if(s){ root.setAttribute('data-theme', s); } else { root.removeAttribute('data-theme'); }
     btn.textContent = labels[i];
+  }
+  try{
+    var saved = localStorage.getItem('oc-theme');
+    if(saved && states.indexOf(saved) > -1){ i = states.indexOf(saved); }
+  }catch(e){}
+  apply();
+
+  btn.addEventListener('click', function(){
+    i = (i + 1) % states.length;
+    apply();
+    store(states[i]);
   });
+
+  /* mark the section currently in view in the contents rail */
+  var links = {};
+  Array.prototype.forEach.call(document.querySelectorAll('.index-rail a'), function(a){
+    links[a.getAttribute('href').slice(1)] = a;
+  });
+  if(window.IntersectionObserver){
+    var current = null;
+    var obs = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(!entry.isIntersecting) return;
+        var link = links[entry.target.id];
+        if(!link || link === current) return;
+        if(current){ current.removeAttribute('aria-current'); }
+        link.setAttribute('aria-current', 'true');
+        current = link;
+      });
+    }, {rootMargin: '-10% 0px -70% 0px', threshold: 0});
+    Array.prototype.forEach.call(document.querySelectorAll('section.sec'), function(s){ obs.observe(s); });
+  }
 })();
 </script>
 </body>

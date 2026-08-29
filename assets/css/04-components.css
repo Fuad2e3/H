@@ -184,21 +184,32 @@
 }
 
 /* ---- filter toolbar ----------------------------------------------------- */
-.filters{
+.filterbar{
   border:1px solid var(--rule);
   border-radius:var(--r2);
   background:var(--card-bg);
   box-shadow:var(--sh1);
-  padding:var(--s3) var(--s4) var(--s4);
   margin-bottom:var(--s3);
+  overflow:hidden;
+}
+.filterbar-head{
+  display:flex; align-items:center; gap:var(--s2);
+  padding:var(--s2) var(--s4);
+  background:var(--card-bg-alt);
+  border-bottom:1px solid var(--rule);
+  min-height:46px;
+}
+.filterbar-head h2{font-size:14px;}
+.filterbar-head .icon{color:var(--text-secondary);}
+.filterbar-head .tools{display:flex; gap:var(--s2); margin-left:auto;}
+.filters{
+  padding:var(--s3) var(--s4) var(--s4);
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(148px,1fr));
   gap:var(--s3);
   align-items:end;
 }
 .filters .field{margin:0;}
-.filters .actions{display:flex; gap:var(--s2); align-items:flex-end;}
-.filters .actions .btn{height:var(--ctl);}
 
 .savedbar{display:flex; gap:var(--s2); flex-wrap:wrap; align-items:center; margin-bottom:var(--s3);}
 .savedbar .chip{cursor:pointer; height:23px; transition:background var(--t);}
@@ -411,3 +422,40 @@ dialog.modal::backdrop{background:rgba(8,12,22,0.5);}
 
 /* a pending invite reads as provisional, not as an established record */
 .invite-card{border-left:3px solid var(--brass);}
+
+/* ---- modal fallback for browsers without <dialog> ------------------------ */
+.modal-backdrop{
+  position:fixed; inset:0; z-index:70;
+  background:rgba(8,12,22,0.5);
+}
+dialog.modal.fallback{
+  display:block;
+  position:fixed; z-index:71;
+  top:50%; left:50%; transform:translate(-50%,-50%);
+  margin:0;
+}
+
+/* ---- person mark --------------------------------------------------------- */
+.mark-tint{
+  display:inline-grid; place-items:center; flex:none;
+  width:19px; height:19px;
+  border-radius:var(--r1);
+  border:1px solid currentColor;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:9px; font-weight:600; letter-spacing:0.02em;
+  line-height:1;
+}
+.tint-blueprint{color:var(--blueprint); background:var(--blueprint-soft);}
+.tint-brass{color:var(--brass); background:var(--brass-soft);}
+.tint-success{color:var(--success); background:var(--success-soft);}
+.tint-signal{color:var(--signal); background:var(--signal-soft);}
+.tint-slate{color:var(--text-secondary); background:var(--card-bg-alt);}
+
+.person{display:inline-flex; align-items:center; gap:6px; white-space:nowrap;}
+.person.strong{color:var(--ink); font-weight:600;}
+.person .mark-tint{width:18px; height:18px; font-size:8.5px;}
+.chip.person{padding-left:3px; gap:5px;}
+.chip.person .mark-tint{width:15px; height:15px; font-size:8px; border:none;}
+
+/* the due date sits at the end of the row, where the eye scans for it */
+.item .meta .due{margin-left:auto;}

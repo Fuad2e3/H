@@ -107,7 +107,8 @@ OC.groups = (function () {
           h('p', { class: 'muted', style: 'font-size:13.5px;margin:6px 0 10px' }, g.purpose),
           h('div', { class: 'row' }, g.members.map(function (id) {
             var u = OC.store.user(id);
-            return h('span', { class: 'chip custom', title: OC.can.roleLabel(u) }, u ? u.name : id);
+            return h('span', { class: 'chip custom person', title: OC.can.roleLabel(u) },
+              [OC.ui.mark(id), u ? u.name : id]);
           })),
           h('div', { class: 'meta muted mono', style: 'font-size:11px;margin-top:10px' },
             'Created by ' + OC.ui.personName(g.created_by) + ' · ' + OC.ui.fmtDate(g.created_at)),

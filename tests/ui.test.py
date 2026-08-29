@@ -83,26 +83,26 @@ with sync_playwright() as pw:
     ok("department filter", set(page.locator('.panel--todos .item .chip.dept').all_inner_texts()), {'Web Development'})
     page.locator('.filters select').nth(2).select_option(label='Ayesha Noor'); page.wait_for_timeout(350)
     ok("person filter stacks with department", page.locator('.panel--todos .item').count()>0)
-    page.click('.filters button:has-text("Clear")'); page.wait_for_timeout(350)
+    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(350)
     ok("clear restores everything", page.locator('.panel--todos .item').count(), counts['all'])
     page.locator('.filters select').nth(3).select_option(label='Urgent'); page.wait_for_timeout(350)
     ok("tag filter", page.locator('.panel--todos .item .chip:has-text("Urgent")').count()>0)
-    page.click('.filters button:has-text("Clear")'); page.wait_for_timeout(300)
+    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
     page.locator('.filters input[type=date]').first.fill('2030-01-01'); page.wait_for_timeout(350)
     ok("from-date filter excludes older items", page.locator('.panel--todos .item').count(), 0)
-    page.click('.filters button:has-text("Clear")'); page.wait_for_timeout(300)
+    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
 
     print("\n=== board.js: pinned filters ===")
     page.locator('.filters select').first.select_option(label='Chaim'); page.wait_for_timeout(300)
-    page.click('.filters button:has-text("Pin filter")'); page.wait_for_timeout(250)
+    page.click('.filterbar-head button:has-text("Pin filter")'); page.wait_for_timeout(250)
     dtxt(0).fill('Everything Chaim'); page.click('dialog button:has-text("Pin")'); page.wait_for_timeout(350)
     ok("pinned filter appears", page.locator('.savedbar .chip:has-text("Everything Chaim")').count(), 1)
-    page.click('.filters button:has-text("Clear")'); page.wait_for_timeout(300)
+    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
     page.click('.savedbar .chip:has-text("Everything Chaim")'); page.wait_for_timeout(350)
     ok("clicking a pin reapplies it", set(page.locator('.panel--todos .item .chip.client').all_inner_texts()), {'Chaim'})
     page.click('.savedbar .chip:has-text("Everything Chaim") button'); page.wait_for_timeout(350)
     ok("pin can be removed", page.locator('.savedbar .chip:has-text("Everything Chaim")').count(), 0)
-    page.click('.filters button:has-text("Clear")'); page.wait_for_timeout(300)
+    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
 
     print("\n=== board.js: grouping and toggles ===")
     for mode,label in [('person','Person'),('client','Client'),('department','Department')]:
@@ -296,7 +296,7 @@ with sync_playwright() as pw:
     }""")
     ok("timeline covers every entry for the client", page.locator('.tl-entry').count()>0)
     page.locator('.boardbar .segmented button', has_text='Two panels').click(); page.wait_for_timeout(300)
-    page.click('.filters button:has-text("Clear")'); page.wait_for_timeout(300)
+    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
 
     print("\n=== 5.0 comments ===")
     thread = page.locator('.panel--todos .item .thread').first
@@ -384,7 +384,7 @@ with sync_playwright() as pw:
     print("\n=== 6.4 pinned filters reach the dashboard ===")
     nav('Board')
     page.locator('.filters select').first.select_option(label='Rafa'); page.wait_for_timeout(300)
-    page.click('.filters button:has-text("Pin filter")'); page.wait_for_timeout(250)
+    page.click('.filterbar-head button:has-text("Pin filter")'); page.wait_for_timeout(250)
     dtxt(0).fill('Everything Rafa'); page.click('dialog button:has-text("Pin")'); page.wait_for_timeout(400)
     nav('Dashboard')
     ok("pinned filter appears on the dashboard",
@@ -392,7 +392,7 @@ with sync_playwright() as pw:
     page.locator('.card:has-text("Pinned filters") button:has-text("Everything Rafa")').click(); page.wait_for_timeout(450)
     ok("using it opens the board with that filter applied",
        set(page.locator('.panel--todos .item .chip.client').all_inner_texts()), {'Rafa'})
-    page.click('.filters button:has-text("Clear")'); page.wait_for_timeout(300)
+    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
 
     print("\n=== reset ===")
     page.click('footer button:has-text("reset data")'); page.wait_for_timeout(500)

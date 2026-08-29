@@ -284,7 +284,7 @@ OC.people = (function () {
             : null,
           h('div', { class: 'stack' }, members.map(function (u) {
             return h('div', { class: 'row', style: 'font-size:13.5px' }, [
-              h('span', {}, u.name),
+              OC.ui.person(u.id),
               h('span', { class: 'chip role push' }, OC.can.levelIn(u, d.id)),
               u.status === 'invited' ? h('span', { class: 'chip overdue' }, 'invited') : null
             ]);
@@ -308,7 +308,7 @@ OC.people = (function () {
           ])),
           h('tbody', {}, OC.store.state.users.map(function (u) {
             return h('tr', {}, [
-              h('th', { scope: 'row' }, u.name),
+              h('th', { scope: 'row' }, OC.ui.person(u.id)),
               h('td', { class: 'muted' }, u.title),
               h('td', {}, h('span', { class: 'chip role' }, OC.can.roleLabel(u))),
               h('td', {}, u.departments.length

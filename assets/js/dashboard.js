@@ -113,7 +113,7 @@ OC.dashboard = (function () {
                 var isUnread = n.read_by.indexOf(user.id) === -1;
                 return h('article', { class: 'note' + (isUnread ? ' unread' : '') }, [
                   h('div', { class: 'byline' }, [
-                    h('strong', {}, OC.ui.personName(n.author)),
+                    OC.ui.person(n.author, 'strong'),
                     h('span', {}, OC.ui.fmtWhen(n.posted_at)),
                     isUnread ? h('span', { class: 'chip overdue' }, 'unread') : null
                   ]),

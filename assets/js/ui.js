@@ -102,6 +102,38 @@ OC.ui = (function () {
     ]);
   }
 
+  /* ---- person mark --------------------------------------------------------
+     Initials in a small square rather than a circle: this is a drafting
+     aesthetic, and a square reads as a stamp on a document. The tint is
+     derived from the account id, so a person keeps the same colour
+     everywhere without any colour being stored on the record. */
+  var MARK_TINTS = ['blueprint', 'brass', 'success', 'signal', 'slate'];
+
+  function initials(name) {
+    var parts = String(name || '?').trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  function mark(userId, extraClass) {
+    var user = OC.store.user(userId);
+    var name = user ? user.name : 'Unknown';
+    var hash = 0;
+    for (var i = 0; i < String(userId).length; i++) hash = (hash * 31 + String(userId).charCodeAt(i)) | 0;
+    var tint = MARK_TINTS[Math.abs(hash) % MARK_TINTS.length];
+    return h('span', {
+      class: 'mark-tint tint-' + tint + (extraClass ? ' ' + extraClass : ''),
+      title: name, 'aria-hidden': 'true'
+    }, initials(name));
+  }
+
+  /* a person, shown as mark plus name */
+  function person(userId, extraClass) {
+    return h('span', { class: 'person' + (extraClass ? ' ' + extraClass : '') }, [
+      mark(userId), h('span', {}, personName(userId))
+    ]);
+  }
+
   function personName(id) {
     var u = OC.store.user(id);
     return u ? u.name : 'Unknown';
@@ -208,7 +240,7 @@ OC.ui = (function () {
         (item.comments || []).map(function (c) {
           return h('div', { class: 'comment' }, [
             h('div', { class: 'comment-by' }, [
-              h('strong', {}, personName(c.author)),
+              person(c.author, 'strong'),
               h('span', {}, fmtWhen(c.posted_at))
             ]),
             h('div', {}, c.body)
@@ -238,18 +270,23 @@ OC.ui = (function () {
   /* ---- modal ------------------------------------------------------------ */
   function modal(opts) {
     var dlg = h('dialog', { class: 'modal' });
+    var backdrop = null;
+    var escapeHandler = null;
     var errorBox = h('div', { class: 'error', hidden: true });
     var errorText = h('span', {});
     errorBox.appendChild(OC.icon('alert'));
     errorBox.appendChild(errorText);
 
     function close() {
-      if (dlg.open) dlg.close();
+      if (escapeHandler) { document.removeEventListener('keydown', escapeHandler); escapeHandler = null; }
+      if (backdrop) { backdrop.remove(); backdrop = null; }
+      if (dlg.open && typeof dlg.close === 'function') dlg.close();
       dlg.remove();
     }
 
+    var primaryButton = null;
     var actions = (opts.actions || []).map(function (a) {
-      return h('button', {
+      var button = h('button', {
         class: 'btn' + (a.primary ? ' primary' : ''),
         type: 'button',
         onClick: function () {
@@ -260,6 +297,8 @@ OC.ui = (function () {
           }
         }
       }, a.label);
+      if (a.primary) primaryButton = button;
+      return button;
     });
 
     dlg.appendChild(h('div', { class: 'modal-head' }, [
@@ -269,9 +308,36 @@ OC.ui = (function () {
     dlg.appendChild(h('div', { class: 'modal-body' }, [errorBox, opts.content]));
     if (actions.length) dlg.appendChild(h('div', { class: 'modal-foot' }, actions));
 
+    /* Enter anywhere but a textarea runs the primary action. Without this a
+       filled-in form plus the Enter key does nothing at all, which reads as a
+       broken button. */
+    dlg.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || !primaryButton) return;
+      var tag = e.target.tagName;
+      if (tag === 'TEXTAREA' || tag === 'BUTTON') return;
+      e.preventDefault();
+      primaryButton.click();
+    });
+
+    /* clicking the backdrop dismisses, as people expect */
+    dlg.addEventListener('click', function (e) { if (e.target === dlg) close(); });
+
     document.body.appendChild(dlg);
-    dlg.addEventListener('close', function () { dlg.remove(); });
-    dlg.showModal();
+    dlg.addEventListener('close', function () { dlg.remove(); if (backdrop) backdrop.remove(); });
+
+    /* <dialog> is not everywhere. Without this fallback every modal button is
+       dead on an older browser rather than merely unstyled. */
+    if (typeof dlg.showModal === 'function') {
+      dlg.showModal();
+    } else {
+      backdrop = h('div', { class: 'modal-backdrop', onClick: close });
+      document.body.appendChild(backdrop);
+      dlg.setAttribute('open', '');
+      dlg.classList.add('fallback');
+      escapeHandler = function (e) { if (e.key === 'Escape') close(); };
+      document.addEventListener('keydown', escapeHandler);
+    }
+
     var first = dlg.querySelector('input,textarea,select');
     if (first) first.focus();
     return { close: close, root: dlg };
@@ -306,6 +372,7 @@ OC.ui = (function () {
     today: today, fmtDate: fmtDate, fmtWhen: fmtWhen, daysLate: daysLate, dueLabel: dueLabel,
     clientChip: clientChip, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
     personName: personName, assigneeName: assigneeName,
+    initials: initials, mark: mark, person: person,
     STATE_LABEL: STATE_LABEL,
     field: field, select: select, tagPicker: tagPicker, commentThread: commentThread,
     modal: modal, confirm: confirm, toast: toast

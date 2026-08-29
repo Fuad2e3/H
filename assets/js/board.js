@@ -101,22 +101,31 @@ OC.board = (function () {
       return function (e) { filters[key] = e.target.value; rerender(); };
     }
 
-    var bar = h('div', { class: 'filters' }, [
+    var active = Object.keys(filters).filter(function (k) { return filters[k]; }).length;
+
+    var bar = h('div', { class: 'filterbar' }, [
+      h('div', { class: 'filterbar-head' }, [
+        OC.icon('filter'),
+        h('h2', {}, 'Filters'),
+        active ? h('span', { class: 'chip count' }, active + ' active') : h('span', { class: 'muted', style: 'font-size:12.5px' }, 'showing everything you may see'),
+        h('div', { class: 'tools' }, [
+          h('button', {
+            class: 'btn small', type: 'button', disabled: !active, onClick: function () {
+              Object.keys(filters).forEach(function (k) { filters[k] = ''; });
+              rerender();
+            }
+          }, 'Clear'),
+          h('button', { class: 'btn small', type: 'button', onClick: saveFilter }, 'Pin filter')
+        ])
+      ]),
+      h('div', { class: 'filters' }, [
       OC.ui.field('Search', h('input', { type: 'search', value: filters.q, placeholder: 'text in todos and instructions', onInput: set('q') })),
       OC.ui.field('Client', OC.ui.select(optionsFor(OC.store.state.clients, 'All clients'), filters.client, { onChange: set('client') })),
       OC.ui.field('Department', OC.ui.select(optionsFor(depts, 'All departments'), filters.department, { onChange: set('department') })),
       OC.ui.field('Person', OC.ui.select(optionsFor(people, 'Anyone'), filters.person, { onChange: set('person') })),
       OC.ui.field('Tag', OC.ui.select(optionsFor(OC.store.state.tags, 'Any tag'), filters.tag, { onChange: set('tag') })),
       OC.ui.field('From', h('input', { type: 'date', value: filters.from, onChange: set('from') })),
-      OC.ui.field('To', h('input', { type: 'date', value: filters.to, onChange: set('to') })),
-      h('div', { class: 'actions' }, [
-        h('button', {
-          class: 'btn small', type: 'button', onClick: function () {
-            Object.keys(filters).forEach(function (k) { filters[k] = ''; });
-            rerender();
-          }
-        }, 'Clear'),
-        h('button', { class: 'btn small', type: 'button', onClick: saveFilter }, 'Pin filter')
+      OC.ui.field('To', h('input', { type: 'date', value: filters.to, onChange: set('to') }))
       ])
     ]);
     return bar;
@@ -281,11 +290,11 @@ OC.board = (function () {
         OC.ui.deptChip(todo.department),
         todo.assignee_type === 'group'
           ? h('span', { class: 'chip group' }, OC.ui.assigneeName(todo))
-          : h('span', {}, OC.ui.assigneeName(todo)),
-        h('span', { class: overdue ? 'chip overdue' : '' }, OC.ui.dueLabel(todo.due)),
+          : OC.ui.person(todo.assignee),
         todo.recurrence !== 'none' ? h('span', { class: 'chip recurring' }, todo.recurrence) : null,
         todo.archived ? h('span', { class: 'chip custom' }, 'archived') : null,
-        (todo.tags || []).map(OC.ui.tagChip)
+        (todo.tags || []).map(OC.ui.tagChip),
+        h('span', { class: overdue ? 'chip overdue due' : 'due' }, OC.ui.dueLabel(todo.due))
       ]),
       todo.blocked_reason
         ? h('div', { class: 'blocked-note' }, [OC.icon('alert'), h('span', {}, 'Blocked: ' + todo.blocked_reason)])
@@ -471,7 +480,7 @@ OC.board = (function () {
 
     return h('article', { class: 'note' + (unread && !note.archived ? ' unread' : '') + (note.archived ? ' archived' : '') }, [
       h('div', { class: 'byline' }, [
-        h('strong', {}, OC.ui.personName(note.author)),
+        OC.ui.person(note.author, 'strong'),
         h('span', {}, OC.ui.fmtWhen(note.posted_at)),
         note.archived ? h('span', { class: 'chip custom' }, 'archived') : null,
         note.linked_todo ? h('span', { class: 'chip group' }, 'todo created') : null

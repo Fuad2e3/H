@@ -33,8 +33,16 @@ runs from disk as well as from a server.
 | 9.0 notifications | The in-app channel, with per-person channel toggles |
 | 9.4 escalation | Overdue work names the chain it has climbed: lead, then head, then leadership |
 
+**Back end:** written and tested, waiting on a project. `backend/` holds the
+Firestore security rules, indexes and Cloud Functions — 49 rules checks run
+against the Firestore emulator and 38 unit tests cover the claims, recurrence,
+escalation and invite logic. Nothing there can reach a real project until you
+create one (10.2). Paste your web config into `assets/js/firebase-config.js`
+and the app switches from localStorage to Firestore; the footer says which one
+is live.
+
 **Not built:** email and the Discord webhook are sent by a Cloud Function in the
-specified build (10.1), so they need the server side to exist. Browser push is
+specified build (10.1), so they need that project to exist. Browser push is
 here as far as a page can take it — permission and system notifications — but
 true Web Push also needs a service worker and a server to push from. There is no
 authentication: the account switcher in the top bar stands in for the
@@ -64,6 +72,9 @@ assets/js/groups.js            cross-department groups (4.2, 6.5)
 assets/js/reports.js           snapshot, per-person table, CSV export (6.8)
 assets/js/people.js            accounts, departments, invites, preferences
 assets/js/app.js               shell, routing, notifications, theme
+assets/js/backend.js           which store is live, local or Firestore
+assets/js/firebase-config.js   your project's web config (placeholders until set)
+backend/                       Firestore rules, indexes and Cloud Functions
 spec/                          the specification document
 ```
 
@@ -75,8 +86,12 @@ on their order — tokens first, every later file reads those properties.
 
 ```
 node tests/logic.test.js     # 119 checks, no browser needed
-python3 tests/ui.test.py     # 112 checks, drives a real browser
+python3 tests/ui.test.py     # 114 checks, drives a real browser
 python3 tests/sweep.test.py  # clicks every control, as every account
+
+cd backend
+node tests/logic.test.js     #  38 checks on the functions' decisions
+npm run test:rules           #  49 checks against the Firestore emulator
 ```
 
 `logic.test.js` covers `store.js` and `permissions.js` directly: every lookup,

@@ -206,13 +206,25 @@ OC.board = (function () {
     );
   }
 
+  /* adding a month to the 31st overflows into the month after next in plain
+     JavaScript — Jan 31 lands on Mar 3 — so a monthly todo on the 31st would
+     skip February entirely. The day clamps to the end of a shorter month. */
+  function addMonths(date, months) {
+    var day = date.getDate();
+    var target = new Date(date.getFullYear(), date.getMonth() + months, 1, 12);
+    var lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0, 12).getDate();
+    target.setDate(Math.min(day, lastDay));
+    return target;
+  }
+
   function nextDue(dueDate, recurrence) {
     var d = new Date(dueDate + 'T12:00:00');
     if (recurrence === 'daily') d.setDate(d.getDate() + 1);
     else if (recurrence === 'weekly') d.setDate(d.getDate() + 7);
-    else if (recurrence === 'monthly') d.setMonth(d.getMonth() + 1);
-    else if (recurrence === 'quarterly') d.setMonth(d.getMonth() + 3);
-    return d.toISOString().slice(0, 10);
+    else if (recurrence === 'monthly') d = addMonths(d, 1);
+    else if (recurrence === 'quarterly') d = addMonths(d, 3);
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
 
   function changeState(todo, next, control) {

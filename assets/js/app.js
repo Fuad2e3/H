@@ -229,6 +229,15 @@ OC.app = (function () {
   function start() {
     OC.store.load();
 
+    /* say plainly where the data lives, rather than letting a local-only
+       workspace look like a shared one */
+    var label = document.getElementById('backendLabel');
+    if (label && OC.backend) {
+      var backend = OC.backend.describe();
+      label.textContent = backend.label;
+      label.title = backend.detail;
+    }
+
     var saved = readTheme();
     if (saved && THEMES.indexOf(saved) > -1) themeIndex = THEMES.indexOf(saved);
     applyTheme(null);

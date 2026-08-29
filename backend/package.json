@@ -1,0 +1,12 @@
+{
+  "name": "originate-command-backend",
+  "private": true,
+  "description": "Firestore rules, indexes and Cloud Functions for Originate Command (OM SRS 001)",
+  "scripts": {
+    "test:rules": "firebase emulators:exec --only firestore --project demo-originate \"node tests/rules.test.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase-tools": "^13.29.1"
+  }
+}

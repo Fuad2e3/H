@@ -276,6 +276,26 @@ with sync_playwright() as pw:
     au('Shohag Munshe — System Admin')
     ok("invited account persisted", page.evaluate("OC.store.state.users.some(u=>u.name==='Test Person')"))
 
+    print("\n=== 6.2 recurrence dates, including month ends ===")
+    # a monthly todo dated the 31st must land on the end of a shorter month,
+    # not overflow into the month after next the way plain JS date maths does
+    title = page.evaluate("""() => {
+      const t = OC.store.state.todos.find(x => x.recurrence === 'monthly');
+      t.due = '2026-01-31'; t.state = 'open'; t.spawned = false;
+      OC.store.save();
+      return t.title;
+    }""")
+    page.reload(wait_until='domcontentloaded'); page.wait_for_timeout(400)
+    page.get_by_role('button', name='Board', exact=True).click(); page.wait_for_timeout(300)
+    page.check('.checkline:has-text("Show completed") input'); page.wait_for_timeout(250)
+    page.locator('.item', has_text=title).first.locator('select').select_option('done')
+    page.wait_for_timeout(450)
+    spawned = page.evaluate("""(t) => OC.store.state.todos
+        .filter(x => x.title === t && x.state === 'open').map(x => x.due)""", title)
+    ok("31 January monthly spawns 28 February", '2026-02-28' in spawned)
+    ok("and never 3 March, which plain JS date maths would give", '2026-03-03' in spawned, False)
+    page.uncheck('.checkline:has-text("Show completed") input'); page.wait_for_timeout(200)
+
     print("\n=== 6.4 client timeline ===")
     nav('Board')
     page.locator('.filters select').first.select_option(label='Chaim'); page.wait_for_timeout(300)

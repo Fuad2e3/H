@@ -1,1 +1,8 @@
 tests/.screenshots/
+backend/node_modules/
+backend/package-lock.json
+backend/functions/node_modules/
+backend/.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

@@ -1,0 +1,11 @@
+{
+  "name": "originate-command-functions",
+  "description": "Cloud Functions for Originate Command (OM SRS 001 section 10.1)",
+  "private": true,
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.1.1"
+  }
+}

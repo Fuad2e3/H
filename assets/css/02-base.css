@@ -103,6 +103,13 @@ input:focus,select:focus,textarea:focus{
   border-color:var(--blueprint);
   box-shadow:0 0 0 3px var(--tint-strong);
 }
+/* the rule above is element+pseudo-class, so it outranks the bare
+   :focus-visible reset and was swallowing the keyboard focus ring on every
+   field. Restore it at matching specificity. */
+input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--brass);
+  outline-offset:2px;
+}
 input::placeholder,textarea::placeholder{color:var(--text-secondary); opacity:0.75;}
 
 select{

@@ -72,13 +72,19 @@ on their order — tokens first, every later file reads those properties.
 
 ```
 node tests/logic.test.js     # 119 checks, no browser needed
-python3 tests/ui.test.py     # 109 checks, drives a real browser
+python3 tests/ui.test.py     # 112 checks, drives a real browser
+python3 tests/sweep.test.py  # clicks every control, as every account
 ```
 
 `logic.test.js` covers `store.js` and `permissions.js` directly: every lookup,
 persistence, the audit stamp, and the full permission matrix across all eleven
 accounts — who may see, assign, reassign, create groups, invite, and where each
 rule stops at a department boundary.
+
+`sweep.test.py` clicks every control in every view as every one of the eleven
+accounts and fails on any console error. It exists because scripted tests only
+cover paths someone thought to script: this one found a crash on the dashboard's
+own New todo button, on a path no scripted test walked.
 
 `ui.test.py` drives the interface: routing and deep links, theme cycling and
 persistence, every filter, pinned filters, all three groupings, all four

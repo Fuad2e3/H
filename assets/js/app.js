@@ -13,7 +13,8 @@ window.OC = window.OC || {};
 OC.app = (function () {
   'use strict';
 
-  var h;
+  function h() { return OC.ui.h.apply(null, arguments); }
+
   var route = 'dashboard';
 
   var ROUTES = [
@@ -226,7 +227,6 @@ OC.app = (function () {
 
   /* ---- boot ------------------------------------------------------------- */
   function start() {
-    h = OC.ui.h;
     OC.store.load();
 
     var saved = readTheme();

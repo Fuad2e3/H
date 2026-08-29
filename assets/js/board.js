@@ -12,7 +12,13 @@ window.OC = window.OC || {};
 OC.board = (function () {
   'use strict';
 
-  var h, filters = { client: '', department: '', person: '', tag: '', from: '', to: '', q: '' };
+  /* delegate rather than cache: newTodo() and newInstruction() are called from
+     the dashboard, which is the landing view, so this module's functions can
+     run before its own render() ever does. Caching OC.ui.h in render() left
+     those entry points throwing on a fresh load. */
+  function h() { return OC.ui.h.apply(null, arguments); }
+
+  var filters = { client: '', department: '', person: '', tag: '', from: '', to: '', q: '' };
   var grouping = 'person';       /* person | client | department */
   var mode = 'panels';           /* panels | timeline */
   var showDone = false;
@@ -587,7 +593,6 @@ OC.board = (function () {
 
   /* ---- render ----------------------------------------------------------- */
   function render(host, rerender) {
-    h = OC.ui.h;
     var user = me();
     var todos = visibleTodos();
     var notes = visibleInstructions();

@@ -48,6 +48,21 @@ with sync_playwright() as pw:
     page.locator('.toggle-theme').click(); page.wait_for_timeout(150)
     ok("theme returns to system", page.evaluate("document.documentElement.dataset.theme"), None)
 
+    print("\n=== dashboard entry points on a cold load ===")
+    # Dashboard is the landing view, so board.js functions run before board.render()
+    # ever has. This regressed once: the modal silently never opened.
+    page.goto(url, wait_until='domcontentloaded'); page.wait_for_timeout(400)
+    ok("lands on the dashboard", 'Good to see you' in page.locator('#page h1').inner_text())
+    page.locator('.panel button:has-text("New todo")').first.click(); page.wait_for_timeout(350)
+    ok("new todo opens from a cold dashboard", page.locator('dialog .modal-head h2').inner_text(), 'New todo')
+    page.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>{d.close();d.remove();})")
+    page.wait_for_timeout(200)
+    page.locator('.panel button:has-text("Post instruction")').first.click(); page.wait_for_timeout(350)
+    ok("post instruction opens from a cold dashboard",
+       page.locator('dialog .modal-head h2').inner_text(), 'Post an instruction')
+    page.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>{d.close();d.remove();})")
+    page.wait_for_timeout(200)
+
     print("\n=== ui.js: modal and toast ===")
     nav('Board')
     page.get_by_role('button',name='New todo',exact=True).first.click(); page.wait_for_timeout(250)

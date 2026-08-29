@@ -254,13 +254,20 @@ OC.people = (function () {
       ]),
 
       pending.length ? h('div', { style: 'margin-bottom:22px' }, [
-        h('h3', { style: 'font-size:17px;margin-bottom:10px' }, 'Pending invites'),
+        h('h2', { class: 'section-head' }, [
+          'Pending invites',
+          h('span', { class: 'chip count' }, pending.length + ' awaiting')
+        ]),
         h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:12px;max-width:74ch' },
           'Each link is single use and expires 72 hours after it is issued. An unclaimed invite can be resent or ' +
           'revoked by whoever sent it, or by the system admin (6.1).'),
         h('div', { class: 'grid-2' }, pending.map(inviteRow))
       ]) : null,
 
+      h('h2', { class: 'section-head' }, [
+        'Departments',
+        h('span', { class: 'chip count' }, OC.store.state.departments.length + ' total')
+      ]),
       h('div', { class: 'grid-2', style: 'margin-bottom:22px' }, OC.store.state.departments.map(function (d) {
         var members = OC.store.state.users.filter(function (u) { return OC.can.inDept(u, d.id); });
         return h('div', { class: 'card' }, [
@@ -285,6 +292,10 @@ OC.people = (function () {
         ]);
       })),
 
+      h('h2', { class: 'section-head' }, [
+        'Accounts',
+        h('span', { class: 'chip count' }, OC.store.state.users.length + ' people')
+      ]),
       h('div', { class: 'tablewrap' }, [
         h('table', {}, [
           h('caption', {}, 'Accounts'),

@@ -94,6 +94,10 @@ OC.groups = (function () {
         ? h('button', { class: 'btn primary', type: 'button', style: 'margin-bottom:16px', onClick: newGroup },
             [OC.icon('plus'), 'New group'])
         : null,
+      h('h2', { class: 'section-head' }, [
+        'All groups',
+        h('span', { class: 'chip count' }, groups.length + ' total')
+      ]),
       h('div', { class: 'grid-2' }, groups.map(function (g) {
         return h('div', { class: 'card' }, [
           h('div', { class: 'row' }, [

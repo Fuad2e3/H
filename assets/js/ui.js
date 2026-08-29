@@ -198,7 +198,8 @@ OC.ui = (function () {
 
   /* ---- comment thread (5.0, Comment) ------------------------------------- */
   function commentThread(kind, item, onChange) {
-    var body = h('input', { type: 'text', placeholder: 'add a comment' });
+    var label = 'Comment on ' + (item.title || String(item.body).slice(0, 40));
+    var body = h('input', { type: 'text', placeholder: 'add a comment', 'aria-label': label });
     var count = (item.comments || []).length;
 
     var wrap = h('details', { class: 'thread' }, [

@@ -1,0 +1,79 @@
+"""Sweep suite — clicks every control in every view as every account.
+
+Catches the class of bug a scripted test misses: a path nobody thought to
+script. It found `h is not a function`, where a board.js entry point called
+from the dashboard ran before board.render() had ever assigned its helper.
+
+Run from the repository root:  python3 tests/sweep.test.py
+Set CHROME_PATH if Chromium lives somewhere else.
+Originate Command · application
+"""
+import os, pathlib, sys
+from playwright.sync_api import sync_playwright
+
+CHROME = os.environ.get('CHROME_PATH', '/opt/pw-browsers/chromium-1194/chrome-linux/chrome')
+url = pathlib.Path('index.html').resolve().as_uri()
+problems = []
+
+with sync_playwright() as pw:
+    b = pw.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
+    page = b.new_page(viewport={'width': 1400, 'height': 1000})
+    errs = []
+    page.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)))
+    page.on('console', lambda m: errs.append(m.type.upper() + ': ' + m.text)
+            if m.type in ('error', 'warning')
+            and 'fonts.g' not in m.text and 'ERR_CONN' not in m.text else None)
+    page.goto(url, wait_until='domcontentloaded')
+    page.wait_for_timeout(400)
+
+    def shut():
+        page.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>{d.close();d.remove();})")
+
+    users = page.locator('.who select option').all_inner_texts()
+    clicks = 0
+    for u in users:
+        shut()
+        page.select_option('.who select', label=u)
+        page.wait_for_timeout(180)
+        for view in ('Dashboard', 'Board', 'Groups', 'Reports', 'People'):
+            shut()
+            page.get_by_role('button', name=view, exact=True).click()
+            page.wait_for_timeout(200)
+            before = len(errs)
+            for i in range(page.locator('#page button').count()):
+                bt = page.locator('#page button').nth(i)
+                try:
+                    if not bt.is_visible():
+                        continue
+                    if (bt.inner_text() or '').strip() in ('Revoke',):
+                        continue           # removes the row the loop is walking
+                    bt.click(timeout=1200)
+                    clicks += 1
+                    page.wait_for_timeout(70)
+                    shut()
+                except Exception:
+                    shut()
+            for sel in range(page.locator('#page select').count()):
+                s = page.locator('#page select').nth(sel)
+                try:
+                    opts = s.locator('option').count()
+                    if opts > 1:
+                        s.select_option(index=opts - 1, timeout=1000); page.wait_for_timeout(90)
+                        s.select_option(index=0, timeout=1000); page.wait_for_timeout(90)
+                except Exception:
+                    pass
+            for cb in range(page.locator('#page input[type=checkbox]').count()):
+                try:
+                    page.locator('#page input[type=checkbox]').nth(cb).click(timeout=800)
+                    page.wait_for_timeout(80)
+                except Exception:
+                    pass
+            new = errs[before:]
+            if new:
+                problems.append(f"{u} / {view}: {new}")
+
+    print(f"{len(users)} accounts x 5 views, {clicks} controls clicked")
+    print("PROBLEMS:", problems or "none")
+    b.close()
+
+sys.exit(1 if problems else 0)

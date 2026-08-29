@@ -14,11 +14,17 @@ OC.board = (function () {
 
   var h, filters = { client: '', department: '', person: '', tag: '', from: '', to: '', q: '' };
   var grouping = 'person';       /* person | client | department */
+  var mode = 'panels';           /* panels | timeline */
   var showDone = false;
   var showArchived = false;
   var panel = 'todos';           /* small screens only */
 
   function me() { return OC.store.user(OC.store.session()); }
+
+  function clientLabel() {
+    var c = filters.client ? OC.store.client(filters.client) : null;
+    return c ? c.name : 'Combined';
+  }
 
   /* ---- filtering -------------------------------------------------------- */
   function matches(item, isTodo) {
@@ -279,7 +285,8 @@ OC.board = (function () {
         ? h('div', { class: 'blocked-note' }, [OC.icon('alert'), h('span', {}, 'Blocked: ' + todo.blocked_reason)])
         : null,
       escalationNote(todo),
-      h('div', { class: 'actions' }, actions)
+      h('div', { class: 'actions' }, actions),
+      OC.can.commentOnTodo(user, todo) ? OC.ui.commentThread('todo', todo) : null
     ]);
   }
 
@@ -338,6 +345,7 @@ OC.board = (function () {
     var priority = OC.ui.select([
       { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }
     ], 'normal');
+    var tags = OC.ui.tagPicker(preset.tags || []);
     var recurrence = OC.ui.select([
       { value: 'none', label: 'One time' }, { value: 'daily', label: 'Daily' },
       { value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' },
@@ -358,6 +366,7 @@ OC.board = (function () {
         OC.ui.field('Assign to', assignee, { required: true, hint: assignHint }),
         OC.ui.field('Due date', due, { required: true }),
         OC.ui.field('Priority', priority),
+        OC.ui.field('Tags', tags.node, { hint: 'Type and category tags are optional. Typing narrows the list; a new tag is available to everyone at once (6.4).' }),
         OC.ui.field('Recurrence', recurrence, { hint: 'A recurring todo regenerates on completion (6.2).' })
       ]),
       actions: [
@@ -377,9 +386,9 @@ OC.board = (function () {
               assignee_type: parts[0], assignee: parts[1],
               state: 'open', priority: priority.value, due: due.value,
               recurrence: recurrence.value, created_by: user.id,
-              created_at: new Date().toISOString(), tags: [], comments: []
+              created_at: new Date().toISOString(), tags: tags.resolve(), comments: []
             };
-            if (priority.value === 'high') todo.tags.push('t-urgent');
+            if (priority.value === 'high' && todo.tags.indexOf('t-urgent') === -1) todo.tags.push('t-urgent');
 
             OC.store.mutate({ actor: user.id, action: 'todo.create', target: todo.title, detail: 'assigned to ' + OC.ui.assigneeName(todo) }, function () {
               OC.store.state.todos.push(todo);
@@ -470,7 +479,8 @@ OC.board = (function () {
       h('div', { class: 'readers' }, readers.length
         ? 'Read by ' + readers.length + ': ' + readers.join(', ')
         : 'Nobody has read this yet'),
-      actions.length ? h('div', { class: 'actions' }, actions) : null
+      actions.length ? h('div', { class: 'actions' }, actions) : null,
+      OC.can.commentOnInstruction(user, note) ? OC.ui.commentThread('instruction', note) : null
     ]);
   }
 
@@ -493,11 +503,7 @@ OC.board = (function () {
     var body = h('textarea', { placeholder: 'the instruction, as it was given' });
     var client = OC.ui.select(optionsFor(OC.store.state.clients, 'Select a client'), '');
     var department = OC.ui.select(optionsFor(OC.store.state.departments, 'Select a department'), '');
-    var checks = OC.store.state.tags.map(function (t) {
-      var box = h('input', { type: 'checkbox', value: t.id });
-      return { tag: t, box: box, node: h('label', { class: 'checkline' }, [box, t.label, h('span', { class: 'muted mono', style: 'font-size:11px' }, t.kind)]) };
-    });
-    var newTag = h('input', { type: 'text', placeholder: 'add a new tag, then post' });
+    var tags = OC.ui.tagPicker([]);
 
     OC.ui.modal({
       title: 'Post an instruction',
@@ -505,8 +511,7 @@ OC.board = (function () {
         OC.ui.field('Instruction', body, { required: true, hint: 'Anyone may post an instruction — it is not restricted the way assignment is (6.3).' }),
         OC.ui.field('Client', client, { required: true, hint: 'Client and department are both required (5.2).' }),
         OC.ui.field('Department', department, { required: true, hint: 'Any department, not only your own (3.2).' }),
-        OC.ui.field('Tags', h('div', {}, checks.map(function (c) { return c.node; }))),
-        OC.ui.field('New tag', newTag, { hint: 'Created inline and available to everyone immediately (6.4).' })
+        OC.ui.field('Tags', tags.node, { hint: 'Typing narrows the list. A new tag is created inline and available to everyone immediately (6.4).' })
       ]),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
@@ -516,20 +521,14 @@ OC.board = (function () {
             if (!client.value) return 'Select a client. This is required by 5.2.';
             if (!department.value) return 'Select a department. This is required by 5.2.';
 
-            var tags = checks.filter(function (c) { return c.box.checked; }).map(function (c) { return c.tag.id; });
             var note = {
               id: OC.store.uid('n'), body: body.value.trim(), author: user.id,
-              client: client.value, department: department.value, tags: tags,
+              client: client.value, department: department.value, tags: tags.resolve(),
               posted_at: new Date().toISOString(), read_by: [user.id],
               archived: false, linked_todo: null, comments: []
             };
 
             OC.store.mutate({ actor: user.id, action: 'instruction.post', target: note.body.slice(0, 48), detail: 'tagged ' + (OC.store.client(note.client) || {}).name }, function () {
-              if (newTag.value.trim()) {
-                var t = { id: OC.store.uid('t'), label: newTag.value.trim(), kind: 'custom' };
-                OC.store.state.tags.push(t);
-                note.tags.push(t.id);
-              }
               OC.store.state.instructions.push(note);
             });
 
@@ -543,6 +542,47 @@ OC.board = (function () {
         }
       ]
     });
+  }
+
+  /* ---- combined client timeline (6.4) ------------------------------------
+     "Filtering by client shows every instruction and todo for that client
+     across every department in one combined, chronological view." Todos and
+     instructions are merged on the moment each was recorded, newest first,
+     and grouped by day. */
+  function timeline(rerender) {
+    var user = me();
+    var entries = [];
+
+    visibleTodos().forEach(function (t) {
+      entries.push({ at: t.created_at, kind: 'todo', item: t });
+    });
+    visibleInstructions().forEach(function (n) {
+      entries.push({ at: n.posted_at, kind: 'instruction', item: n });
+    });
+    entries.sort(function (a, b) { return b.at.localeCompare(a.at); });
+
+    if (!entries.length) {
+      return h('div', { class: 'empty' }, [OC.icon('filter'), 'Nothing recorded for these filters.']);
+    }
+
+    var wrap = h('div', {});
+    var day = null;
+    var current = null;
+
+    entries.forEach(function (entry) {
+      var thisDay = entry.at.slice(0, 10);
+      if (thisDay !== day) {
+        day = thisDay;
+        wrap.appendChild(h('p', { class: 'tl-day' }, OC.ui.fmtDate(thisDay) + ' · ' + OC.ui.fmtWhen(entry.at)));
+        current = h('div', { class: 'timeline' });
+        wrap.appendChild(current);
+      }
+      current.appendChild(h('div', { class: 'tl-entry' + (entry.kind === 'todo' ? ' is-todo' : '') }, [
+        h('p', { class: 'tl-kind' }, entry.kind === 'todo' ? 'Todo' : 'Instruction'),
+        entry.kind === 'todo' ? todoItem(entry.item) : instructionItem(entry.item, rerender)
+      ]));
+    });
+    return wrap;
   }
 
   /* ---- render ----------------------------------------------------------- */
@@ -608,6 +648,13 @@ OC.board = (function () {
       filterBar(rerender),
       savedBar(rerender),
       h('div', { class: 'boardbar' }, [
+        h('div', { class: 'segmented', role: 'group', 'aria-label': 'Board view' },
+          [['panels', 'Two panels'], ['timeline', 'Client timeline']].map(function (opt) {
+            return h('button', {
+              type: 'button', 'aria-pressed': String(mode === opt[0]),
+              onClick: function () { mode = opt[0]; rerender(); }
+            }, opt[1]);
+          })),
         h('label', { class: 'checkline' }, [
           h('input', { type: 'checkbox', checked: showDone, onChange: function (e) { showDone = e.target.checked; rerender(); } }),
           'Show completed'
@@ -619,16 +666,26 @@ OC.board = (function () {
         h('button', { class: 'btn small push', type: 'button', onClick: copyYesterday },
           [OC.icon('reset'), 'Copy yesterday'])
       ]),
-      h('div', { class: 'panel-tabs' }, [
+      mode === 'panels' ? h('div', { class: 'panel-tabs' }, [
         h('button', { type: 'button', 'aria-pressed': String(panel === 'todos'), onClick: function () { panel = 'todos'; rerender(); } }, 'Todos'),
         h('button', { type: 'button', 'aria-pressed': String(panel === 'instructions'), onClick: function () { panel = 'instructions'; rerender(); } }, 'Instructions')
-      ]),
-      h('div', { class: 'board', 'data-panel': panel }, [todoPanel, notePanel])
+      ]) : null,
+      mode === 'panels'
+        ? h('div', { class: 'board', 'data-panel': panel }, [todoPanel, notePanel])
+        : h('section', { class: 'panel panel--timeline' }, [
+            h('div', { class: 'panel-head' }, [
+              h('h2', {}, clientLabel() + ' timeline'),
+              h('span', { class: 'chip count' }, (todos.length + notes.length) + ' entries'),
+              h('span', { class: 'sub' }, 'todos and instructions, every department, newest first')
+            ]),
+            h('div', { class: 'panel-body' }, timeline(rerender))
+          ])
     ]);
   }
 
   return {
     render: render, newTodo: newTodo, newInstruction: newInstruction,
+    applyFilter: function (next) { filters = JSON.parse(JSON.stringify(next)); mode = 'panels'; },
     /* a getter, because applying a pinned filter rebinds the object */
     get filters() { return filters; }
   };

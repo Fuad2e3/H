@@ -135,6 +135,105 @@ OC.ui = (function () {
     return el;
   }
 
+  /* ---- tag field (6.4) ---------------------------------------------------
+     "Every tag field is both a searchable dropdown and a tick list; typing
+     narrows the list live rather than requiring an exact match." So: a filter
+     box over a scrolling tick list, plus inline creation of a new tag, which
+     becomes available to everyone immediately. */
+  function tagPicker(selected) {
+    var chosen = (selected || []).slice();
+    var search = h('input', { type: 'search', placeholder: 'narrow the list', 'aria-label': 'Filter tags' });
+    var list = h('div', { class: 'ticklist', role: 'group', 'aria-label': 'Tags' });
+    var newTag = h('input', { type: 'text', placeholder: 'or create a new tag' });
+
+    function paint() {
+      var q = search.value.trim().toLowerCase();
+      clear(list);
+      var tags = OC.store.state.tags.filter(function (t) {
+        return !q || t.label.toLowerCase().indexOf(q) > -1 || t.kind.indexOf(q) > -1;
+      });
+      if (!tags.length) {
+        list.appendChild(h('p', { class: 'ticklist-empty' }, 'No tag matches. Create one below.'));
+        return;
+      }
+      tags.forEach(function (t) {
+        var box = h('input', {
+          type: 'checkbox', value: t.id, checked: chosen.indexOf(t.id) > -1,
+          onChange: function (e) {
+            var at = chosen.indexOf(t.id);
+            if (e.target.checked && at === -1) chosen.push(t.id);
+            if (!e.target.checked && at > -1) chosen.splice(at, 1);
+          }
+        });
+        list.appendChild(h('label', { class: 'checkline' }, [
+          box, t.label, h('span', { class: 'chip custom' }, t.kind)
+        ]));
+      });
+    }
+    search.addEventListener('input', paint);
+    paint();
+
+    return {
+      node: h('div', { class: 'tagfield' }, [search, list, newTag]),
+      /* returns the chosen tags, creating the typed one first if there is one */
+      resolve: function () {
+        var out = chosen.slice();
+        var label = newTag.value.trim();
+        if (label) {
+          var existing = OC.store.state.tags.filter(function (t) {
+            return t.label.toLowerCase() === label.toLowerCase();
+          })[0];
+          if (existing) {
+            if (out.indexOf(existing.id) === -1) out.push(existing.id);
+          } else {
+            var made = { id: OC.store.uid('t'), label: label, kind: 'custom' };
+            OC.store.state.tags.push(made);
+            out.push(made.id);
+          }
+        }
+        return out;
+      }
+    };
+  }
+
+  /* ---- comment thread (5.0, Comment) ------------------------------------- */
+  function commentThread(kind, item, onChange) {
+    var body = h('input', { type: 'text', placeholder: 'add a comment' });
+    var count = (item.comments || []).length;
+
+    var wrap = h('details', { class: 'thread' }, [
+      h('summary', {}, count ? count + (count === 1 ? ' comment' : ' comments') : 'Comment'),
+      h('div', { class: 'thread-body' }, [
+        (item.comments || []).map(function (c) {
+          return h('div', { class: 'comment' }, [
+            h('div', { class: 'comment-by' }, [
+              h('strong', {}, personName(c.author)),
+              h('span', {}, fmtWhen(c.posted_at))
+            ]),
+            h('div', {}, c.body)
+          ]);
+        }),
+        h('div', { class: 'comment-form' }, [
+          body,
+          h('button', {
+            class: 'btn small', type: 'button', onClick: function () {
+              if (!body.value.trim()) return;
+              var text = body.value.trim();
+              OC.store.mutate({
+                actor: OC.store.session(), action: kind + '.comment',
+                target: item.title || item.body.slice(0, 40), detail: text
+              }, function () {
+                OC.store.comment(kind, item.id, text, OC.store.session());
+              });
+              if (onChange) onChange();
+            }
+          }, 'Post')
+        ])
+      ])
+    ]);
+    return wrap;
+  }
+
   /* ---- modal ------------------------------------------------------------ */
   function modal(opts) {
     var dlg = h('dialog', { class: 'modal' });
@@ -207,6 +306,7 @@ OC.ui = (function () {
     clientChip: clientChip, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
     personName: personName, assigneeName: assigneeName,
     STATE_LABEL: STATE_LABEL,
-    field: field, select: select, modal: modal, confirm: confirm, toast: toast
+    field: field, select: select, tagPicker: tagPicker, commentThread: commentThread,
+    modal: modal, confirm: confirm, toast: toast
   };
 })();

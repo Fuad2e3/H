@@ -325,3 +325,79 @@ dialog.modal::backdrop{background:rgba(8,12,22,0.5);}
   font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-secondary);
   display:flex; gap:var(--s2); flex-wrap:wrap; align-items:center;
 }
+
+/* ---- tag field: searchable, and a tick list (6.4) ------------------------ */
+.tagfield{display:flex; flex-direction:column; gap:var(--s2);}
+.ticklist{
+  max-height:172px; overflow-y:auto;
+  border:1px solid var(--rule); border-radius:var(--r1);
+  padding:var(--s2) var(--s3);
+  background:var(--card-bg-alt);
+}
+.ticklist .checkline{margin-bottom:5px; font-size:13.5px;}
+.ticklist .checkline:last-child{margin-bottom:0;}
+.ticklist .checkline .chip{margin-left:auto;}
+.ticklist-empty{font-size:13px; color:var(--text-secondary); margin:var(--s1) 0;}
+
+/* ---- comment thread (5.0) ----------------------------------------------- */
+.thread{margin-top:10px; border-top:1px dashed var(--rule); padding-top:8px;}
+.thread summary{
+  cursor:pointer; list-style:none;
+  font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+  letter-spacing:0.1em; text-transform:uppercase; color:var(--text-secondary);
+}
+.thread summary::-webkit-details-marker{display:none;}
+.thread summary::before{content:"+ "; color:var(--blueprint);}
+.thread[open] summary::before{content:"– ";}
+.thread summary:hover{color:var(--ink);}
+.thread-body{padding-top:var(--s2); display:flex; flex-direction:column; gap:var(--s2);}
+.comment{
+  border-left:2px solid var(--rule-strong);
+  padding:2px 0 2px var(--s2);
+  font-size:13px; line-height:1.45;
+}
+.comment-by{
+  display:flex; gap:var(--s2); align-items:baseline;
+  font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-secondary);
+}
+.comment-by strong{color:var(--ink); font-weight:600;}
+.comment-form{display:flex; gap:var(--s2);}
+.comment-form input{flex:1;}
+
+/* ---- client timeline (6.4) ---------------------------------------------- */
+.timeline{position:relative; padding-left:var(--s5);}
+.timeline::before{
+  content:""; position:absolute; left:7px; top:4px; bottom:4px;
+  width:1px; background:var(--rule-strong);
+}
+.tl-entry{position:relative; margin-bottom:var(--s4);}
+.tl-entry::before{
+  content:""; position:absolute; left:calc(-1 * var(--s5) + 4px); top:7px;
+  width:7px; height:7px; border-radius:50%;
+  background:var(--blueprint); box-shadow:0 0 0 3px var(--bg);
+}
+.tl-entry.is-todo::before{background:var(--brass);}
+.tl-day{
+  font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+  letter-spacing:0.12em; text-transform:uppercase; color:var(--text-secondary);
+  margin:var(--s5) 0 var(--s3); position:relative;
+}
+.tl-day:first-child{margin-top:0;}
+.tl-kind{
+  font-family:'IBM Plex Mono',monospace; font-size:10px;
+  letter-spacing:0.1em; text-transform:uppercase; color:var(--text-secondary);
+  margin-bottom:3px;
+}
+
+/* ---- browser push status row (9.1) -------------------------------------- */
+.pushrow{
+  display:flex; align-items:center; gap:var(--s2);
+  border:1px solid var(--rule-strong); border-left:3px solid var(--brass);
+  border-radius:var(--r1);
+  background:var(--card-bg-alt);
+  padding:9px var(--s3); margin-bottom:var(--s3);
+  font-size:12.5px; color:var(--text-secondary); line-height:1.4;
+}
+.pushrow.on{border-left-color:var(--success);}
+.pushrow .icon{flex:none; color:var(--brass);}
+.pushrow.on .icon{color:var(--success);}

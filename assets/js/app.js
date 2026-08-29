@@ -43,6 +43,62 @@ OC.app = (function () {
     if (button) button.textContent = THEME_LABELS[themeIndex];
   }
 
+  /* ---- browser push (9.1) ------------------------------------------------
+     Web Push proper needs a service worker and a server to push from, which
+     is the Cloud Function in 10.1. What a page can own by itself is the
+     permission and the notification: this asks once, then raises a system
+     notification for anything addressed to the signed-in account. */
+  var lastSeenNotification = null;
+
+  function pushSupported() { return 'Notification' in window; }
+
+  function askForPush() {
+    if (!pushSupported()) { OC.ui.toast('This browser has no notification support.', true); return; }
+    Notification.requestPermission().then(function (result) {
+      if (result === 'granted') OC.ui.toast('Browser notifications are on for this device.');
+      else OC.ui.toast('Browser notifications stay off. Email remains the fallback channel (9.2).', true);
+      render();
+    });
+  }
+
+  function raisePush() {
+    if (!pushSupported() || Notification.permission !== 'granted') return;
+    var user = OC.store.user(OC.store.session());
+    if (!user || !user.prefs.push) return;
+    var mine = myNotifications();
+    if (!mine.length) return;
+    var newest = mine[0];
+    if (lastSeenNotification === null) { lastSeenNotification = newest.id; return; }
+    if (newest.id === lastSeenNotification || newest.read) return;
+    lastSeenNotification = newest.id;
+    try {
+      new Notification('Originate Command', { body: newest.text, tag: newest.id });
+    } catch (e) {
+      /* some browsers refuse outside a user gesture; the in-app feed still has it */
+    }
+  }
+
+  /* the state of the browser push channel, shown where notifications are */
+  function pushRow() {
+    if (!pushSupported()) {
+      return h('div', { class: 'pushrow' }, [OC.icon('alert'),
+        h('span', {}, 'This browser cannot show system notifications. Email is the fallback channel (9.2).')]);
+    }
+    if (Notification.permission === 'granted') {
+      return h('div', { class: 'pushrow on' }, [OC.icon('check'),
+        h('span', {}, 'Browser push is on for this device. Anything assigned to you raises a system notification (9.1).')]);
+    }
+    if (Notification.permission === 'denied') {
+      return h('div', { class: 'pushrow' }, [OC.icon('alert'),
+        h('span', {}, 'Browser push is blocked in this browser\'s site settings. Email remains the fallback (9.2).')]);
+    }
+    return h('div', { class: 'pushrow' }, [
+      OC.icon('bell'),
+      h('span', {}, 'Browser push is off for this device.'),
+      h('button', { class: 'btn small push', type: 'button', onClick: askForPush }, 'Enable push')
+    ]);
+  }
+
   /* ---- notifications (9.0, in-app channel) ------------------------------ */
   function myNotifications() {
     var id = OC.store.session();
@@ -68,8 +124,9 @@ OC.app = (function () {
       title: 'Notifications',
       content: h('div', {}, [
         h('p', { class: 'muted', style: 'font-size:13px;margin-bottom:12px' },
-          'The in-app channel. Browser push, email and the Discord webhook are server-side in the specified build (9.0) — ' +
-          'your per-channel toggles live under People.'),
+          'The in-app channel. Email and the Discord webhook are sent server-side by the Cloud Function in 10.1; ' +
+          'per-channel toggles live under People.'),
+        pushRow(),
         content
       ]),
       actions: [
@@ -164,6 +221,7 @@ OC.app = (function () {
     var page = h('main', { class: 'page', id: 'page' });
     OC.ui.append(root, [topbar(), nav(), page]);
     currentView().render(page, render);
+    raisePush();
   }
 
   /* ---- boot ------------------------------------------------------------- */

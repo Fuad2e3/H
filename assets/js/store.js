@@ -74,6 +74,7 @@ OC.store = (function () {
       u.email = u.id.replace('u-', '') + '@originate.example';
       u.status = 'active';
       u.prefs = { push: true, email: true, discord: u.admin };
+      u.invite = null;
     });
 
     var clients = [
@@ -296,6 +297,35 @@ OC.store = (function () {
 
     /* callers invoke this after mutate(), so it persists and re-renders on its
        own — otherwise a notification lives only until the page reloads */
+    /* a single use link that expires 72 hours after it is issued (6.1) */
+    issueInvite: function (byUserId) {
+      var expires = new Date();
+      expires.setHours(expires.getHours() + 72);
+      return {
+        token: 'inv-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6),
+        issued_by: byUserId,
+        issued_at: new Date().toISOString(),
+        expires_at: expires.toISOString(),
+        claimed_at: null
+      };
+    },
+
+    inviteExpired: function (invite) {
+      return !!invite && !invite.claimed_at && new Date(invite.expires_at) < new Date();
+    },
+
+    comment: function (kind, id, body, authorId) {
+      var host = kind === 'todo' ? api.todo(id) : api.instruction(id);
+      if (!host) return null;
+      var entry = {
+        id: api.uid('c'), author: authorId, body: body,
+        posted_at: new Date().toISOString()
+      };
+      host.comments = host.comments || [];
+      host.comments.push(entry);
+      return entry;
+    },
+
     notify: function (userIds, text, ref) {
       if (!userIds || !userIds.length) return;
       var at = new Date().toISOString();

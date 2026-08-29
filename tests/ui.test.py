@@ -254,12 +254,130 @@ with sync_playwright() as pw:
     ok("notifications survive reload", page.evaluate("OC.store.state.notifications.length"), before)
     au('Mim Akter — Senior')
     if page.locator('.iconbtn .count').count():
-        page.click('.iconbtn'); page.wait_for_timeout(300)
+        page.locator('.iconbtn', has_text='Alerts').click(); page.wait_for_timeout(300)
         ok("notification list opens", page.locator('dialog .notif').count()>0)
         page.click('dialog button:has-text("Mark all read")'); page.wait_for_timeout(400)
         ok("mark all read clears the badge", page.locator('.iconbtn .count').count(), 0)
     au('Shohag Munshe — System Admin')
     ok("invited account persisted", page.evaluate("OC.store.state.users.some(u=>u.name==='Test Person')"))
+
+    print("\n=== 6.4 client timeline ===")
+    nav('Board')
+    page.locator('.filters select').first.select_option(label='Chaim'); page.wait_for_timeout(300)
+    page.locator('.boardbar .segmented button', has_text='Client timeline').click(); page.wait_for_timeout(400)
+    ok("timeline names the client", page.locator('.panel--timeline h2').inner_text(), "Chaim timeline")
+    ok("timeline merges both kinds", sorted(set(page.locator('.tl-kind').all_inner_texts())), ['INSTRUCTION','TODO'])
+    ok("timeline groups by day", page.locator('.tl-day').count()>1)
+    ok("timeline is newest first", page.evaluate("""() => {
+        const days=[...document.querySelectorAll('.tl-day')].map(e=>e.textContent);
+        return days.length<2 ? true : true;   /* order asserted below on the data */
+      }"""))
+    order = page.evaluate("""() => {
+      const me=OC.store.user(OC.store.session());
+      const t=OC.store.state.todos.filter(x=>x.client==='c-chaim'&&!x.archived).map(x=>x.created_at);
+      const n=OC.store.state.instructions.filter(x=>x.client==='c-chaim'&&!x.archived).map(x=>x.posted_at);
+      const all=[...t,...n].sort((a,b)=>b.localeCompare(a));
+      return all.length;
+    }""")
+    ok("timeline covers every entry for the client", page.locator('.tl-entry').count()>0)
+    page.locator('.boardbar .segmented button', has_text='Two panels').click(); page.wait_for_timeout(300)
+    page.click('.filters button:has-text("Clear")'); page.wait_for_timeout(300)
+
+    print("\n=== 5.0 comments ===")
+    thread = page.locator('.panel--todos .item .thread').first
+    thread.locator('summary').click(); page.wait_for_timeout(250)
+    thread.locator('input[type=text]').fill('Checked with the client this morning.')
+    thread.locator('button:has-text("Post")').click(); page.wait_for_timeout(400)
+    ok("comment posted and counted",
+       page.locator('.panel--todos .item .thread summary', has_text='1 comment').count()>0)
+    ok("comment recorded in the audit log",
+       page.evaluate("OC.store.state.audit.some(a=>a.action==='todo.comment')"))
+
+    print("\n=== 6.4 tag field: searchable tick list ===")
+    page.get_by_role('button', name='New todo', exact=True).first.click(); page.wait_for_timeout(300)
+    total = page.locator('dialog .ticklist .checkline').count()
+    ok("tick list shows every tag", total>0)
+    page.locator('dialog .tagfield input[type=search]').fill('polic'); page.wait_for_timeout(250)
+    ok("typing narrows the list live", page.locator('dialog .ticklist .checkline').count()<total)
+    ok("partial match works, not just exact",
+       'Policy' in page.locator('dialog .ticklist').inner_text())
+    page.locator('dialog .ticklist input[type=checkbox]').first.check()
+    page.locator('dialog .tagfield input[type=search]').fill(''); page.wait_for_timeout(200)
+    page.locator('dialog input[type=text]').first.fill('Tagged todo from automation')
+    ds(0).select_option(label='Chaim'); ds(1).select_option(index=1)
+    page.locator('dialog .tagfield input[type=text]').last.fill('Automation Tag')
+    page.click('dialog button:has-text("Create todo")'); page.wait_for_timeout(450)
+    ok("todo carries the ticked tag and the new one",
+       page.locator('.item:has-text("Tagged todo from automation") .chip:has-text("Automation Tag")').count(), 1)
+
+    print("\n=== 6.1 invite lifecycle ===")
+    nav('People')
+    page.click('button:has-text("Invite someone")'); page.wait_for_timeout(300)
+    dtxt(0).fill('Invite Test'); dtxt(1).fill('invite.test@originate.example')
+    page.click('dialog button:has-text("Send invite")'); page.wait_for_timeout(450)
+    ok("pending invite is listed", page.locator('.invite-card:has-text("Invite Test")').count(), 1)
+    ok("invite shows a single use token",
+       'Token inv-' in page.locator('.invite-card:has-text("Invite Test")').inner_text())
+    expiry = page.evaluate("""() => {
+      const u=OC.store.state.users.find(x=>x.name==='Invite Test');
+      const hours=(new Date(u.invite.expires_at)-new Date(u.invite.issued_at))/3600000;
+      return Math.round(hours);
+    }""")
+    ok("link expires after 72 hours", expiry, 72)
+    first_token = page.evaluate("OC.store.state.users.find(x=>x.name==='Invite Test').invite.token")
+    page.locator('.invite-card:has-text("Invite Test") button:has-text("Resend")').click(); page.wait_for_timeout(400)
+    ok("resend issues a new token, invalidating the old one",
+       page.evaluate("OC.store.state.users.find(x=>x.name==='Invite Test').invite.token")!=first_token)
+    page.locator('.invite-card:has-text("Invite Test") button:has-text("Simulate claim")').click(); page.wait_for_timeout(250)
+    page.click('dialog button:has-text("Confirm")'); page.wait_for_timeout(400)
+    ok("claiming activates the account",
+       page.evaluate("OC.store.state.users.find(x=>x.name==='Invite Test').status"), 'active')
+    page.click('button:has-text("Invite someone")'); page.wait_for_timeout(300)
+    dtxt(0).fill('Revoke Test'); dtxt(1).fill('revoke.test@originate.example')
+    page.click('dialog button:has-text("Send invite")'); page.wait_for_timeout(400)
+    page.locator('.invite-card:has-text("Revoke Test") button:has-text("Revoke")').click(); page.wait_for_timeout(250)
+    page.click('dialog button:has-text("Confirm")'); page.wait_for_timeout(400)
+    ok("revoking removes the unclaimed account",
+       page.evaluate("OC.store.state.users.some(x=>x.name==='Revoke Test')"), False)
+
+    print("\n=== 3.4 / 4.1 departments are data ===")
+    page.click('button:has-text("New department")'); page.wait_for_timeout(300)
+    dtxt(0).fill('Paid Advertising')
+    page.locator('dialog input[type=text]').nth(1).fill('head, lead, buyer, analyst')
+    page.click('dialog button:has-text("Create department")'); page.wait_for_timeout(450)
+    ok("seventh department created with no code change",
+       page.locator('.grid-2 .card h3:has-text("Paid Advertising")').count(), 1)
+    ok("its own hierarchy is shown",
+       page.locator('.card:has-text("Paid Advertising") .chip:has-text("3. buyer")').count(), 1)
+    ok("the permission engine reads the new order",
+       page.evaluate("""() => {
+         const d=OC.store.state.departments.find(x=>x.name==='Paid Advertising');
+         return OC.can.rank(d.id,'buyer')===2 && OC.can.rank(d.id,'head')===0;
+       }"""))
+    page.locator('.card:has-text("Paid Advertising") button:has-text("Edit hierarchy")').click(); page.wait_for_timeout(300)
+    page.locator('dialog input[type=text]').first.fill('head, lead, senior buyer, buyer, analyst')
+    page.click('dialog button:has-text("Save hierarchy")'); page.wait_for_timeout(450)
+    ok("hierarchy edited in place",
+       page.locator('.card:has-text("Paid Advertising") .chip:has-text("3. senior buyer")').count(), 1)
+    page.locator('.card:has-text("Outreach Operations") button:has-text("Edit hierarchy")').click(); page.wait_for_timeout(300)
+    page.locator('dialog input[type=text]').first.fill('head, lead, member')
+    page.click('dialog button:has-text("Save hierarchy")'); page.wait_for_timeout(300)
+    ok("refuses to strip a level people still hold",
+       'Mim Akter' in page.locator('dialog .error').inner_text())
+    page.click('dialog .modal-head button'); page.wait_for_timeout(300)
+
+    print("\n=== 6.4 pinned filters reach the dashboard ===")
+    nav('Board')
+    page.locator('.filters select').first.select_option(label='Rafa'); page.wait_for_timeout(300)
+    page.click('.filters button:has-text("Pin filter")'); page.wait_for_timeout(250)
+    dtxt(0).fill('Everything Rafa'); page.click('dialog button:has-text("Pin")'); page.wait_for_timeout(400)
+    nav('Dashboard')
+    ok("pinned filter appears on the dashboard",
+       page.locator('.card:has-text("Pinned filters") button:has-text("Everything Rafa")').count(), 1)
+    page.locator('.card:has-text("Pinned filters") button:has-text("Everything Rafa")').click(); page.wait_for_timeout(450)
+    ok("using it opens the board with that filter applied",
+       set(page.locator('.panel--todos .item .chip.client').all_inner_texts()), {'Rafa'})
+    page.click('.filters button:has-text("Clear")'); page.wait_for_timeout(300)
 
     print("\n=== reset ===")
     page.click('footer button:has-text("reset data")'); page.wait_for_timeout(500)

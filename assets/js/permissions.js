@@ -162,6 +162,21 @@ OC.can = (function () {
   }
 
   function invite(user) { return !!user && (user.admin || headOfAny(user)); }
+
+  /* an unclaimed invite may be withdrawn by whoever sent it, or by the
+     system admin (6.1) */
+  function manageInvite(user, account) {
+    if (!user || !account || account.status !== 'invited') return false;
+    return user.admin || (!!account.invite && account.invite.issued_by === user.id);
+  }
+
+  /* departments are data, not schema: the system admin may add one at any
+     time and set the ordered hierarchy it uses (3.4, 4.1) */
+  function manageDepartments(user) { return !!user && user.admin; }
+
+  /* anyone who may see an item may discuss it (5.0, Comment) */
+  function commentOnTodo(user, todo) { return seeTodo(user, todo); }
+  function commentOnInstruction(user, note) { return seeInstruction(user, note); }
   function seeAudit(user) { return !!user && user.admin; }
 
   /* people whose work this account may review in reports */
@@ -213,7 +228,9 @@ OC.can = (function () {
     assignToGroup: assignToGroup, assignableGroups: assignableGroups,
     createGroup: createGroup, postInstruction: postInstruction, createTodo: createTodo,
     changeState: changeState, reassign: reassign, assignsOthers: assignsOthers, archiveInstruction: archiveInstruction,
-    manageDepartment: manageDepartment, invite: invite, seeAudit: seeAudit,
+    manageDepartment: manageDepartment, manageDepartments: manageDepartments,
+    invite: invite, manageInvite: manageInvite, seeAudit: seeAudit,
+    commentOnTodo: commentOnTodo, commentOnInstruction: commentOnInstruction,
     visibleUsers: visibleUsers,
     escalationChain: escalationChain, escalationReached: escalationReached
   };

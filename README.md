@@ -19,19 +19,26 @@ runs from disk as well as from a server.
 | 3.4 custom levels | Outreach Operations carries a `senior` level the others do not, with no code change |
 | 4.2 groups | Cross-department groups, created by admin and heads, archived not deleted |
 | 5.2 mandatory tags | A todo or instruction cannot be posted without a client **and** a department |
-| 6.1 invites | Invite flow, new accounts default to the narrowest level in the department |
+| 6.1 invites | Single-use token expiring in 72 hours, resend, revoke, claim; new accounts default to the narrowest level |
 | 6.2 todos | Four states, blocked demands a reason, recurrence regenerates on completion, copy yesterday |
 | 6.3 instructions | Reverse-chronological feed, read receipts, convert to todo, archive never delete |
-| 6.4 tagging | Client / department / type / category plus custom tags created inline, and pinned filters |
+| 6.4 tagging | Client / department / type / category plus custom tags created inline; every tag field is a searchable tick list that narrows as you type |
+| 6.4 client view | One combined chronological timeline of every todo and instruction for a client, across all departments |
+| 6.4 pinned filters | Saved on the board, reachable from the dashboard |
+| 5.0 comments | Comment threads on todos and instructions, written to the audit log |
+| 3.4 / 4.1 departments | The admin can add a department and edit its ordered hierarchy; the permission engine follows the new order at once |
+| 9.1 browser push | Permission request and system notifications for work addressed to you |
 | 6.7 dashboard | Own todos by client, unread instructions first, own clients and groups |
 | 6.8 reporting | Daily snapshot, per-person status, historical log, CSV export |
 | 9.0 notifications | The in-app channel, with per-person channel toggles |
 | 9.4 escalation | Overdue work names the chain it has climbed: lead, then head, then leadership |
 
-**Not built:** browser push, email and the Discord webhook are server-side in the
-specified build (9.0), and there is no authentication — the account switcher in
-the top bar stands in for the invite-only login so the permission rules in 3.0
-can be seen from any role. Data lives in `localStorage` in one browser; "reset
+**Not built:** email and the Discord webhook are sent by a Cloud Function in the
+specified build (10.1), so they need the server side to exist. Browser push is
+here as far as a page can take it — permission and system notifications — but
+true Web Push also needs a service worker and a server to push from. There is no
+authentication: the account switcher in the top bar stands in for the
+invite-only login so the permission rules in 3.0 can be seen from any role. Data lives in `localStorage` in one browser; "reset
 data" in the footer restores the seeded workspace.
 
 ## File structure
@@ -65,7 +72,7 @@ on their order — tokens first, every later file reads those properties.
 
 ```
 node tests/logic.test.js     # 119 checks, no browser needed
-python3 tests/ui.test.py     # 82 checks, drives a real browser
+python3 tests/ui.test.py     # 109 checks, drives a real browser
 ```
 
 `logic.test.js` covers `store.js` and `permissions.js` directly: every lookup,

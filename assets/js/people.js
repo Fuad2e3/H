@@ -56,7 +56,8 @@ OC.people = (function () {
               id: OC.store.uid('u'), name: name.value.trim(), email: email.value.trim(),
               title: title.value.trim() || 'Team member', admin: false, status: 'invited',
               departments: [{ department: deptSelect.value, level: levelSelect.value }],
-              prefs: { push: true, email: true, discord: false }
+              prefs: { push: true, email: true, discord: false },
+              invite: OC.store.issueInvite(user.id)
             };
             OC.store.mutate({
               actor: user.id, action: 'user.invite', target: account.name,
@@ -64,7 +65,7 @@ OC.people = (function () {
             }, function () {
               OC.store.state.users.push(account);
             });
-            OC.ui.toast('Invite recorded. The account shows as invited until the link is claimed.');
+            OC.ui.toast('Invite issued. The link is single use and expires in 72 hours.');
             close();
           }
         }
@@ -103,9 +104,136 @@ OC.people = (function () {
     });
   }
 
+  function resend(account) {
+    var user = me();
+    OC.store.mutate({ actor: user.id, action: 'user.invite.resend', target: account.name,
+                      detail: 'new single use link, 72 hour expiry' }, function () {
+      account.invite = OC.store.issueInvite(user.id);
+    });
+    OC.ui.toast('A fresh link was issued. The previous one no longer works.');
+  }
+
+  function revoke(account) {
+    OC.ui.confirm('Withdraw the invite for ' + account.name + '? The link stops working immediately.', function () {
+      OC.store.mutate({ actor: OC.store.session(), action: 'user.invite.revoke', target: account.name }, function () {
+        OC.store.state.users = OC.store.state.users.filter(function (u) { return u.id !== account.id; });
+      });
+      OC.ui.toast('Invite withdrawn.');
+    });
+  }
+
+  function claim(account) {
+    OC.ui.confirm('Simulate ' + account.name + ' following their link and completing their profile?', function () {
+      OC.store.mutate({ actor: account.id, action: 'user.invite.claim', target: account.name }, function () {
+        account.invite.claimed_at = new Date().toISOString();
+        account.status = 'active';
+      });
+      OC.ui.toast(account.name + ' is now an active account.');
+    });
+  }
+
+  function inviteRow(account) {
+    var h = OC.ui.h;
+    var user = me();
+    var expired = OC.store.inviteExpired(account.invite);
+    var actions = [];
+    if (OC.can.manageInvite(user, account)) {
+      actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { resend(account); } }, 'Resend'));
+      actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { revoke(account); } }, 'Revoke'));
+      if (!expired) {
+        actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { claim(account); } }, 'Simulate claim'));
+      }
+    }
+    return h('div', { class: 'card invite-card' }, [
+      h('div', { class: 'row' }, [
+        h('h3', {}, account.name),
+        h('span', { class: 'chip ' + (expired ? 'overdue' : 'custom') + ' push' }, expired ? 'link expired' : 'awaiting claim')
+      ]),
+      h('p', { class: 'muted', style: 'font-size:13px;margin:4px 0 8px' }, account.email + ' · ' + account.title),
+      h('div', { class: 'row' }, account.departments.map(function (m) {
+        return h('span', { class: 'chip custom' }, (OC.store.department(m.department) || {}).name + ' · ' + m.level);
+      })),
+      h('p', { class: 'mono muted', style: 'font-size:10.5px;margin-top:8px' },
+        'Token ' + account.invite.token + ' · issued by ' + OC.ui.personName(account.invite.issued_by) +
+        ' · expires ' + OC.ui.fmtDate(account.invite.expires_at)),
+      actions.length ? h('div', { class: 'row', style: 'margin-top:10px' }, actions) : null
+    ]);
+  }
+
+  /* ---- departments are data, not schema (3.4, 4.1) ----------------------- */
+  function newDepartment() {
+    var h = OC.ui.h;
+    var user = me();
+    var name = h('input', { type: 'text', placeholder: 'for example: Paid Advertising' });
+    var levels = h('input', { type: 'text', value: 'head, lead, member' });
+    OC.ui.modal({
+      title: 'New department',
+      content: h('div', {}, [
+        OC.ui.field('Name', name, { required: true }),
+        OC.ui.field('Hierarchy, highest first', levels, { required: true,
+          hint: 'Comma separated. Permissions come from a level\'s position in this list, so a department may carry levels the others do not (3.4).' })
+      ]),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } },
+        {
+          label: 'Create department', primary: true, onClick: function (close) {
+            if (!name.value.trim()) return 'Give the department a name.';
+            var list = levels.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+            if (list.length < 2) return 'A department needs at least two levels.';
+            var dept = { id: OC.store.uid('d'), name: name.value.trim(), levels: list };
+            OC.store.mutate({ actor: user.id, action: 'department.create', target: dept.name,
+                              detail: list.join(' → ') }, function () {
+              OC.store.state.departments.push(dept);
+            });
+            OC.ui.toast('Department created. No development work required (4.1).');
+            close();
+          }
+        }
+      ]
+    });
+  }
+
+  function editLevels(dept) {
+    var h = OC.ui.h;
+    var user = me();
+    var levels = h('input', { type: 'text', value: dept.levels.join(', ') });
+    OC.ui.modal({
+      title: 'Hierarchy for ' + dept.name,
+      content: h('div', {}, [
+        OC.ui.field('Levels, highest first', levels, { required: true,
+          hint: 'Order is the authority. Position 1 is the department head, position 2 the team lead; anything below assigns to nobody (3.4).' })
+      ]),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } },
+        {
+          label: 'Save hierarchy', primary: true, onClick: function (close) {
+            var list = levels.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+            if (list.length < 2) return 'A department needs at least two levels.';
+            var orphaned = OC.store.state.users.filter(function (u) {
+              var lv = OC.can.levelIn(u, dept.id);
+              return lv && list.indexOf(lv) === -1;
+            });
+            if (orphaned.length) {
+              return 'Removing a level that people still hold: ' +
+                orphaned.map(function (u) { return u.name; }).join(', ') + '. Move them first.';
+            }
+            var before = dept.levels.join(' → ');
+            OC.store.mutate({ actor: user.id, action: 'department.hierarchy', target: dept.name,
+                              detail: before + '  =>  ' + list.join(' → ') }, function () {
+              dept.levels = list;
+            });
+            OC.ui.toast('Hierarchy saved. Permissions follow the new order immediately.');
+            close();
+          }
+        }
+      ]
+    });
+  }
+
   function render(host) {
     var h = OC.ui.h;
     var user = me();
+    var pending = OC.store.state.users.filter(function (u) { return u.status === 'invited' && u.invite; });
 
     OC.ui.clear(host);
     OC.ui.append(host, [
@@ -119,8 +247,19 @@ OC.people = (function () {
         OC.can.invite(user)
           ? h('button', { class: 'btn primary', type: 'button', onClick: invite }, [OC.icon('plus'), 'Invite someone'])
           : h('p', { class: 'muted' }, 'Invites are sent by the system admin or a department head (6.1).'),
-        h('button', { class: 'btn', type: 'button', onClick: editPrefs }, [OC.icon('bell'), 'My notification preferences'])
+        h('button', { class: 'btn', type: 'button', onClick: editPrefs }, [OC.icon('bell'), 'My notification preferences']),
+        OC.can.manageDepartments(user)
+          ? h('button', { class: 'btn', type: 'button', onClick: newDepartment }, [OC.icon('plus'), 'New department'])
+          : null
       ]),
+
+      pending.length ? h('div', { style: 'margin-bottom:22px' }, [
+        h('h3', { style: 'font-size:17px;margin-bottom:10px' }, 'Pending invites'),
+        h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:12px;max-width:74ch' },
+          'Each link is single use and expires 72 hours after it is issued. An unclaimed invite can be resent or ' +
+          'revoked by whoever sent it, or by the system admin (6.1).'),
+        h('div', { class: 'grid-2' }, pending.map(inviteRow))
+      ]) : null,
 
       h('div', { class: 'grid-2', style: 'margin-bottom:22px' }, OC.store.state.departments.map(function (d) {
         var members = OC.store.state.users.filter(function (u) { return OC.can.inDept(u, d.id); });
@@ -132,6 +271,10 @@ OC.people = (function () {
           h('div', { class: 'row', style: 'margin:8px 0 10px' }, d.levels.map(function (lv, i) {
             return h('span', { class: 'chip ' + (i === 0 ? 'dept' : 'custom') }, (i + 1) + '. ' + lv);
           })),
+          OC.can.manageDepartments(user)
+            ? h('button', { class: 'btn small', type: 'button', style: 'margin-bottom:10px',
+                            onClick: function () { editLevels(d); } }, 'Edit hierarchy')
+            : null,
           h('div', { class: 'stack' }, members.map(function (u) {
             return h('div', { class: 'row', style: 'font-size:13.5px' }, [
               h('span', {}, u.name),

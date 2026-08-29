@@ -132,6 +132,22 @@ OC.dashboard = (function () {
         ])
       ]),
 
+      (function () {
+        var pinned = OC.store.state.saved_filters.filter(function (f) { return f.owner === user.id; });
+        if (!pinned.length) return null;
+        return h('div', { class: 'card', style: 'margin-top:18px' }, [
+          h('h3', {}, 'Pinned filters'),
+          h('p', { class: 'muted', style: 'font-size:13px;margin:4px 0 10px' },
+            'Saved on the board so they do not have to be rebuilt each visit (6.4).'),
+          h('div', { class: 'row' }, pinned.map(function (f) {
+            return h('button', {
+              class: 'chip client', type: 'button', style: 'cursor:pointer',
+              onClick: function () { OC.board.applyFilter(f.filters); OC.app.go('board'); }
+            }, f.name);
+          }))
+        ]);
+      })(),
+
       h('div', { class: 'grid-2', style: 'margin-top:18px' }, [
         h('div', { class: 'card' }, [
           h('h3', {}, 'My clients'),

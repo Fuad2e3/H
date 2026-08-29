@@ -51,6 +51,9 @@ assets/css/02-base.css         element defaults, form controls, buttons, utiliti
 assets/css/03-layout.css       top bar, nav, page, two-panel board, breakpoints
 assets/css/04-components.css   chips, segmented controls, cards, todo and note
                                items, filter bar, tables, modal, toasts
+assets/css/05-touch.css        coarse-pointer control scale and phone density
+                               (loaded last: it overrides earlier files at
+                               equal specificity, so order is what makes it win)
 assets/js/icons.js             inline SVG icon set, drawn on a 16px grid
 assets/js/store.js             every entity in 5.0, seed data, persistence, audit
 assets/js/permissions.js       the permission engine of 3.0
@@ -111,6 +114,8 @@ Adding a department, a level, a client or a tag is data, not code: add it in
 
 Nothing in the interface should invent its own spacing, radius or control
 height — those live as scales in `01-tokens.css`. If a value is not there, it
-probably belongs there. Both breakpoints are set by content rather than by
-device: 1100px is where the two panels stop fitting side by side, 720px is
-where the top bar has to wrap.
+probably belongs there. Breakpoints are set by content rather than by device: 1100px is where the two
+panels stop fitting side by side, 720px is where the top bar has to wrap, and
+560px is where the wordmark tips it onto a third row. Touch sizing keys off
+`pointer: coarse` rather than width, so a touch laptop gets the larger controls
+and a narrow desktop window does not.

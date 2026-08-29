@@ -21,6 +21,7 @@ OC.board = (function () {
   var filters = { client: '', department: '', person: '', tag: '', from: '', to: '', q: '' };
   var grouping = 'person';       /* person | client | department */
   var mode = 'panels';           /* panels | timeline */
+  var filtersOpen = false;       /* small screens only; always open above 720px */
   var showDone = false;
   var showArchived = false;
   var panel = 'todos';           /* small screens only */
@@ -103,7 +104,7 @@ OC.board = (function () {
 
     var active = Object.keys(filters).filter(function (k) { return filters[k]; }).length;
 
-    var bar = h('div', { class: 'filterbar' }, [
+    var bar = h('div', { class: 'filterbar', 'data-open': String(filtersOpen) }, [
       h('div', { class: 'filterbar-head' }, [
         OC.icon('filter'),
         h('h2', {}, 'Filters'),
@@ -115,7 +116,15 @@ OC.board = (function () {
               rerender();
             }
           }, 'Clear'),
-          h('button', { class: 'btn small', type: 'button', onClick: saveFilter }, 'Pin filter')
+          h('button', { class: 'btn small', type: 'button', onClick: saveFilter }, 'Pin filter'),
+          /* on a phone the seven fields are a screenful before any content,
+             so they fold away behind this. Hidden above 720px, where they
+             are always shown. */
+          h('button', {
+            class: 'btn small filters-toggle', type: 'button',
+            'aria-expanded': String(filtersOpen),
+            onClick: function () { filtersOpen = !filtersOpen; rerender(); }
+          }, filtersOpen ? 'Hide fields' : 'Show fields')
         ])
       ]),
       h('div', { class: 'filters' }, [

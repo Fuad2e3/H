@@ -1,0 +1,86 @@
+/* =========================================================================
+   05-touch.css — coarse pointer scale
+   On touch the whole control scale grows: 34px is comfortable with a mouse
+   and fiddly with a thumb, and Apple, Material and WCAG 2.5.5 all land near
+   44px. Keyed to pointer type rather than viewport width, so a touch laptop
+   gets it and a small desktop window does not.
+
+   LOADED LAST ON PURPOSE. These rules override components defined in the
+   earlier files at equal specificity, so the cascade order is what makes
+   them win — an earlier position silently loses to 03-layout.css.
+   Originate Command · application
+   ========================================================================= */
+
+@media (pointer: coarse){
+  :root{ --ctl:48px; --ctl-sm:44px; }
+
+  .btn.small{padding:0 14px; font-size:13.5px;}
+  .btn.link{min-height:44px; display:inline-flex; align-items:center;}
+  .chip{height:24px; padding:0 9px; font-size:11px;}
+  .savedbar .chip{height:38px; padding:0 4px 0 12px;}
+  .savedbar .chip button{min-width:36px; min-height:36px; font-size:17px;}
+  .checkline{min-height:44px;}
+  .checkline input{width:21px; height:21px;}
+  .segmented{height:var(--ctl-sm);}
+  .segmented button{padding:0 14px; font-size:13.5px;}
+  .nav button{padding:17px 16px 15px; font-size:14.5px;}
+  .panel-tabs button{padding:15px 10px; font-size:14px;}
+  .iconbtn, .toggle-theme{height:44px; padding:0 15px; font-size:12px;}
+  .thread summary{min-height:38px; display:flex; align-items:center;}
+  .item .actions select{height:var(--ctl-sm);}
+  .ticklist .checkline{margin-bottom:2px;}
+  .brand{min-height:44px;}
+  .appfoot a, .appfoot button{min-height:44px; display:inline-flex; align-items:center;}
+  .topbar .who select{height:var(--ctl-sm);}
+}
+
+/* ---- narrow screens: fold the filter fields away ------------------------- */
+.filters-toggle{display:none;}
+
+@media (max-width:720px){
+  .filters-toggle{display:inline-flex;}
+  .filterbar[data-open="false"] .filters{display:none;}
+  .filterbar-head{flex-wrap:wrap; row-gap:var(--s2);}
+  .filterbar-head .tools{width:100%; margin-left:0;}
+  .filterbar-head .tools .btn{flex:1;}
+
+  /* the top bar keeps to two rows: identity and controls, then the account */
+  .brand b{font-size:14px; letter-spacing:-0.01em;}
+  .brand .mark{width:26px; height:26px; font-size:12.5px;}
+  .topbar{gap:var(--s2); padding:8px var(--s3);}
+  .iconbtn, .toggle-theme{padding:0 11px;}
+
+  /* the section rail scrolls; fade the edge so that reads as more, not cut */
+  .nav{
+    -webkit-mask-image:linear-gradient(90deg,#000 90%,transparent);
+    mask-image:linear-gradient(90deg,#000 90%,transparent);
+  }
+}
+/* Below 560px the wordmark is what tips the top bar onto a third row, so the
+   OC mark carries the identity there and the bar stays at two. */
+@media (max-width:560px){
+  .brand .lockup{display:none;}
+
+  /* the orientation paragraph is for a first-time desktop reader; on a phone
+     it costs a third of the first screen before any work is visible */
+  .page-head p{display:none;}
+  .page-head h1{font-size:19px;}
+  .boardbar .checkline{min-height:40px; font-size:12.5px;}
+}
+
+/* reclaim vertical space on a phone: the same content, less air */
+@media (max-width:720px){
+  .page{padding:var(--s3) var(--s3) 64px;}
+  .page-head{margin-bottom:var(--s3);}
+  .page-head h1{font-size:20px;}
+  .page-head p{font-size:13px; line-height:1.45;}
+  /* these share rows rather than each claiming one: stacking them cost about
+     190px of the first screen, which is worse than a slightly tighter row */
+  .boardbar{gap:var(--s2) var(--s3); margin-bottom:var(--s3);}
+  .boardbar .segmented button{padding:0 11px; font-size:12.5px;}
+  .boardbar .checkline{font-size:12.5px;}
+  .boardbar .btn.push{margin-left:auto;}
+  .filterbar{margin-bottom:var(--s3);}
+  .panel-head{padding:var(--s2) var(--s3);}
+  .panel-body{padding:var(--s3);}
+}

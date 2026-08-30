@@ -272,7 +272,7 @@ OC.ui = (function () {
     var dlg = h('dialog', { class: 'modal' });
     var backdrop = null;
     var escapeHandler = null;
-    var errorBox = h('div', { class: 'error', hidden: true });
+    var errorBox = h('div', { class: 'error', style: 'display:none;' });
     var errorText = h('span', {});
     errorBox.appendChild(OC.icon('alert'));
     errorBox.appendChild(errorText);
@@ -293,7 +293,7 @@ OC.ui = (function () {
           var problem = a.onClick ? a.onClick(close) : null;
           if (problem) {
             errorText.textContent = problem;
-            errorBox.hidden = false;
+            errorBox.style.display = 'flex';
           }
         }
       }, a.label);

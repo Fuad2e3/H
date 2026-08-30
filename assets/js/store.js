@@ -223,6 +223,18 @@ OC.store = (function () {
       state = seed();
       write();
     }
+    // Ensure default system admins are present even if local storage was cached
+    if (state && Array.isArray(state.users)) {
+      var seedUsers = seed().users;
+      var modified = false;
+      seedUsers.forEach(function (su) {
+        if (!state.users.some(function (u) { return u.id === su.id || (u.email && su.email && u.email.toLowerCase() === su.email.toLowerCase()); })) {
+          state.users.push(su);
+          modified = true;
+        }
+      });
+      if (modified) write();
+    }
     syncWithServer();
     return state;
   }

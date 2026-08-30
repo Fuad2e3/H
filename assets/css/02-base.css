@@ -281,6 +281,9 @@ select {
   margin-bottom: var(--s3);
   font-weight: 500;
 }
+.error[hidden], [hidden] {
+  display: none !important;
+}
 
 /* ---- buttons ------------------------------------------------------------ */
 .btn {

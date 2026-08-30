@@ -65,12 +65,40 @@ OC.people = (function () {
             }, function () {
               OC.store.state.users.push(account);
             });
-            OC.ui.toast('Invite issued. The link is single use and expires in 72 hours.');
+            dispatchInviteEmail(account, false);
+            OC.ui.toast('Invite issued for ' + account.name + '. 72h single-use link created.');
             close();
           }
         }
       ]
     });
+  }
+
+  function dispatchInviteEmail(account, isResend) {
+    var deptObj = OC.store.department(account.departments && account.departments[0] ? account.departments[0].department : '');
+    var levelName = account.departments && account.departments[0] ? account.departments[0].level : 'Member';
+    var base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:7000';
+
+    if (typeof fetch === 'function') {
+      fetch('/api/invites/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: account.email,
+          name: account.name,
+          departmentName: deptObj ? deptObj.name : 'Development Operations',
+          levelName: levelName,
+          token: account.invite ? account.invite.token : '',
+          appUrl: base
+        })
+      }).then(function (res) { return res.json(); }).then(function (data) {
+        if (data && data.result && data.result.success) {
+          OC.ui.toast('🚀 Auto-email dispatched to ' + account.email + ' via Resend API!');
+        } else if (data && data.result && data.result.simulated) {
+          OC.ui.toast((isResend ? 'Fresh link issued.' : 'Invite issued.') + ' (Add RESEND_API_KEY in .env for direct inbox auto-delivery)');
+        }
+      }).catch(function () {});
+    }
   }
 
   function editPrefs() {
@@ -110,6 +138,7 @@ OC.people = (function () {
                       detail: 'new single use link, 72 hour expiry' }, function () {
       account.invite = OC.store.issueInvite(user.id);
     });
+    dispatchInviteEmail(account, true);
     OC.ui.toast('A fresh link was issued. The previous one no longer works.');
   }
 

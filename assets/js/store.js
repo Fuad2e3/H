@@ -145,13 +145,28 @@ OC.store = (function () {
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
     } catch (e) {}
+  }  /* ---- Manual Server API Sync & Auto-Refresh (Every 5s) ---------------- */
+  function getApiUrl(endpoint) {
+    if (typeof window === 'undefined' || !window.location) return endpoint;
+    var host = window.location.hostname;
+    // If running on local server directly, use relative URL
+    if (host === 'localhost' || host === '127.0.0.1' || window.location.port === '7000') {
+      return endpoint;
+    }
+    // Otherwise use configured tunnel URL from assets/config.js
+    var cfg = window.OC_CONFIG || window.LGS_CONFIG;
+    if (cfg && cfg.API_URL && cfg.API_URL.indexOf('http') === 0) {
+      return cfg.API_URL.replace(/\/+$/, '') + endpoint;
+    }
+    return endpoint;
   }
 
-  /* ---- Manual Server API Sync & Auto-Refresh (Every 5s) ---------------- */
   function syncWithServer() {
     if (!isHttp() || typeof fetch !== 'function') return;
 
-    fetch('/api/state')
+    fetch(getApiUrl('/api/state'), {
+      headers: { 'bypass-tunnel-reminder': 'true' }
+    })
       .then(function (res) {
         if (res.ok) return res.json();
         throw new Error('Server returned ' + res.status);
@@ -181,9 +196,9 @@ OC.store = (function () {
   function pushMutationToServer(entry) {
     if (!isHttp() || typeof fetch !== 'function') return;
 
-    fetch('/api/mutate', {
+    fetch(getApiUrl('/api/mutate'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': 'true' },
       body: JSON.stringify({ entry: entry, state: state })
     }).catch(function () {});
   }
@@ -192,12 +207,12 @@ OC.store = (function () {
     if (sseSource || !isHttp() || typeof EventSource !== 'function') return;
 
     try {
-      sseSource = new EventSource('/api/events');
+      sseSource = new EventSource(getApiUrl('/api/events'));
       sseSource.onmessage = function (event) {
         try {
           var data = JSON.parse(event.data);
           if (data.type === 'mutate' || data.type === 'reset' || data.type === 'state_saved') {
-            fetch('/api/state')
+            fetch(getApiUrl('/api/state'), { headers: { 'bypass-tunnel-reminder': 'true' } })
               .then(function (res) { return res.json(); })
               .then(function (fresh) {
                 if (fresh && fresh.version === 1) {

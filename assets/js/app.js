@@ -138,28 +138,47 @@ OC.app = (function () {
 
   /* ---- Dedicated Initial Login Screen ----------------------------------- */
   function openGoogleAccountChooser(onSelect) {
-    var users = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
+    var knownDeviceAccounts = [
+      { name: 'Abdullah al Fuad', email: 'fuadkalaroa2002@gmail.com', avatar: 'AF', color: '#1E293B' },
+      { name: 'Abdullah al Fuad', email: 'fuadkalaroa2000@gmail.com', avatar: 'AF', color: '#7E22CE' },
+      { name: 'Abdullah Al Fuad', email: 'fuadogt@gmail.com', avatar: 'AF', color: '#0284C7' },
+      { name: 'Development Operations', email: 'devops@originateteam.com', avatar: 'DO', color: '#475569' },
+      { name: 'Shohag Munshe', email: 'shohag@originate.example', avatar: 'SM', color: '#2563EB' }
+    ];
+
+    // Merge any other active users from database store
+    var dbUsers = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
+    dbUsers.forEach(function (u) {
+      if (!knownDeviceAccounts.some(function (da) { return da.email.toLowerCase() === u.email.toLowerCase(); })) {
+        knownDeviceAccounts.push({
+          name: u.name,
+          email: u.email,
+          avatar: u.name ? u.name.slice(0, 2).toUpperCase() : 'U',
+          color: '#2563EB'
+        });
+      }
+    });
+
     var otherEmailInput = h('input', { type: 'email', autocomplete: 'email' });
     var showOther = false;
     var listContainer = h('div', { class: 'google-account-list' });
 
     function refresh(closeModal) {
       OC.ui.clear(listContainer);
-      var items = users.map(function (u) {
+      var items = knownDeviceAccounts.map(function (acc) {
         return h('div', {
           class: 'google-account-item',
           tabindex: '0',
           onClick: function () {
             closeModal();
-            onSelect(u.email);
+            onSelect(acc.email);
           }
         }, [
-          h('div', { class: 'google-avatar' }, u.name ? u.name.slice(0, 2).toUpperCase() : 'U'),
+          h('div', { class: 'google-avatar', style: 'background:' + acc.color + ';' }, acc.avatar),
           h('div', { class: 'google-account-info' }, [
-            h('div', { class: 'google-account-name' }, u.name),
-            h('div', { class: 'google-account-email' }, u.email)
-          ]),
-          h('span', { class: 'chip role push' }, OC.can.roleLabel(u))
+            h('div', { class: 'google-account-name' }, acc.name),
+            h('div', { class: 'google-account-email' }, acc.email)
+          ])
         ]);
       });
 
@@ -204,7 +223,7 @@ OC.app = (function () {
       title: 'Choose an account',
       content: h('div', { class: 'google-chooser-wrapper' }, [
         h('p', { class: 'muted', style: 'font-size:13px;margin-bottom:14px;' },
-          'Select your registered Google/Gmail account to connect to Originate Command:'),
+          'to continue to Originate Solution (intrepid-precept-7qmt3):'),
         listContainer
       ]),
       actions: [
@@ -235,18 +254,18 @@ OC.app = (function () {
   function renderLoginScreen(host) {
     OC.ui.clear(host);
 
-    var errorBox = h('div', { class: 'error', style: 'display:none;margin-bottom:14px;' });
+    var errorBox = h('div', { class: 'error', style: 'display:none;margin-bottom:16px;' });
 
     function performLogin(email) {
       if (!email) {
-        errorBox.textContent = 'Please select your registered Gmail account.';
+        errorBox.textContent = 'Please select your Google account.';
         errorBox.style.display = 'flex';
         return;
       }
       var clean = email.trim().toLowerCase();
       var found = OC.store.userByEmail(clean);
       if (!found) {
-        errorBox.innerHTML = '<strong>Access Denied:</strong> &quot;' + clean + '&quot; is not registered in the database.<br><span style="font-size:12px;opacity:0.9;">Only database-registered accounts can connect. Please contact your System Admin.</span>';
+        errorBox.innerHTML = '<strong>Access Denied:</strong> &quot;' + clean + '&quot; is not registered in the database.<br><span style="font-size:12px;opacity:0.9;">Only authorized staff and invited team members can access. Please contact your System Admin.</span>';
         errorBox.style.display = 'flex';
         return;
       }
@@ -264,41 +283,44 @@ OC.app = (function () {
       render();
     }
 
-    var googleButtonContainer = h('div', {
-      id: 'googleSignInDiv',
-      style: 'display:flex;justify-content:center;margin-bottom:10px;'
-    });
+    var card = h('div', { class: 'login-portal-card' }, [
+      h('div', { class: 'portal-brand-header' }, [
+        h('div', { class: 'portal-logo-badge' }, [
+          h('span', { class: 'portal-logo-icon' }, 'M'),
+          h('span', { class: 'portal-logo-text' }, 'Originate Marketing')
+        ]),
+        h('h1', { class: 'portal-title' }, 'Originate Solution'),
+        h('p', { class: 'portal-tagline' }, 'OFFICIAL CONFIDENTIAL TEAM PORTAL')
+      ]),
 
-    var cardContent = h('div', { class: 'login-form', style: 'text-align:center;' }, [
       errorBox,
-      googleButtonContainer,
+
+      h('div', { class: 'authorized-notice-box' }, [
+        h('div', { class: 'authorized-notice-head' }, [
+          OC.icon('alert'),
+          h('strong', {}, 'Authorized Personnel Only')
+        ]),
+        h('p', { class: 'authorized-notice-text' },
+          'Access is restricted to invited team members and authorized staff. Please log in with your authorized Google account.')
+      ]),
+
       h('button', {
-        class: 'btn primary connect-btn',
+        class: 'portal-google-btn',
         type: 'button',
-        style: 'height:48px;font-size:15px;width:100%;',
         onClick: function () {
-          if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-            try { google.accounts.id.prompt(); } catch (e) { }
-          }
           openGoogleAccountChooser(function (selectedEmail) {
             performLogin(selectedEmail);
           });
         }
       }, [
         OC.icon('google'),
-        'Connect with Google / Gmail'
+        'Sign in with Google Account'
       ]),
-      h('p', { class: 'muted', style: 'font-size:12px;margin-top:14px;' },
-        '🔒 Single sign-on with database match verification.')
-    ]);
 
-    var card = h('div', { class: 'login-card' }, [
-      h('div', { class: 'login-brand' }, [
-        h('div', { class: 'mark' }, 'OC'),
-        h('h1', {}, 'Connect to Originate Command'),
-        h('p', {}, 'Database-verified Google & Gmail authentication.')
-      ]),
-      cardContent
+      h('div', { class: 'portal-footer-notice' }, [
+        h('p', {}, '© 2026 Originate Marketing. All rights reserved.'),
+        h('p', { class: 'portal-owner' }, 'Owner: vaemesbah@gmail.com')
+      ])
     ]);
 
     var screen = h('div', { class: 'login-screen' }, [card]);

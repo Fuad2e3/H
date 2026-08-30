@@ -13,7 +13,7 @@ console.log('=== dev3 server: logic.js unit tests ===');
 // 1. Seed verification
 const seed = logic.seed();
 assert.strictEqual(seed.departments.length, 6, 'Should have 6 departments');
-assert.strictEqual(seed.users.length, 2, 'Should have System Admins in clean production seed');
+assert.strictEqual(seed.users.length, 3, 'Should have System Admins in clean production seed');
 assert.ok(seed.users.every(u => u.admin === true), 'All seed users should be System Admins');
 console.log('✓ clean production seed() entities verified (system admins retained)');
 

@@ -303,7 +303,7 @@ OC.app = (function () {
         return;
       }
       if (!pass) {
-        errorBox.textContent = 'Please enter your 72-hour temporary password / passcode.';
+        errorBox.textContent = 'Please enter your password.';
         errorBox.style.display = 'flex';
         return;
       }
@@ -315,9 +315,18 @@ OC.app = (function () {
         return;
       }
 
-      if (found.invite) {
+      // 1. If permanent password already set on account
+      if (found.password) {
+        if (pass.toLowerCase() !== String(found.password).toLowerCase()) {
+          errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password for &quot;' + email + '&quot;.';
+          errorBox.style.display = 'flex';
+          return;
+        }
+      }
+      // 2. If first-time login using 72-hour invite passcode/token
+      else if (found.invite) {
         var isExpired = OC.store.inviteExpired(found.invite);
-        if (isExpired) {
+        if (isExpired && !found.invite.claimed_at) {
           errorBox.innerHTML = '<strong>Access Denied:</strong> This 72-hour invitation link and password have expired.<br><span style="font-size:12px;opacity:0.9;">Please request a new invitation from your System Admin.</span>';
           errorBox.style.display = 'flex';
           return;
@@ -333,8 +342,15 @@ OC.app = (function () {
           return;
         }
 
+        // Make the passcode permanent for all future logins!
+        found.password = found.invite.passcode || pass;
         found.invite.claimed_at = new Date().toISOString();
         found.status = 'active';
+        OC.store.mutate(null, function () {});
+      }
+      // 3. Unlocked admin default
+      else {
+        found.password = pass;
         OC.store.mutate(null, function () {});
       }
 
@@ -375,7 +391,7 @@ OC.app = (function () {
           h('strong', {}, 'Authorized Personnel Only')
         ]),
         h('p', { class: 'authorized-notice-text' },
-          'Access is restricted to invited team members and authorized staff. Log in with your Gmail & 72-hr password or Google account.')
+          'Access is restricted to invited team members and authorized staff. Log in with your Gmail & password or Google account.')
       ]),
 
       h('form', { class: 'portal-form', onSubmit: handlePasswordLogin }, [
@@ -384,7 +400,7 @@ OC.app = (function () {
           emailInput
         ]),
         h('div', { class: 'portal-field' }, [
-          h('label', {}, '72-Hour Password / Passcode'),
+          h('label', {}, 'Password / 72-Hr Passcode'),
           passInput
         ]),
         h('button', {
@@ -446,7 +462,7 @@ OC.app = (function () {
       }
 
       var nameInput = h('input', { type: 'text', value: target.name });
-      var passInput = h('input', { type: 'password', placeholder: 'Choose a password' });
+      var passInput = h('input', { type: 'password', value: target.invite.passcode || '', placeholder: 'Choose a password' });
 
       OC.ui.modal({
         title: 'Complete your profile',
@@ -454,7 +470,7 @@ OC.app = (function () {
           h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:12px' },
             'Welcome to Originate Command! Confirm your details to activate your account.'),
           OC.ui.field('Full Name', nameInput, { required: true }),
-          OC.ui.field('Password', passInput, { required: true }),
+          OC.ui.field('Permanent Password', passInput, { required: true, hint: 'You will use this password for all future logins.' }),
           OC.ui.field('Email', h('input', { type: 'text', value: target.email, disabled: true }))
         ]),
         actions: [
@@ -467,14 +483,16 @@ OC.app = (function () {
               }, function () {
                 target.name = nameInput.value.trim();
                 target.status = 'active';
+                target.password = passInput.value.trim() || target.invite.passcode;
                 target.invite.claimed_at = new Date().toISOString();
               });
+              close();
               isAuthenticated = true;
               try { localStorage.setItem(AUTH_KEY, target.id); } catch (e) { }
               OC.store.setSession(target.id);
-              OC.ui.toast('Welcome, ' + target.name + '! Your account is now active.');
               location.hash = '#dashboard';
-              close();
+              OC.ui.toast('Account activated! You can now log in anytime with your password.');
+              render();
             }
           }
         ]

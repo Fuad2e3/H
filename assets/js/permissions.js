@@ -173,6 +173,24 @@ OC.can = (function () {
      time and set the ordered hierarchy it uses (3.4, 4.1) */
   function manageDepartments(user) { return !!user && user.admin; }
 
+  /* System Admin may edit/delete any user; Department Head may edit/delete members in their own department(s) */
+  function canEditAccount(actor, targetAccount) {
+    if (!actor || !targetAccount) return false;
+    if (actor.admin) return true;
+    if (targetAccount.admin) return false; // Head cannot edit System Admin
+    var headDepts = (actor.departments || []).filter(function (m) { return m.level === 'head' || rankOf(actor, m.department) === 0; }).map(function (m) { return m.department; });
+    if (!headDepts.length) return false;
+    return (targetAccount.departments || []).some(function (m) {
+      return headDepts.indexOf(m.department) > -1;
+    });
+  }
+
+  function canDeleteAccount(actor, targetAccount) {
+    if (!actor || !targetAccount) return false;
+    if (actor.id === targetAccount.id) return false; // Cannot delete self
+    return canEditAccount(actor, targetAccount);
+  }
+
   /* anyone who may see an item may discuss it (5.0, Comment) */
   function commentOnTodo(user, todo) { return seeTodo(user, todo); }
   function commentOnInstruction(user, note) { return seeInstruction(user, note); }
@@ -227,7 +245,7 @@ OC.can = (function () {
     createClient: createClient,
     changeState: changeState, reassign: reassign, assignsOthers: assignsOthers, archiveInstruction: archiveInstruction,
     manageDepartment: manageDepartment, manageDepartments: manageDepartments,
-    invite: invite, manageInvite: manageInvite, seeAudit: seeAudit,
+    invite: invite, manageInvite: manageInvite, editAccount: canEditAccount, deleteAccount: canDeleteAccount, seeAudit: seeAudit,
     commentOnTodo: commentOnTodo, commentOnInstruction: commentOnInstruction,
     visibleUsers: visibleUsers,
     escalationChain: escalationChain, escalationReached: escalationReached

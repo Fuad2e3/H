@@ -354,17 +354,22 @@ OC.people = (function () {
     var h = OC.ui.h;
     var user = me();
     var name = h('input', { type: 'text', value: account.name });
-    var email = h('input', { type: 'text', value: account.email });
+    var email = h('input', { type: 'email', value: account.email });
     var title = h('input', { type: 'text', value: account.title });
     var isAdmin = h('input', { type: 'checkbox', checked: account.admin });
 
     var currentDept = (account.departments && account.departments[0]) ? account.departments[0].department : '';
     var currentLevel = (account.departments && account.departments[0]) ? account.departments[0].level : '';
 
-    var deptSelect = OC.ui.select([{ value: '', label: 'None (System Admin / Independent)' }].concat(
-      OC.store.state.departments.map(function (d) { return { value: d.id, label: d.name }; })
-    ), currentDept);
+    var allowedDepts = user.admin
+      ? OC.store.state.departments
+      : OC.store.state.departments.filter(function (d) { return OC.can.isHead(user, d.id); });
 
+    var deptOptions = [{ value: '', label: 'None (Independent)' }].concat(
+      allowedDepts.map(function (d) { return { value: d.id, label: d.name }; })
+    );
+
+    var deptSelect = OC.ui.select(deptOptions, currentDept);
     var levelSelect = OC.ui.select([], '');
 
     function refreshLevels() {
@@ -402,45 +407,52 @@ OC.people = (function () {
             account.name = name.value.trim();
             account.email = email.value.trim();
             account.title = title.value.trim() || 'Team Member';
-            account.admin = isAdmin.checked;
+            if (user.admin) {
+              account.admin = isAdmin.checked;
+            }
             account.status = statusSelect.value;
             if (deptSelect.value && levelSelect.value) {
               account.departments = [{ department: deptSelect.value, level: levelSelect.value }];
-            } else {
+            } else if (user.admin && !deptSelect.value) {
               account.departments = [];
             }
           });
-          OC.ui.toast('Account updated.');
+          OC.ui.toast('Account updated successfully.');
           close();
         }
       }
     ];
 
-    if (account.id !== user.id) {
+    if (OC.can.deleteAccount(user, account)) {
       actions.unshift({
         label: 'Delete account', onClick: function (close) {
-          OC.ui.confirm('Delete account "' + account.name + '"? This user will no longer be able to log in.', function () {
+          OC.ui.confirm('Delete account "' + account.name + '"? This user will be permanently removed and cannot log in.', function () {
             OC.store.mutate({ actor: user.id, action: 'user.delete', target: account.name }, function () {
               OC.store.state.users = OC.store.state.users.filter(function (u) { return u.id !== account.id; });
             });
-            OC.ui.toast('Account removed.');
+            OC.ui.toast('Account permanently deleted.');
             close();
           });
         }
       });
     }
 
+    var fields = [
+      OC.ui.field('Full name', name, { required: true }),
+      OC.ui.field('Email address', email, { required: true }),
+      OC.ui.field('Job title', title),
+      OC.ui.field('Department', deptSelect),
+      OC.ui.field('Department level', levelSelect),
+      OC.ui.field('Status', statusSelect)
+    ];
+
+    if (user.admin && account.id !== user.id) {
+      fields.push(h('label', { class: 'checkline', style: 'margin-top:12px;' }, [isAdmin, ' Grant System Admin superuser access']));
+    }
+
     OC.ui.modal({
       title: 'Edit account: ' + account.name,
-      content: h('div', {}, [
-        OC.ui.field('Full name', name, { required: true }),
-        OC.ui.field('Email address', email, { required: true }),
-        OC.ui.field('Job title', title),
-        OC.ui.field('Department', deptSelect),
-        OC.ui.field('Department level', levelSelect),
-        OC.ui.field('Status', statusSelect),
-        h('label', { class: 'checkline', style: 'margin-top:12px;' }, [isAdmin, ' Grant System Admin superuser access'])
-      ]),
+      content: h('div', {}, fields),
       actions: actions
     });
   }
@@ -449,13 +461,14 @@ OC.people = (function () {
     var h = OC.ui.h;
     var user = me();
     var pending = OC.store.state.users.filter(function (u) { return u.status === 'invited' && u.invite; });
+    var canEditAny = OC.store.state.users.some(function (u) { return OC.can.editAccount(user, u); });
 
     OC.ui.clear(host);
     OC.ui.append(host, [
       h('div', { class: 'page-head' }, [
         h('h1', {}, 'People and departments'),
         h('p', {}, 'Departments are data, not schema — any department can be renamed, customized, or added without development work (4.1). ' +
-          'System Admin can edit all profiles, departments, and client entities directly.')
+          'System Admin and Department Heads can edit, manage, and delete member accounts directly.')
       ]),
 
       h('div', { class: 'row', style: 'margin-bottom:16px' }, [
@@ -533,10 +546,18 @@ OC.people = (function () {
               ])
             : null,
           h('div', { class: 'stack' }, members.length ? members.map(function (u) {
-            return h('div', { class: 'row', style: 'font-size:13.5px' }, [
+            return h('div', { class: 'row', style: 'font-size:13.5px;align-items:center;' }, [
               OC.ui.person(u.id),
               h('span', { class: 'chip role push' }, OC.can.levelIn(u, d.id)),
-              u.status === 'invited' ? h('span', { class: 'chip overdue' }, 'invited') : null
+              u.status === 'invited' ? h('span', { class: 'chip overdue' }, 'invited') : null,
+              OC.can.editAccount(user, u)
+                ? h('button', {
+                    class: 'btn small',
+                    type: 'button',
+                    style: 'padding:2px 8px;font-size:11.5px;margin-left:6px;',
+                    onClick: function () { editAccount(u); }
+                  }, 'Edit')
+                : null
             ]);
           }) : [h('p', { class: 'muted', style: 'font-size:12.5px;' }, 'No members yet.')])
         ]);
@@ -555,7 +576,7 @@ OC.people = (function () {
             h('th', { scope: 'col' }, 'Role'),
             h('th', { scope: 'col' }, 'Departments'),
             h('th', { scope: 'col' }, 'Status'),
-            user && user.admin ? h('th', { scope: 'col', style: 'text-align:right;' }, 'Actions') : null
+            canEditAny ? h('th', { scope: 'col', style: 'text-align:right;' }, 'Actions') : null
           ].filter(Boolean))),
           h('tbody', {}, OC.store.state.users.map(function (u) {
             return h('tr', {}, [
@@ -569,8 +590,10 @@ OC.people = (function () {
                   })
                 : h('span', { class: 'muted' }, 'leadership tier, every department')),
               h('td', { class: 'mono' }, u.status),
-              user && user.admin ? h('td', { style: 'text-align:right;' }, [
-                h('button', { class: 'btn small', type: 'button', onClick: function () { editAccount(u); } }, 'Edit')
+              canEditAny ? h('td', { style: 'text-align:right;' }, [
+                OC.can.editAccount(user, u)
+                  ? h('button', { class: 'btn small', type: 'button', onClick: function () { editAccount(u); } }, 'Edit')
+                  : null
               ]) : null
             ].filter(Boolean));
           }))

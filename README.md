@@ -8,9 +8,6 @@ npm run seed     # create the database and fill it with a workspace to try
 npm start        # http://localhost:3000
 ```
 
-Sign in as `shohag@originate.example` (admin) or `rifat@originate.example`
-(team member). Password: `originate`.
-
 Node 22.5 or newer, and **no dependencies at all** — not one `npm install`.
 The server is Node's own `http` module and its own SQLite driver.
 

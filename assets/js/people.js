@@ -128,12 +128,20 @@ OC.people = (function () {
           h('p', { style: 'margin:0;word-break:break-all;font-size:12px;' }, ['🔗 ', h('strong', {}, 'Link: '), details.link]),
         ]),
         h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap;' }, [
-          h('a', {
+          h('button', {
             class: 'btn primary',
+            type: 'button',
+            style: 'display:inline-flex;align-items:center;gap:6px;',
+            onClick: function () {
+              dispatchInviteEmail(account, true);
+            }
+          }, [OC.icon('send'), '⚡ Send Email Now']),
+          h('a', {
+            class: 'btn',
             href: details.gmailUrl,
             target: '_blank',
             style: 'display:inline-flex;align-items:center;gap:6px;text-decoration:none;'
-          }, [OC.icon('send'), 'Open in Gmail (Auto-Filled)']),
+          }, [OC.icon('send'), 'Open in Gmail (Manual)']),
           h('button', {
             class: 'btn',
             type: 'button',
@@ -155,6 +163,8 @@ OC.people = (function () {
                 navigator.clipboard.writeText(details.pass).then(function () {
                   OC.ui.toast('Password (' + details.pass + ') copied!');
                 });
+              } else {
+                prompt('Copy Passcode:', details.pass);
               }
             }
           }, 'Copy Passcode'),
@@ -166,6 +176,8 @@ OC.people = (function () {
                 navigator.clipboard.writeText(details.link).then(function () {
                   OC.ui.toast('Link copied to clipboard!');
                 });
+              } else {
+                prompt('Copy Link:', details.link);
               }
             }
           }, 'Copy Link')
@@ -177,15 +189,34 @@ OC.people = (function () {
     });
   }
 
+  function getApiEndpoint(endpoint) {
+    if (typeof window === 'undefined' || !window.location) return endpoint;
+    var host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || window.location.port === '7000') {
+      return endpoint;
+    }
+    var cfg = window.OC_CONFIG || window.LGS_CONFIG;
+    if (cfg && cfg.API_URL && cfg.API_URL.indexOf('http') === 0) {
+      return cfg.API_URL.replace(/\/+$/, '') + endpoint;
+    }
+    return endpoint;
+  }
+
   function dispatchInviteEmail(account, isResend) {
     var deptObj = OC.store.department(account.departments && account.departments[0] ? account.departments[0].department : '');
     var levelName = account.departments && account.departments[0] ? account.departments[0].level : 'Member';
     var base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:7000';
 
+    OC.ui.toast('📧 Dispatching auto-email to ' + account.email + '...');
+
     if (typeof fetch === 'function') {
-      fetch('/api/invites/send-email', {
+      var targetUrl = getApiEndpoint('/api/invites/send-email');
+      fetch(targetUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'bypass-tunnel-reminder': 'true'
+        },
         body: JSON.stringify({
           to: account.email,
           name: account.name,
@@ -195,11 +226,19 @@ OC.people = (function () {
           passcode: account.invite ? account.invite.passcode : '',
           appUrl: base
         })
-      }).then(function (res) { return res.json(); }).then(function (data) {
-        if (data && data.result && data.result.success) {
-          OC.ui.toast('🚀 Auto-email dispatched to ' + account.email + '!');
-        }
-      }).catch(function () {});
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data && data.ok) {
+            OC.ui.toast('🚀 Auto-email successfully delivered to ' + account.email + '!');
+          } else {
+            OC.ui.toast('⚠️ Mail notice: ' + (data.error || 'Server processed request'));
+          }
+        })
+        .catch(function (err) {
+          console.warn('Auto email dispatch warning:', err);
+          OC.ui.toast('⚠️ Could not connect to mail server. Use Open in Gmail button.');
+        });
     }
   }
 

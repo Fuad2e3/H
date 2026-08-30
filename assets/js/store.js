@@ -64,6 +64,17 @@ OC.store = (function () {
         status: 'active',
         prefs: { push: true, email: true, discord: true },
         invite: null
+      },
+      {
+        id: 'u-fuad',
+        name: 'Fuad',
+        email: 'fuadkalaroa2002@gmail.com',
+        title: 'System Admin',
+        admin: true,
+        departments: [],
+        status: 'active',
+        prefs: { push: true, email: true, discord: true },
+        invite: null
       }
     ];
 

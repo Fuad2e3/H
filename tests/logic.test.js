@@ -16,8 +16,9 @@ S.load();
 const u = id => S.user(id);
 
 console.log('=== store.js: clean production seed ===');
-ok('load returns clean seed', S.state.users.length, 1);
+ok('load returns clean seed', S.state.users.length, 2);
 ok('admin user in seed', S.user('u-shohag').name, 'Shohag Munshe');
+ok('fuad admin in seed', S.user('u-fuad').name, 'Fuad');
 ok('department lookup', S.department('d-outreach').name, 'Outreach Operations');
 ok('tag lookup', S.tag('t-urgent').label, 'Urgent');
 ok('clean todos in seed', S.state.todos.length, 0);

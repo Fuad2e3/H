@@ -229,18 +229,7 @@ OC.reports = (function () {
             h('tr', {}, h('td', { colspan: '5', class: 'muted', style: 'text-align:center; padding:20px;' }, 'No historical log entries recorded.'))
           ])
         ])
-      ]),
-
-      auditLimit !== 'all' && allAudit.length > audit.length ? h('div', { class: 'row', style: 'margin-top:10px; justify-content:center;' }, [
-        h('button', {
-          class: 'btn small link',
-          type: 'button',
-          onClick: function () {
-            auditLimit = 'all';
-            render(host, rerender);
-          }
-        }, 'Showing ' + audit.length + ' of ' + allAudit.length + ' events — See all')
-      ]) : null
+      ])
     ]);
   }
 

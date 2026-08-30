@@ -32,11 +32,35 @@ OC.ui = (function () {
 
   function append(el, children) {
     if (children === null || children === undefined || children === false) return;
-    if (Array.isArray(children)) { children.forEach(function (c) { append(el, c); }); return; }
+    if (Array.isArray(children)) {
+      var frag = (typeof document !== 'undefined' && document.createDocumentFragment) ? document.createDocumentFragment() : null;
+      for (var i = 0; i < children.length; i++) {
+        var c = children[i];
+        if (c === null || c === undefined || c === false) continue;
+        if (Array.isArray(c)) {
+          append(frag || el, c);
+        } else {
+          var node = c.nodeType ? c : document.createTextNode(String(c));
+          if (frag) frag.appendChild(node);
+          else el.appendChild(node);
+        }
+      }
+      if (frag) el.appendChild(frag);
+      return;
+    }
     el.appendChild(children.nodeType ? children : document.createTextNode(String(children)));
   }
 
   function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
+
+  function debounce(fn, wait) {
+    var timer;
+    return function () {
+      var ctx = this, args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(ctx, args); }, wait || 150);
+    };
+  }
 
   /* ---- dates ------------------------------------------------------------ */
   var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -707,6 +731,6 @@ OC.ui = (function () {
     STATE_LABEL: STATE_LABEL,
     field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
     tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
-    modal: modal, confirm: confirm, toast: toast
+    modal: modal, confirm: confirm, toast: toast, debounce: debounce
   };
 })();

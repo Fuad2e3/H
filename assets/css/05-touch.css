@@ -84,3 +84,15 @@
   .panel-head{padding:var(--s2) var(--s3);}
   .panel-body{padding:var(--s3);}
 }
+
+@media (max-width:600px){
+  dialog.modal{width:96vw; max-height:94vh;}
+  .group-chat-messages{max-height:42vh;}
+  .reaction-picker-pop{
+    position:fixed;
+    left:50% !important;
+    top:50% !important;
+    transform:translate(-50%, -50%) !important;
+    z-index:120;
+  }
+}

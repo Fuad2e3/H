@@ -128,7 +128,7 @@ OC.board = (function () {
         ])
       ]),
       h('div', { class: 'filters' }, [
-      OC.ui.field('Search', h('input', { type: 'search', value: filters.q, placeholder: 'text in todos and instructions', onInput: set('q') })),
+      OC.ui.field('Search', h('input', { type: 'search', value: filters.q, placeholder: 'text in todos and instructions', onInput: OC.ui.debounce ? OC.ui.debounce(set('q'), 120) : set('q') })),
       OC.ui.field('Client', OC.ui.select(optionsFor(OC.store.state.clients, 'All clients'), filters.client, { onChange: set('client') })),
       OC.ui.field('Department', OC.ui.select(optionsFor(depts, 'All departments'), filters.department, { onChange: set('department') })),
       OC.ui.field('Person', OC.ui.select(optionsFor(people, 'Anyone'), filters.person, { onChange: set('person') })),

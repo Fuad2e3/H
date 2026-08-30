@@ -575,6 +575,7 @@
 /* ---- tables ------------------------------------------------------------- */
 .tablewrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--rule);
   border-radius: var(--r2);
   background: var(--card-bg);
@@ -687,6 +688,38 @@ dialog.modal::backdrop {
   padding: var(--s3) var(--s4);
   border-top: 1px solid var(--rule);
   background: var(--card-bg-alt);
+}
+
+@media (max-width: 600px) {
+  dialog.modal {
+    width: 95vw;
+    max-height: 94vh;
+    border-radius: var(--r2);
+  }
+  .modal-head {
+    padding: 10px 14px;
+  }
+  .modal-body {
+    padding: 12px 14px;
+    max-height: min(72vh, 480px);
+  }
+  .modal-foot {
+    padding: 10px 14px;
+    flex-wrap: wrap-reverse;
+  }
+  .modal-foot .btn {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
+/* ---- responsive table wrapper ------------------------------------------- */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--r1);
 }
 
 /* ---- toasts ------------------------------------------------------------- */

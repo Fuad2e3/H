@@ -468,7 +468,7 @@ OC.groups = (function () {
             type: 'search', placeholder: 'Search groups by name, purpose, or member...',
             value: searchQuery,
             style: 'max-width:320px;',
-            onInput: function (e) { searchQuery = e.target.value; render(host, rerender); }
+            onInput: OC.ui.debounce(function (e) { searchQuery = e.target.value; render(host, rerender); }, 120)
           }),
           h('div', { class: 'segmented', role: 'group', 'aria-label': 'Filter groups' }, [
             ['all', 'All (' + allGroups.length + ')'],

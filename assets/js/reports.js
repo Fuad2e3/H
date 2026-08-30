@@ -229,7 +229,44 @@ OC.reports = (function () {
             h('tr', {}, h('td', { colspan: '5', class: 'muted', style: 'text-align:center; padding:20px;' }, 'No historical log entries recorded.'))
           ])
         ])
-      ])
+      ]),
+
+      allAudit.length > 10 ? h('div', {
+        class: 'row',
+        style: 'margin-top: 14px; padding: 10px 16px; background: var(--card-bg); border: 1px solid var(--rule); border-radius: var(--r1); justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;'
+      }, [
+        h('div', { class: 'row', style: 'gap: 8px; align-items: center;' }, [
+          h('span', { class: 'chip count' },
+            (auditLimit === 'all' || audit.length >= allAudit.length
+              ? String(allAudit.length)
+              : audit.length + ' of ' + allAudit.length) + (allAudit.length === 1 ? ' event' : ' events')),
+          h('span', { class: 'muted', style: 'font-size: 13px;' }, 'displayed in historical audit trail')
+        ]),
+        h('div', { class: 'row', style: 'gap: 8px;' }, [
+          h('button', {
+            class: 'btn small' + (auditLimit !== 'all' ? ' primary' : ''),
+            type: 'button',
+            title: auditLimit === 'all' ? 'Show initial 10 events' : 'Show 10 more events',
+            onClick: function () {
+              if (auditLimit === 'all') {
+                auditLimit = 10;
+              } else {
+                auditLimit = (parseInt(auditLimit, 10) || 10) + 10;
+              }
+              render(host, rerender);
+            }
+          }, auditLimit === 'all' ? 'Show 10' : 'See 10+'),
+          h('button', {
+            class: 'btn small' + (auditLimit === 'all' ? ' primary' : ''),
+            type: 'button',
+            title: 'Show all historical events',
+            onClick: function () {
+              auditLimit = 'all';
+              render(host, rerender);
+            }
+          }, 'See all (' + allAudit.length + ')')
+        ])
+      ]) : null
     ]);
   }
 

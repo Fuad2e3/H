@@ -369,7 +369,7 @@ OC.board = (function () {
     preset = preset || {};
     var title = h('input', { type: 'text', value: preset.title || '' });
     var desc = h('textarea', {}, preset.description || '');
-    var client = OC.ui.select(optionsFor(OC.store.state.clients, 'Select a client'), preset.client || '');
+    var clientPicker = OC.ui.clientPicker(preset.client || '');
     var depts = user.admin ? OC.store.state.departments
       : OC.store.state.departments.filter(function (d) { return OC.can.inDept(user, d.id); });
     var department = OC.ui.select(optionsFor(depts, 'Select a department'), preset.department || '');
@@ -397,7 +397,7 @@ OC.board = (function () {
       content: h('div', {}, [
         OC.ui.field('Title', title, { required: true }),
         OC.ui.field('Description', desc),
-        OC.ui.field('Client', client, { required: true, hint: 'Every todo needs a client and a department before it can be posted (5.2).' }),
+        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select an existing client or click "+ New Client" to add a custom client (5.2).' }),
         OC.ui.field('Department', department, { required: true }),
         OC.ui.field('Assign to', assignee, { required: true, hint: assignHint }),
         OC.ui.field('Due date', due, { required: true }),
@@ -410,7 +410,8 @@ OC.board = (function () {
         {
           label: 'Create todo', primary: true, onClick: function (close) {
             if (!title.value.trim()) return 'A todo needs a title.';
-            if (!client.value) return 'Select a client. This is required by 5.2.';
+            var selectedClient = clientPicker.getValue();
+            if (!selectedClient || selectedClient === '__new__') return 'Select a client or add a new one. This is required by 5.2.';
             if (!department.value) return 'Select a department. This is required by 5.2.';
             var parts = assignee.value.split(':');
             if (parts[0] === 'user' && !OC.can.assignTo(user, parts[1])) return 'You cannot assign work to that person (3.2).';
@@ -418,7 +419,7 @@ OC.board = (function () {
             var todo = {
               id: OC.store.uid('t'),
               title: title.value.trim(), description: desc.value.trim(),
-              client: client.value, department: department.value,
+              client: selectedClient, department: department.value,
               assignee_type: parts[0], assignee: parts[1],
               state: 'open', priority: priority.value, due: due.value,
               recurrence: recurrence.value, created_by: user.id,
@@ -537,7 +538,7 @@ OC.board = (function () {
   function newInstruction() {
     var user = me();
     var body = h('textarea', { placeholder: 'the instruction, as it was given' });
-    var client = OC.ui.select(optionsFor(OC.store.state.clients, 'Select a client'), '');
+    var clientPicker = OC.ui.clientPicker('');
     var department = OC.ui.select(optionsFor(OC.store.state.departments, 'Select a department'), '');
     var tags = OC.ui.tagPicker([]);
 
@@ -545,7 +546,7 @@ OC.board = (function () {
       title: 'Post an instruction',
       content: h('div', {}, [
         OC.ui.field('Instruction', body, { required: true, hint: 'Anyone may post an instruction — it is not restricted the way assignment is (6.3).' }),
-        OC.ui.field('Client', client, { required: true, hint: 'Client and department are both required (5.2).' }),
+        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select an existing client or click "+ New Client" to add a custom client (5.2).' }),
         OC.ui.field('Department', department, { required: true, hint: 'Any department, not only your own (3.2).' }),
         OC.ui.field('Tags', tags.node, { hint: 'Typing narrows the list. A new tag is created inline and available to everyone immediately (6.4).' })
       ]),
@@ -554,12 +555,13 @@ OC.board = (function () {
         {
           label: 'Post instruction', primary: true, onClick: function (close) {
             if (!body.value.trim()) return 'Write the instruction first.';
-            if (!client.value) return 'Select a client. This is required by 5.2.';
+            var selectedClient = clientPicker.getValue();
+            if (!selectedClient || selectedClient === '__new__') return 'Select a client or add a new one. This is required by 5.2.';
             if (!department.value) return 'Select a department. This is required by 5.2.';
 
             var note = {
               id: OC.store.uid('n'), body: body.value.trim(), author: user.id,
-              client: client.value, department: department.value, tags: tags.resolve(),
+              client: selectedClient, department: department.value, tags: tags.resolve(),
               posted_at: new Date().toISOString(), read_by: [user.id],
               archived: false, linked_todo: null, comments: []
             };

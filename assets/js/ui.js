@@ -354,6 +354,112 @@ OC.ui = (function () {
     });
   }
 
+  /* ---- custom client creation modal & picker --------------------------- */
+  function newClientModal(onCreated) {
+    var user = OC.store.user(OC.store.session());
+    var name = h('input', { type: 'text', placeholder: 'e.g. Acme Corp, Apex Solutions' });
+    var contact = h('input', { type: 'text', placeholder: 'e.g. John Doe / Lead Contact' });
+
+    modal({
+      title: 'Add new client',
+      content: h('div', {}, [
+        field('Client / Company name', name, { required: true, hint: 'Official client or account name for task assignment.' }),
+        field('Primary contact', contact, { hint: 'Person responsible on the client side (optional).' })
+      ]),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } },
+        {
+          label: 'Add client', primary: true, onClick: function (close) {
+            var cName = name.value.trim();
+            if (!cName) return 'Please enter a client name.';
+            var exists = OC.store.state.clients.some(function (c) {
+              return c.name.toLowerCase() === cName.toLowerCase();
+            });
+            if (exists) return 'A client with this name already exists.';
+
+            var newClient = {
+              id: OC.store.uid('c'),
+              name: cName,
+              contact: contact.value.trim() || cName,
+              status: 'active'
+            };
+
+            OC.store.mutate({
+              actor: user ? user.id : 'u-shohag',
+              action: 'client.create',
+              target: newClient.name,
+              detail: 'Added client ' + newClient.name
+            }, function () {
+              OC.store.state.clients.push(newClient);
+            });
+
+            toast('Client "' + newClient.name + '" added.');
+            if (onCreated) onCreated(newClient);
+            close();
+          }
+        }
+      ]
+    });
+  }
+
+  function clientPicker(selectedValue, onChange) {
+    var selectEl = h('select', {});
+
+    function refresh(preselectId) {
+      clear(selectEl);
+      selectEl.appendChild(h('option', { value: '' }, 'Select a client'));
+      OC.store.state.clients.forEach(function (c) {
+        var opt = h('option', { value: c.id }, c.name);
+        if (c.id === preselectId) opt.selected = true;
+        selectEl.appendChild(opt);
+      });
+      selectEl.appendChild(h('option', { value: '__new__' }, '+ Add new client...'));
+      if (preselectId !== undefined) selectEl.value = preselectId;
+    }
+
+    refresh(selectedValue || '');
+
+    selectEl.addEventListener('change', function () {
+      if (selectEl.value === '__new__') {
+        selectEl.value = selectedValue || '';
+        newClientModal(function (newClient) {
+          selectedValue = newClient.id;
+          refresh(newClient.id);
+          if (onChange) onChange(newClient.id);
+        });
+        return;
+      }
+      selectedValue = selectEl.value;
+      if (onChange) onChange(selectEl.value);
+    });
+
+    var addBtn = h('button', {
+      class: 'btn small',
+      type: 'button',
+      title: 'Add new client',
+      onClick: function () {
+        newClientModal(function (newClient) {
+          selectedValue = newClient.id;
+          refresh(newClient.id);
+          if (onChange) onChange(newClient.id);
+        });
+      }
+    }, [OC.icon ? OC.icon('plus') : '+', ' New Client']);
+
+    var row = h('div', { class: 'client-picker-row' }, [
+      selectEl,
+      addBtn
+    ]);
+
+    return {
+      node: row,
+      select: selectEl,
+      getValue: function () { return selectEl.value; },
+      setValue: function (v) { selectedValue = v; refresh(v); },
+      refresh: refresh
+    };
+  }
+
   /* ---- toasts ----------------------------------------------------------- */
   function toast(message, warn) {
     var host = document.querySelector('.toasts');
@@ -374,7 +480,8 @@ OC.ui = (function () {
     personName: personName, assigneeName: assigneeName,
     initials: initials, mark: mark, person: person,
     STATE_LABEL: STATE_LABEL,
-    field: field, select: select, tagPicker: tagPicker, commentThread: commentThread,
+    field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
+    tagPicker: tagPicker, commentThread: commentThread,
     modal: modal, confirm: confirm, toast: toast
   };
 })();

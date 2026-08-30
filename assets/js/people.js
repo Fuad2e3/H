@@ -263,6 +263,7 @@ OC.people = (function () {
         OC.can.invite(user)
           ? h('button', { class: 'btn primary', type: 'button', onClick: invite }, [OC.icon('plus'), 'Invite someone'])
           : h('p', { class: 'muted' }, 'Invites are sent by the system admin or a department head (6.1).'),
+        h('button', { class: 'btn', type: 'button', onClick: function () { OC.ui.newClientModal(function () { render(host); }); } }, [OC.icon('plus'), 'Add client']),
         h('button', { class: 'btn', type: 'button', onClick: editPrefs }, [OC.icon('bell'), 'My notification preferences']),
         OC.can.manageDepartments(user)
           ? h('button', { class: 'btn', type: 'button', onClick: newDepartment }, [OC.icon('plus'), 'New department'])
@@ -279,6 +280,30 @@ OC.people = (function () {
           'revoked by whoever sent it, or by the system admin (6.1).'),
         h('div', { class: 'grid-2' }, pending.map(inviteRow))
       ]) : null,
+
+      h('div', { class: 'row', style: 'align-items:center;margin-top:20px;' }, [
+        h('h2', { class: 'section-head', style: 'margin:0;' }, [
+          'Clients & Accounts',
+          h('span', { class: 'chip count' }, OC.store.state.clients.length + ' total')
+        ]),
+        h('button', { class: 'btn small push', type: 'button', onClick: function () { OC.ui.newClientModal(function () { render(host); }); } }, [OC.icon('plus'), 'New client'])
+      ]),
+      OC.store.state.clients.length ? h('div', { class: 'grid-2', style: 'margin:12px 0 22px' }, OC.store.state.clients.map(function (c) {
+        var clientTodos = OC.store.state.todos.filter(function (t) { return t.client === c.id; });
+        return h('div', { class: 'card' }, [
+          h('div', { class: 'row' }, [
+            h('h3', {}, c.name),
+            h('span', { class: 'chip ' + (c.status === 'active' ? 'dept' : 'custom') + ' push' }, c.status)
+          ]),
+          h('p', { class: 'muted', style: 'font-size:13px;margin:6px 0 10px;' }, 'Primary contact: ' + (c.contact || c.name)),
+          h('div', { class: 'row', style: 'font-size:12.5px' }, [
+            h('span', { class: 'chip count' }, clientTodos.length + ' active tasks')
+          ])
+        ]);
+      })) : h('div', { class: 'card', style: 'margin:12px 0 22px;text-align:center;padding:24px;' }, [
+        h('p', { class: 'muted', style: 'margin-bottom:12px;' }, 'No clients registered yet. Add custom clients here or directly when creating a todo (5.2).'),
+        h('button', { class: 'btn primary small', type: 'button', onClick: function () { OC.ui.newClientModal(function () { render(host); }); } }, [OC.icon('plus'), 'Add your first client'])
+      ]),
 
       h('h2', { class: 'section-head' }, [
         'Departments',

@@ -181,12 +181,26 @@ OC.store = (function () {
       })
       .then(function (serverState) {
         if (serverState && serverState.version === 1) {
+          var needsPush = false;
+          if (state && Array.isArray(state.groups) && state.groups.length > 0) {
+            serverState.groups = serverState.groups || [];
+            state.groups.forEach(function (lg) {
+              if (!serverState.groups.some(function (sg) { return sg.id === lg.id || sg.name === lg.name; })) {
+                serverState.groups.push(lg);
+                needsPush = true;
+              }
+            });
+          }
+
           var prevRaw = JSON.stringify(state);
           var nextRaw = JSON.stringify(serverState);
           if (prevRaw !== nextRaw) {
             state = serverState;
             write();
             emit();
+          }
+          if (needsPush) {
+            pushMutationToServer({ actor: 'system', action: 'state.sync', target: 'workspace' });
           }
           if (OC.backend && OC.backend.setServerStatus) {
             OC.backend.setServerStatus(true);

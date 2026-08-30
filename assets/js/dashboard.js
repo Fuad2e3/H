@@ -74,10 +74,7 @@ OC.dashboard = (function () {
         h('section', { class: 'panel' }, [
           h('div', { class: 'panel-head' }, [
             h('h2', {}, 'My todos'),
-            h('span', { class: 'sub' }, 'by client, oldest due first'),
-            h('div', { class: 'tools' }, [
-              h('button', { class: 'btn small primary', type: 'button', onClick: function () { OC.board.newTodo(); } },
-                [OC.icon('plus'), 'New todo'])])
+            h('span', { class: 'sub' }, 'by client, oldest due first')
           ]),
           h('div', { class: 'panel-body' }, todos.length
             ? Object.keys(byClient).sort().map(function (name) {
@@ -104,10 +101,7 @@ OC.dashboard = (function () {
         h('section', { class: 'panel' }, [
           h('div', { class: 'panel-head' }, [
             h('h2', {}, 'My instructions'),
-            h('span', { class: 'sub' }, unread.length ? unread.length + ' unread first' : 'all read'),
-            h('div', { class: 'tools' }, [
-              h('button', { class: 'btn small primary', type: 'button', onClick: function () { OC.board.newInstruction(); } },
-                [OC.icon('plus'), 'Post instruction'])])
+            h('span', { class: 'sub' }, unread.length ? unread.length + ' unread first' : 'all read')
           ]),
           h('div', { class: 'panel-body' }, notes.length
             ? notes.slice(0, 8).map(function (n) {

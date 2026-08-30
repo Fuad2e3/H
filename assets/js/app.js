@@ -138,15 +138,33 @@ OC.app = (function () {
 
   /* ---- Dedicated Initial Login Screen ----------------------------------- */
   function openGoogleAccountChooser(onSelect) {
-    var dbUsers = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
-    var accountsList = dbUsers.map(function (u) {
-      return {
-        name: u.name,
-        email: u.email,
-        avatar: u.name ? u.name.slice(0, 2).toUpperCase() : 'U',
-        color: u.admin ? '#1E293B' : '#2563EB'
-      };
+    var rawUsers = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
+    var accountsList = [];
+    var seen = {};
+
+    rawUsers.forEach(function (u) {
+      var email = (u.email || '').trim().toLowerCase();
+      // Only include Google/Gmail accounts or Fuad's account; exclude non-google internal seeds and removed test emails
+      if (!email || email === 'shohag@originate.example' || email === 'fuadkalaroa2000@gmail.com') return;
+      if (!seen[email]) {
+        seen[email] = true;
+        accountsList.push({
+          name: u.name || 'Abdullah al Fuad',
+          email: u.email,
+          avatar: u.name ? u.name.slice(0, 2).toUpperCase() : 'AF',
+          color: '#1E293B'
+        });
+      }
     });
+
+    if (accountsList.length === 0) {
+      accountsList.push({
+        name: 'Abdullah al Fuad',
+        email: 'fuadkalaroa2002@gmail.com',
+        avatar: 'AF',
+        color: '#1E293B'
+      });
+    }
 
     var otherEmailInput = h('input', { type: 'email', autocomplete: 'email' });
     var showOther = false;

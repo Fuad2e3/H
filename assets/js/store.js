@@ -223,13 +223,26 @@ OC.store = (function () {
       state = seed();
       write();
     }
-    // Ensure default system admins are present even if local storage was cached
+    // Clean legacy removed users and ensure clean system admins are present
     if (state && Array.isArray(state.users)) {
       var seedUsers = seed().users;
       var modified = false;
+      // Filter out removed legacy test users
+      var filtered = state.users.filter(function (u) {
+        return u.id !== 'u-fuad2' && u.email !== 'fuadkalaroa2000@gmail.com';
+      });
+      if (filtered.length !== state.users.length) {
+        state.users = filtered;
+        modified = true;
+      }
       seedUsers.forEach(function (su) {
-        if (!state.users.some(function (u) { return u.id === su.id || (u.email && su.email && u.email.toLowerCase() === su.email.toLowerCase()); })) {
+        var existing = state.users.find(function (u) { return u.id === su.id; });
+        if (!existing) {
           state.users.push(su);
+          modified = true;
+        } else if (existing.name !== su.name || existing.email !== su.email) {
+          existing.name = su.name;
+          existing.email = su.email;
           modified = true;
         }
       });

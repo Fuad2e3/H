@@ -1,10 +1,45 @@
+# ---- Originate Command ----------------------------------------------------
 # the database and anything else the running server writes
 server/data/
 
 # test output
 tests/.screenshots/
 
-# editors and platforms
-.DS_Store
-*.log
+# dependencies
 node_modules/
+
+# ---- editors, platforms and build tooling --------------------------------
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+*.iml
+*.ipr
+*.iws
+.idea/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+app.*.symbols
+app.*.map.json
+/android/app/debug
+/android/app/profile
+/android/app/release
+node_modules/
+**/node_modules/
+.env
+*.env
+.env.*

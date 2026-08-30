@@ -12,6 +12,8 @@ window.OC = window.OC || {};
 OC.reports = (function () {
   'use strict';
 
+  var auditLimit = 10;
+
   function me() { return OC.store.user(OC.store.session()); }
 
   function scopedTodos(user) {
@@ -59,7 +61,21 @@ OC.reports = (function () {
     download('originate-command-todos-' + OC.ui.today() + '.csv', csv(rows));
   }
 
-  function render(host) {
+  function exportAudit(auditLogs) {
+    var rows = [['When', 'Actor', 'Action', 'Target', 'Detail']];
+    auditLogs.forEach(function (a) {
+      rows.push([
+        a.at,
+        OC.ui.personName(a.actor),
+        a.action,
+        a.target,
+        a.detail || ''
+      ]);
+    });
+    download('originate-command-history-' + OC.ui.today() + '.csv', csv(rows));
+  }
+
+  function render(host, rerender) {
     var h = OC.ui.h;
     var user = me();
     var todos = scopedTodos(user);
@@ -98,7 +114,9 @@ OC.reports = (function () {
     }).filter(function (r) { return r.total > 0; })
       .sort(function (a, b) { return b.overdue - a.overdue || b.total - a.total; });
 
-    var audit = OC.store.state.audit.slice(0, 25);
+    var allAudit = OC.store.state.audit || [];
+    var limitNum = auditLimit === 'all' ? allAudit.length : (parseInt(auditLimit, 10) || 10);
+    var audit = allAudit.slice(0, limitNum);
 
     OC.ui.clear(host);
     OC.ui.append(host, [
@@ -147,6 +165,48 @@ OC.reports = (function () {
         ])
       ]),
 
+      h('div', { class: 'section-head', style: 'margin-top:28px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;' }, [
+        h('div', { class: 'row', style: 'gap:10px;' }, [
+          h('span', { style: 'font-weight:600; font-size:16px;' }, 'Historical Log'),
+          h('span', { class: 'chip count' },
+            (auditLimit === 'all' || audit.length >= allAudit.length
+              ? String(allAudit.length)
+              : audit.length + ' of ' + allAudit.length) + (allAudit.length === 1 ? ' event' : ' events'))
+        ]),
+        h('div', { class: 'row', style: 'gap:8px;' }, [
+          h('div', { class: 'segmented', role: 'group', 'aria-label': 'Historical log limit' }, [
+            h('button', {
+              type: 'button',
+              'aria-pressed': String(auditLimit !== 'all'),
+              title: auditLimit === 'all' ? 'Show 10 events' : 'Show 10 more events',
+              onClick: function () {
+                if (auditLimit === 'all') {
+                  auditLimit = 10;
+                } else {
+                  auditLimit = (parseInt(auditLimit, 10) || 10) + 10;
+                }
+                render(host, rerender);
+              }
+            }, 'See 10+'),
+            h('button', {
+              type: 'button',
+              'aria-pressed': String(auditLimit === 'all'),
+              title: 'Show all events',
+              onClick: function () {
+                auditLimit = 'all';
+                render(host, rerender);
+              }
+            }, 'See all')
+          ]),
+          h('button', {
+            class: 'btn small',
+            type: 'button',
+            title: 'Export history log to CSV',
+            onClick: function () { exportAudit(allAudit); }
+          }, [OC.icon('board'), 'Export history'])
+        ])
+      ]),
+
       h('div', { class: 'tablewrap' }, [
         h('table', {}, [
           h('caption', {}, 'Historical log — every action, newest first (6.8)'),
@@ -157,7 +217,7 @@ OC.reports = (function () {
             h('th', { scope: 'col' }, 'Target'),
             h('th', { scope: 'col' }, 'Detail')
           ])),
-          h('tbody', {}, audit.map(function (a) {
+          h('tbody', {}, audit.length ? audit.map(function (a) {
             return h('tr', {}, [
               h('td', { class: 'mono' }, OC.ui.fmtWhen(a.at)),
               h('td', {}, OC.ui.personName(a.actor)),
@@ -165,11 +225,24 @@ OC.reports = (function () {
               h('td', {}, a.target),
               h('td', { class: 'muted' }, a.detail || '—')
             ]);
-          }))
+          }) : [
+            h('tr', {}, h('td', { colspan: '5', class: 'muted', style: 'text-align:center; padding:20px;' }, 'No historical log entries recorded.'))
+          ])
         ])
-      ])
+      ]),
+
+      auditLimit !== 'all' && allAudit.length > audit.length ? h('div', { class: 'row', style: 'margin-top:10px; justify-content:center;' }, [
+        h('button', {
+          class: 'btn small link',
+          type: 'button',
+          onClick: function () {
+            auditLimit = 'all';
+            render(host, rerender);
+          }
+        }, 'Showing ' + audit.length + ' of ' + allAudit.length + ' events — See all')
+      ]) : null
     ]);
   }
 
-  return { render: render, csv: csv };
+  return { render: render, csv: csv, exportAudit: exportAudit };
 })();

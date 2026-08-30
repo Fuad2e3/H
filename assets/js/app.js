@@ -142,14 +142,13 @@ OC.app = (function () {
 
     var emailInput = h('input', {
       type: 'email',
-      placeholder: 'shohag@originate.example or user@gmail.com',
+      placeholder: 'name@domain.com',
       autocomplete: 'email',
       required: true,
       autofocus: true
     });
 
     var errorBox = h('div', { class: 'error', style: 'display:none;margin-bottom:12px;' });
-    var adminUser = (OC.store.state.users || []).find(function (u) { return u.admin; });
 
     function performLogin(email) {
       if (!email) {
@@ -192,19 +191,7 @@ OC.app = (function () {
       h('button', { class: 'btn primary connect-btn', type: 'submit' }, [
         OC.icon('google'),
         'Connect with Gmail / Email'
-      ]),
-      adminUser ? h('div', { class: 'admin-quick-connect', style: 'margin-top:14px;text-align:center;' }, [
-        h('p', { class: 'muted', style: 'font-size:11.5px;margin-bottom:6px;' }, 'Database Registered System Admin:'),
-        h('button', {
-          class: 'btn small',
-          type: 'button',
-          style: 'font-size:12px;border-radius:20px;padding:4px 12px;',
-          onClick: function () {
-            emailInput.value = adminUser.email;
-            performLogin(adminUser.email);
-          }
-        }, [OC.icon('check'), ' ' + adminUser.name + ' (' + adminUser.email + ')'])
-      ]) : null
+      ])
     ]);
 
     var card = h('div', { class: 'login-card' }, [

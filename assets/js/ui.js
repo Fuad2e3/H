@@ -404,6 +404,8 @@ OC.ui = (function () {
 
   function clientPicker(selectedValue, onChange) {
     var selectEl = h('select', {});
+    var user = OC.store.user(OC.store.session());
+    var canAdd = !!(OC.can && OC.can.createClient ? OC.can.createClient(user) : (user && user.admin));
 
     function refresh(preselectId) {
       clear(selectEl);
@@ -413,7 +415,9 @@ OC.ui = (function () {
         if (c.id === preselectId) opt.selected = true;
         selectEl.appendChild(opt);
       });
-      selectEl.appendChild(h('option', { value: '__new__' }, '+ Add new client...'));
+      if (canAdd) {
+        selectEl.appendChild(h('option', { value: '__new__' }, '+ Add new client...'));
+      }
       if (preselectId !== undefined) selectEl.value = preselectId;
     }
 
@@ -433,10 +437,10 @@ OC.ui = (function () {
       if (onChange) onChange(selectEl.value);
     });
 
-    var addBtn = h('button', {
+    var addBtn = canAdd ? h('button', {
       class: 'btn small',
       type: 'button',
-      title: 'Add new client',
+      title: 'Add new client (Admin and Department Head only)',
       onClick: function () {
         newClientModal(function (newClient) {
           selectedValue = newClient.id;
@@ -444,12 +448,12 @@ OC.ui = (function () {
           if (onChange) onChange(newClient.id);
         });
       }
-    }, [OC.icon ? OC.icon('plus') : '+', ' New Client']);
+    }, [OC.icon ? OC.icon('plus') : '+', ' New Client']) : null;
 
     var row = h('div', { class: 'client-picker-row' }, [
       selectEl,
       addBtn
-    ]);
+    ].filter(Boolean));
 
     return {
       node: row,

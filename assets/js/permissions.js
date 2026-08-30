@@ -160,6 +160,7 @@ OC.can = (function () {
   }
 
   function invite(user) { return !!user && (user.admin || headOfAny(user)); }
+  function createClient(user) { return !!user && (user.admin || headOfAny(user)); }
 
   /* an unclaimed invite may be withdrawn by whoever sent it, or by the
      system admin (6.1) */
@@ -223,6 +224,7 @@ OC.can = (function () {
     assignTo: assignTo, assignableUsers: assignableUsers,
     assignToGroup: assignToGroup, assignableGroups: assignableGroups,
     createGroup: createGroup, postInstruction: postInstruction, createTodo: createTodo,
+    createClient: createClient,
     changeState: changeState, reassign: reassign, assignsOthers: assignsOthers, archiveInstruction: archiveInstruction,
     manageDepartment: manageDepartment, manageDepartments: manageDepartments,
     invite: invite, manageInvite: manageInvite, seeAudit: seeAudit,

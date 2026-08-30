@@ -263,7 +263,9 @@ OC.people = (function () {
         OC.can.invite(user)
           ? h('button', { class: 'btn primary', type: 'button', onClick: invite }, [OC.icon('plus'), 'Invite someone'])
           : h('p', { class: 'muted' }, 'Invites are sent by the system admin or a department head (6.1).'),
-        h('button', { class: 'btn', type: 'button', onClick: function () { OC.ui.newClientModal(function () { render(host); }); } }, [OC.icon('plus'), 'Add client']),
+        OC.can.createClient(user)
+          ? h('button', { class: 'btn', type: 'button', onClick: function () { OC.ui.newClientModal(function () { render(host); }); } }, [OC.icon('plus'), 'Add client'])
+          : null,
         h('button', { class: 'btn', type: 'button', onClick: editPrefs }, [OC.icon('bell'), 'My notification preferences']),
         OC.can.manageDepartments(user)
           ? h('button', { class: 'btn', type: 'button', onClick: newDepartment }, [OC.icon('plus'), 'New department'])
@@ -286,7 +288,9 @@ OC.people = (function () {
           'Clients & Accounts',
           h('span', { class: 'chip count' }, OC.store.state.clients.length + ' total')
         ]),
-        h('button', { class: 'btn small push', type: 'button', onClick: function () { OC.ui.newClientModal(function () { render(host); }); } }, [OC.icon('plus'), 'New client'])
+        OC.can.createClient(user)
+          ? h('button', { class: 'btn small push', type: 'button', onClick: function () { OC.ui.newClientModal(function () { render(host); }); } }, [OC.icon('plus'), 'New client'])
+          : null
       ]),
       OC.store.state.clients.length ? h('div', { class: 'grid-2', style: 'margin:12px 0 22px' }, OC.store.state.clients.map(function (c) {
         var clientTodos = OC.store.state.todos.filter(function (t) { return t.client === c.id; });
@@ -301,8 +305,10 @@ OC.people = (function () {
           ])
         ]);
       })) : h('div', { class: 'card', style: 'margin:12px 0 22px;text-align:center;padding:24px;' }, [
-        h('p', { class: 'muted', style: 'margin-bottom:12px;' }, 'No clients registered yet. Add custom clients here or directly when creating a todo (5.2).'),
-        h('button', { class: 'btn primary small', type: 'button', onClick: function () { OC.ui.newClientModal(function () { render(host); }); } }, [OC.icon('plus'), 'Add your first client'])
+        h('p', { class: 'muted', style: 'margin-bottom:12px;' }, 'No clients registered yet. Admin and Department Heads can add custom clients (5.2).'),
+        OC.can.createClient(user)
+          ? h('button', { class: 'btn primary small', type: 'button', onClick: function () { OC.ui.newClientModal(function () { render(host); }); } }, [OC.icon('plus'), 'Add your first client'])
+          : null
       ]),
 
       h('h2', { class: 'section-head' }, [

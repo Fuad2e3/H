@@ -272,6 +272,12 @@ test('permissions.js: Role computation, visibility, assignment matrix, and state
   assert.strictEqual(OC.can.invite(shohag), true);
   assert.strictEqual(OC.can.invite(nadia), true);
   assert.strictEqual(OC.can.invite(rifat), false);
+
+  // Client creation authority (Admin and Heads only)
+  assert.strictEqual(OC.can.createClient(shohag), true);
+  assert.strictEqual(OC.can.createClient(nadia), true);
+  assert.strictEqual(OC.can.createClient(tanvir), false);
+  assert.strictEqual(OC.can.createClient(rifat), false);
 });
 
 // -------------------------------------------------------------------------

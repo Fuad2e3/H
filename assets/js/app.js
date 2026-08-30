@@ -142,7 +142,6 @@ OC.app = (function () {
 
     var emailInput = h('input', {
       type: 'email',
-      placeholder: 'name@domain.com',
       autocomplete: 'email',
       required: true,
       autofocus: true

@@ -218,7 +218,7 @@ test('store.js initializes state, lookups, and session', () => {
   // Direct email lookup (Point 1 requirement)
   // Set up mock test users in memory
   OC.store.state.users = [
-    { id: 'u-shohag', name: 'Shohag Munshe', email: 'shohag@originate.example', title: 'Founder', admin: true, departments: [] },
+    { id: 'u-shohag', name: 'Shohag Munshe', email: 'sm@originatemarketing.com', title: 'Founder', admin: true, departments: [] },
     { id: 'u-imran', name: 'Imran Sheikh', email: 'imran@originate.example', title: 'Operations Manager', admin: false, departments: [{ department: 'd-bizops', level: 'head' }, { department: 'd-admin', level: 'head' }] },
     { id: 'u-nadia', name: 'Nadia Rahman', email: 'nadia@originate.example', title: 'Outreach Director', admin: false, departments: [{ department: 'd-outreach', level: 'head' }, { department: 'd-bizops', level: 'member' }] },
     { id: 'u-tanvir', name: 'Tanvir Hasan', email: 'tanvir@originate.example', title: 'Outreach Specialist', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
@@ -229,7 +229,7 @@ test('store.js initializes state, lookups, and session', () => {
     { id: 't-1', title: 'Test Todo', department: 'd-outreach', client: 'c-1', assignee_type: 'user', assignee: 'u-rifat', state: 'open' }
   ];
 
-  const byEmail = OC.store.userByEmail('shohag@originate.example');
+  const byEmail = OC.store.userByEmail('sm@originatemarketing.com');
   assert.ok(byEmail);
   assert.strictEqual(byEmail.id, 'u-shohag');
 

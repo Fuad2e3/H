@@ -542,7 +542,7 @@ OC.app = (function () {
 
   /* ---- chrome ----------------------------------------------------------- */
   function topbar() {
-    var user = OC.store.user(OC.store.session()) || { id: 'u-shohag', name: 'User', email: 'shohag@originate.example' };
+    var user = OC.store.user(OC.store.session()) || { id: 'u-shohag', name: 'User', email: 'sm@originatemarketing.com' };
     var unread = myNotifications().filter(function (n) { return !n.read; }).length;
 
     var THEME_ICONS = ['monitor', 'moon', 'sun'];

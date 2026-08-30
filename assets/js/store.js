@@ -57,7 +57,7 @@ OC.store = (function () {
       {
         id: 'u-shohag',
         name: 'Shohag Munshe',
-        email: 'shohag@originate.example',
+        email: 'sm@originatemarketing.com',
         title: 'Founder & System Admin',
         admin: true,
         departments: [],

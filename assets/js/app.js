@@ -272,6 +272,38 @@ OC.app = (function () {
       render();
     }
 
+    function handleGoogleSignIn() {
+      if (typeof firebase !== 'undefined' && firebase.auth) {
+        try {
+          if (!firebase.apps.length) {
+            firebase.initializeApp({
+              authDomain: "intrepid-precept-7qmt3.firebaseapp.com",
+              projectId: "intrepid-precept-7qmt3"
+            });
+          }
+          var provider = new firebase.auth.GoogleAuthProvider();
+          provider.setCustomParameters({ prompt: 'select_account' });
+          firebase.auth().signInWithPopup(provider).then(function (result) {
+            if (result && result.user && result.user.email) {
+              performLogin(result.user.email);
+            }
+          }).catch(function (err) {
+            console.log('Firebase popup notice:', err.message);
+            openGoogleAccountChooser(function (selectedEmail) {
+              performLogin(selectedEmail);
+            });
+          });
+          return;
+        } catch (e) {
+          console.log('Firebase init notice:', e);
+        }
+      }
+
+      openGoogleAccountChooser(function (selectedEmail) {
+        performLogin(selectedEmail);
+      });
+    }
+
     var card = h('div', { class: 'login-portal-card' }, [
       h('div', { class: 'portal-brand-header' }, [
         h('div', { class: 'portal-logo-badge' }, [
@@ -296,11 +328,7 @@ OC.app = (function () {
       h('button', {
         class: 'portal-google-btn',
         type: 'button',
-        onClick: function () {
-          openGoogleAccountChooser(function (selectedEmail) {
-            performLogin(selectedEmail);
-          });
-        }
+        onClick: handleGoogleSignIn
       }, [
         OC.icon('google'),
         'Sign in with Google Account'

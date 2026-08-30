@@ -1,11 +1,11 @@
 /* =========================================================================
-   store.js — data layer
-   Owns every entity in section 5.0 of the specification, seeds a realistic
-   dataset on first run, and persists to localStorage. Every write goes
-   through mutate(), which stamps the audit log described in 5.1.
-
-   This is the only file that touches storage. Swapping localStorage for
-   Firestore later means reimplementing read()/write() and nothing else.
+   store.js — Data layer with Manual Server Sync & LocalStorage Fallback
+   Owns every entity in section 5.0 of the OM SRS 001 specification:
+   - Seeds a realistic dataset on first run
+   - Synchronizes with dev3 manual API server (/api/*) in real-time
+   - Auto-refreshes every 5 seconds (5000ms) with network auto-reconnect
+   - Fallback to localStorage for offline resilience
+   - Every write goes through mutate(), which stamps the audit log (5.1)
    Originate Command · application
    ========================================================================= */
 
@@ -18,6 +18,14 @@ OC.store = (function () {
   var SESSION_KEY = 'oc-session-v1';
   var state = null;
   var listeners = [];
+  var sseSource = null;
+
+  function isHttp() {
+    return typeof window !== 'undefined' &&
+           window.location &&
+           typeof window.location.protocol === 'string' &&
+           window.location.protocol.indexOf('http') === 0;
+  }
 
   /* ---- date helpers ---------------------------------------------------- */
   function iso(d) { return d.toISOString().slice(0, 10); }
@@ -34,7 +42,7 @@ OC.store = (function () {
     return d.toISOString();
   }
 
-  /* ---- seed ------------------------------------------------------------ */
+  /* ---- seed (5.0) ------------------------------------------------------ */
   function seed() {
     var departments = [
       { id: 'd-admin',    name: 'Admin & HR',              levels: ['head', 'lead', 'member'] },
@@ -46,28 +54,17 @@ OC.store = (function () {
     ];
 
     var users = [
-      { id: 'u-shohag',  name: 'Shohag Munshe',    title: 'Founder',            admin: true,
-        departments: [] },
-      { id: 'u-imran',   name: 'Imran Sheikh',     title: 'Operations Manager', admin: false,
-        departments: [{ department: 'd-bizops', level: 'head' }, { department: 'd-admin', level: 'head' }] },
-      { id: 'u-nadia',   name: 'Nadia Rahman',     title: 'Outreach Director',  admin: false,
-        departments: [{ department: 'd-outreach', level: 'head' }, { department: 'd-bizops', level: 'member' }] },
-      { id: 'u-tanvir',  name: 'Tanvir Hasan',     title: 'Outreach Lead',      admin: false,
-        departments: [{ department: 'd-outreach', level: 'lead' }] },
-      { id: 'u-mim',     name: 'Mim Akter',        title: 'Senior Strategist',  admin: false,
-        departments: [{ department: 'd-outreach', level: 'senior' }] },
-      { id: 'u-rifat',   name: 'Rifat Chowdhury',  title: 'Outreach Associate', admin: false,
-        departments: [{ department: 'd-outreach', level: 'member' }] },
-      { id: 'u-sadia',   name: 'Sadia Islam',      title: 'Lead Gen Head',      admin: false,
-        departments: [{ department: 'd-leadgen', level: 'head' }] },
-      { id: 'u-jubayer', name: 'Jubayer Alam',     title: 'Researcher',         admin: false,
-        departments: [{ department: 'd-leadgen', level: 'member' }] },
-      { id: 'u-farhan',  name: 'Farhan Kabir',     title: 'Web Lead',           admin: false,
-        departments: [{ department: 'd-web', level: 'head' }] },
-      { id: 'u-ayesha',  name: 'Ayesha Noor',      title: 'Front-end Developer', admin: false,
-        departments: [{ department: 'd-web', level: 'member' }] },
-      { id: 'u-piya',    name: 'Piya Das',         title: 'Social Media Head',  admin: false,
-        departments: [{ department: 'd-social', level: 'head' }, { department: 'd-admin', level: 'member' }] }
+      { id: 'u-shohag',  name: 'Shohag Munshe',    title: 'Founder',            admin: true,  departments: [] },
+      { id: 'u-imran',   name: 'Imran Sheikh',     title: 'Operations Manager', admin: false, departments: [{ department: 'd-bizops', level: 'head' }, { department: 'd-admin', level: 'head' }] },
+      { id: 'u-nadia',   name: 'Nadia Rahman',     title: 'Outreach Director',  admin: false, departments: [{ department: 'd-outreach', level: 'head' }, { department: 'd-bizops', level: 'member' }] },
+      { id: 'u-tanvir',  name: 'Tanvir Hasan',     title: 'Outreach Lead',      admin: false, departments: [{ department: 'd-outreach', level: 'lead' }] },
+      { id: 'u-mim',     name: 'Mim Akter',        title: 'Senior Strategist',  admin: false, departments: [{ department: 'd-outreach', level: 'senior' }] },
+      { id: 'u-rifat',   name: 'Rifat Chowdhury',  title: 'Outreach Associate', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
+      { id: 'u-sadia',   name: 'Sadia Islam',      title: 'Lead Gen Head',      admin: false, departments: [{ department: 'd-leadgen', level: 'head' }] },
+      { id: 'u-jubayer', name: 'Jubayer Alam',     title: 'Researcher',         admin: false, departments: [{ department: 'd-leadgen', level: 'member' }] },
+      { id: 'u-farhan',  name: 'Farhan Kabir',     title: 'Web Lead',           admin: false, departments: [{ department: 'd-web', level: 'head' }] },
+      { id: 'u-ayesha',  name: 'Ayesha Noor',      title: 'Front-end Developer', admin: false, departments: [{ department: 'd-web', level: 'member' }] },
+      { id: 'u-piya',    name: 'Piya Das',         title: 'Social Media Head',  admin: false, departments: [{ department: 'd-social', level: 'head' }, { department: 'd-admin', level: 'member' }] }
     ];
 
     users.forEach(function (u) {
@@ -95,8 +92,12 @@ OC.store = (function () {
     ];
 
     var groups = [
-      { id: 'g-relaunch', name: 'Chaim Site Relaunch', purpose: 'Cross-department push to ship the new Chaim landing pages before the Q4 campaign.',
-        members: ['u-tanvir', 'u-ayesha', 'u-shohag'], created_by: 'u-shohag', status: 'active', created_at: stamp(9) }
+      {
+        id: 'g-relaunch', name: 'Chaim Site Relaunch',
+        purpose: 'Cross-department push to ship the new Chaim landing pages before the Q4 campaign.',
+        members: ['u-tanvir', 'u-ayesha', 'u-shohag'], created_by: 'u-shohag',
+        status: 'active', created_at: stamp(9)
+      }
     ];
 
     var todos = [
@@ -148,7 +149,7 @@ OC.store = (function () {
     todos.forEach(function (t, i) {
       t.id = 't-' + (i + 1);
       t.tags = t.tags || [];
-      if (t.priority === 'high') t.tags.push('t-urgent');
+      if (t.priority === 'high' && t.tags.indexOf('t-urgent') === -1) t.tags.push('t-urgent');
       t.comments = [];
     });
 
@@ -188,6 +189,7 @@ OC.store = (function () {
 
     return {
       version: 1,
+      seeded_at: new Date().toISOString(),
       departments: departments,
       users: users,
       clients: clients,
@@ -217,9 +219,91 @@ OC.store = (function () {
   function write() {
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
-    } catch (e) {
-      /* storage unavailable: the session still works, it just will not persist */
+    } catch (e) {}
+  }
+
+  /* ---- Manual Server API Sync & Auto-Refresh (Every 5s) ---------------- */
+  function syncWithServer() {
+    if (!isHttp() || typeof fetch !== 'function') return;
+
+    fetch('/api/state')
+      .then(function (res) {
+        if (res.ok) return res.json();
+        throw new Error('Server returned ' + res.status);
+      })
+      .then(function (serverState) {
+        if (serverState && serverState.version === 1) {
+          var prevRaw = JSON.stringify(state);
+          var nextRaw = JSON.stringify(serverState);
+          if (prevRaw !== nextRaw) {
+            state = serverState;
+            write();
+            emit();
+          }
+          if (OC.backend && OC.backend.setServerStatus) {
+            OC.backend.setServerStatus(true);
+          }
+          initSSE();
+        }
+      })
+      .catch(function () {
+        if (OC.backend && OC.backend.setServerStatus) {
+          OC.backend.setServerStatus(false);
+        }
+      });
+  }
+
+  function pushMutationToServer(entry) {
+    if (!isHttp() || typeof fetch !== 'function') return;
+
+    fetch('/api/mutate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entry: entry, state: state })
+    }).catch(function () {});
+  }
+
+  function initSSE() {
+    if (sseSource || !isHttp() || typeof EventSource !== 'function') return;
+
+    try {
+      sseSource = new EventSource('/api/events');
+      sseSource.onmessage = function (event) {
+        try {
+          var data = JSON.parse(event.data);
+          if (data.type === 'mutate' || data.type === 'reset' || data.type === 'state_saved') {
+            fetch('/api/state')
+              .then(function (res) { return res.json(); })
+              .then(function (fresh) {
+                if (fresh && fresh.version === 1) {
+                  state = fresh;
+                  write();
+                  emit();
+                }
+              })
+              .catch(function () {});
+          }
+        } catch (_) {}
+      };
+      sseSource.onerror = function () {};
+    } catch (_) {}
+  }
+
+  // 🔄 Recurring 5-second Auto-Refresh Loop
+  if (typeof setInterval === 'function' && isHttp()) {
+    var syncTimer = setInterval(function () {
+      syncWithServer();
+    }, 5000);
+    if (syncTimer && typeof syncTimer.unref === 'function') {
+      syncTimer.unref();
     }
+  }
+
+  // 🌐 Instant auto-sync when network reconnects
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('online', function () {
+      syncWithServer();
+    });
   }
 
   function load() {
@@ -228,6 +312,7 @@ OC.store = (function () {
       state = seed();
       write();
     }
+    syncWithServer();
     return state;
   }
 
@@ -235,6 +320,10 @@ OC.store = (function () {
     state = seed();
     write();
     emit();
+
+    if (isHttp() && typeof fetch === 'function') {
+      fetch('/api/reset', { method: 'POST' }).catch(function () {});
+    }
   }
 
   /* ---- change notification --------------------------------------------- */
@@ -242,16 +331,22 @@ OC.store = (function () {
   function emit() { listeners.forEach(function (fn) { fn(); }); }
 
   function mutate(entry, fn) {
-    fn();
+    if (typeof fn === 'function') {
+      fn();
+    }
     if (entry) {
       state.audit.unshift({
         id: 'a-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
         actor: entry.actor, action: entry.action, target: entry.target,
         detail: entry.detail || '', at: new Date().toISOString()
       });
+      if (state.audit.length > 500) {
+        state.audit = state.audit.slice(0, 500);
+      }
     }
     write();
     emit();
+    pushMutationToServer(entry);
   }
 
   function uid(prefix) {
@@ -260,6 +355,7 @@ OC.store = (function () {
 
   /* ---- lookups --------------------------------------------------------- */
   function byId(list, id) {
+    if (!list) return null;
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
     return null;
   }
@@ -267,6 +363,7 @@ OC.store = (function () {
   var api = {
     load: load,
     reset: reset,
+    sync: syncWithServer,
     save: write,
     onChange: onChange,
     emit: emit,
@@ -275,6 +372,14 @@ OC.store = (function () {
     get state() { return state; },
 
     user: function (id) { return byId(state.users, id); },
+    userByEmail: function (email) {
+      if (!email || !state.users) return null;
+      var clean = String(email).trim().toLowerCase();
+      for (var i = 0; i < state.users.length; i++) {
+        if (String(state.users[i].email).trim().toLowerCase() === clean) return state.users[i];
+      }
+      return null;
+    },
     department: function (id) { return byId(state.departments, id); },
     client: function (id) { return byId(state.clients, id); },
     group: function (id) { return byId(state.groups, id); },
@@ -295,8 +400,6 @@ OC.store = (function () {
       emit();
     },
 
-    /* callers invoke this after mutate(), so it persists and re-renders on its
-       own — otherwise a notification lives only until the page reloads */
     /* a single use link that expires 72 hours after it is issued (6.1) */
     issueInvite: function (byUserId) {
       var expires = new Date();
@@ -337,6 +440,7 @@ OC.store = (function () {
       });
       write();
       emit();
+      pushMutationToServer({ actor: 'system', action: 'notification.send', target: text, detail: 'notified ' + userIds.length + ' users' });
     }
   };
 

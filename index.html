@@ -1,56 +1,60 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
-<title>Originate Command</title>
-<meta name="description" content="Unified todo board and instruction system for Originate Marketing, built to the OM SRS 001 specification.">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Originate Command</title>
+  <meta name="description"
+    content="Unified todo board and instruction system for Originate Marketing, built to the OM SRS 001 specification.">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&amp;family=Public+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&amp;family=Public+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
 
-<!-- stylesheets load in cascade order; see README.md -->
-<link rel="stylesheet" href="assets/css/01-tokens.css">
-<link rel="stylesheet" href="assets/css/02-base.css">
-<link rel="stylesheet" href="assets/css/03-layout.css">
-<link rel="stylesheet" href="assets/css/04-components.css">
-<link rel="stylesheet" href="assets/css/05-touch.css">
+  <!-- stylesheets load in cascade order; see README.md -->
+  <link rel="stylesheet" href="assets/css/01-tokens.css">
+  <link rel="stylesheet" href="assets/css/02-base.css">
+  <link rel="stylesheet" href="assets/css/03-layout.css">
+  <link rel="stylesheet" href="assets/css/04-components.css">
+  <link rel="stylesheet" href="assets/css/05-touch.css">
 </head>
+
 <body>
 
-<div id="root">
-  <noscript>
-    <p style="padding:24px">Originate Command needs JavaScript. The specification it is built from is
-    readable without it at <a href="spec/">spec/</a>.</p>
-  </noscript>
-</div>
+  <div id="root">
+    <noscript>
+      <p style="padding:24px">Originate Command needs JavaScript. The specification it is built from is
+        readable without it at <a href="spec/">spec/</a>.</p>
+    </noscript>
+  </div>
 
-<div class="toasts" aria-live="polite"></div>
+  <div class="toasts" aria-live="polite"></div>
 
-<footer class="appfoot">
-  <p>
-    <span>Originate Command · built to <a href="spec/">OM SRS 001</a></span>
-    <span>·</span>
-    <span id="backendLabel">demonstration data held in this browser only</span>
-    <span>·</span>
-    <button class="btn link" type="button" onclick="OC.app.reset()">reset data</button>
-  </p>
-</footer>
+  <footer class="appfoot">
+    <p>
+      <span>Originate Command · built to <a href="spec/">OM SRS 001</a></span>
+      <span>·</span>
+      <span id="backendLabel">demonstration data held in this browser only</span>
+      <span>·</span>
+      <button class="btn link" type="button" onclick="OC.app.reset()">reset data</button>
+    </p>
+  </footer>
 
-<!-- icons, data and rules first, then shared helpers, then views, then the shell -->
-<script src="assets/js/firebase-config.js" defer></script>
-<script src="assets/js/backend.js" defer></script>
-<script src="assets/js/icons.js" defer></script>
-<script src="assets/js/store.js" defer></script>
-<script src="assets/js/permissions.js" defer></script>
-<script src="assets/js/ui.js" defer></script>
-<script src="assets/js/board.js" defer></script>
-<script src="assets/js/dashboard.js" defer></script>
-<script src="assets/js/groups.js" defer></script>
-<script src="assets/js/reports.js" defer></script>
-<script src="assets/js/people.js" defer></script>
-<script src="assets/js/app.js" defer></script>
+  <!-- icons, data and rules first, then shared helpers, then views, then the shell -->
+  <script src="assets/js/backend.js" defer></script>
+  <script src="assets/js/icons.js" defer></script>
+  <script src="assets/js/store.js" defer></script>
+  <script src="assets/js/permissions.js" defer></script>
+  <script src="assets/js/ui.js" defer></script>
+  <script src="assets/js/board.js" defer></script>
+  <script src="assets/js/dashboard.js" defer></script>
+  <script src="assets/js/groups.js" defer></script>
+  <script src="assets/js/reports.js" defer></script>
+  <script src="assets/js/people.js" defer></script>
+  <script src="assets/js/app.js" defer></script>
 </body>
+
 </html>

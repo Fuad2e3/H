@@ -138,11 +138,27 @@ OC.people = (function () {
     var expired = OC.store.inviteExpired(account.invite);
     var actions = [];
     if (OC.can.manageInvite(user, account)) {
-      actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { resend(account); } }, 'Resend'));
-      actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { revoke(account); } }, 'Revoke'));
       if (!expired) {
+        actions.push(h('button', {
+          class: 'btn small', type: 'button', onClick: function () {
+            var base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:7000';
+            var path = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '/';
+            var link = base + path + '#claim=' + account.invite.token;
+            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(link).then(function () {
+                OC.ui.toast('Invite link copied to clipboard!');
+              }).catch(function () {
+                prompt('Copy invite link:', link);
+              });
+            } else {
+              prompt('Copy invite link:', link);
+            }
+          }
+        }, 'Copy Link'));
         actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { claim(account); } }, 'Simulate claim'));
       }
+      actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { resend(account); } }, 'Resend'));
+      actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { revoke(account); } }, 'Revoke'));
     }
     return h('div', { class: 'card invite-card' }, [
       h('div', { class: 'row' }, [

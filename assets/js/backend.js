@@ -1,9 +1,5 @@
 /* =========================================================================
-   backend.js — which store the application runs on
-   store.js owns storage and is the only file that touches storage. This
-   decides whether that is what runs: with a real firebase-config.js present
-   the Firestore adapter takes over, otherwise the local server / localStorage
-   store runs and the footer accurately displays the live connection state.
+   backend.js — Backend connection state and server descriptor
    Originate Command · OM SRS 001
    ========================================================================= */
 
@@ -12,39 +8,54 @@ window.OC = window.OC || {};
 OC.backend = (function () {
   'use strict';
 
-  function configured() {
-    var c = OC.firebaseConfig;
-    if (!c) return false;
-    var required = ['apiKey', 'projectId', 'appId'];
-    return required.every(function (k) {
-      return typeof c[k] === 'string' && c[k].length > 0 && c[k].indexOf('PASTE_') !== 0;
-    });
+  var serverOnline = false;
+
+  function setServerStatus(online) {
+    serverOnline = !!online;
+    updateFooter();
   }
 
   function describe() {
-    if (configured()) {
-      return {
-        kind: 'firestore',
-        label: 'connected to Firestore, project ' + OC.firebaseConfig.projectId,
-        detail: 'Permissions are enforced by the security rules in backend/firestore.rules (8.1), ' +
-                'not only by this interface.'
-      };
-    }
     if (typeof window !== 'undefined' && window.location && window.location.protocol.indexOf('http') === 0) {
       var portStr = window.location.port ? ' (Port ' + window.location.port + ')' : '';
+      var hostname = window.location.hostname;
+      var isTunnel = hostname.indexOf('trycloudflare.com') > -1 || hostname.indexOf('loca.lt') > -1;
+
+      if (isTunnel) {
+        return {
+          kind: 'tunnel',
+          label: 'connected to Cloudflare Gateway · Live Sync',
+          detail: 'Connected via secure public tunnel to Originate Command Operations Server with real-time SSE sync.'
+        };
+      }
+
       return {
         kind: 'server',
-        label: 'connected to Local Server' + portStr,
-        detail: 'Running on local API server with persistent store and enterprise security active.'
+        label: 'connected to Originate Command Server' + portStr + ' · Live DB Sync',
+        detail: 'Running on manual API server (dev3) with persistent JSON database and real-time live synchronization.'
       };
     }
+
     return {
       kind: 'local',
-      label: 'demonstration data held in this browser only',
-      detail: 'No Firebase project is configured yet, so nothing is shared between people. ' +
-              'Add assets/js/firebase-config.js to point this at Firestore (10.1).'
+      label: 'demonstration data held in this browser (offline mode)',
+      detail: 'Loaded from local storage. Launch dev3 server or start-servers.bat to enable full multi-client persistence.'
     };
   }
 
-  return { configured: configured, describe: describe };
+  function updateFooter() {
+    var label = document.getElementById('backendLabel');
+    if (label) {
+      var info = describe();
+      label.textContent = info.label;
+      label.title = info.detail;
+    }
+  }
+
+  return {
+    describe: describe,
+    updateFooter: updateFooter,
+    setServerStatus: setServerStatus,
+    get isOnline() { return serverOnline; }
+  };
 })();

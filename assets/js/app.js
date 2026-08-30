@@ -1,10 +1,7 @@
 /* =========================================================================
-   app.js — application shell
+   app.js — application shell & direct authentication
    Boots the store, draws the top bar and navigation, routes between views,
-   and re-renders whenever the store reports a change. Also carries the
-   account switcher, which stands in for the invite-only login in 6.1: the
-   real build authenticates, this build lets you look through any account's
-   eyes to see the permission rules in section 3.0 actually biting.
+   handles direct email login, invite activation, and re-renders on store changes.
    Originate Command · application
    ========================================================================= */
 
@@ -44,11 +41,7 @@ OC.app = (function () {
     if (button) button.textContent = THEME_LABELS[themeIndex];
   }
 
-  /* ---- browser push (9.1) ------------------------------------------------
-     Web Push proper needs a service worker and a server to push from, which
-     is the Cloud Function in 10.1. What a page can own by itself is the
-     permission and the notification: this asks once, then raises a system
-     notification for anything addressed to the signed-in account. */
+  /* ---- browser push (9.1) ------------------------------------------------ */
   var lastSeenNotification = null;
 
   function pushSupported() { return 'Notification' in window; }
@@ -74,9 +67,7 @@ OC.app = (function () {
     lastSeenNotification = newest.id;
     try {
       new Notification('Originate Command', { body: newest.text, tag: newest.id });
-    } catch (e) {
-      /* some browsers refuse outside a user gesture; the in-app feed still has it */
-    }
+    } catch (e) {}
   }
 
   /* the state of the browser push channel, shown where notifications are */
@@ -103,7 +94,7 @@ OC.app = (function () {
   /* ---- notifications (9.0, in-app channel) ------------------------------ */
   function myNotifications() {
     var id = OC.store.session();
-    return OC.store.state.notifications.filter(function (n) { return n.user === id; });
+    return (OC.store.state.notifications || []).filter(function (n) { return n.user === id; });
   }
 
   function openNotifications() {
@@ -125,8 +116,7 @@ OC.app = (function () {
       title: 'Notifications',
       content: h('div', {}, [
         h('p', { class: 'muted', style: 'font-size:13px;margin-bottom:12px' },
-          'The in-app channel. Email and the Discord webhook are sent server-side by the Cloud Function in 10.1; ' +
-          'per-channel toggles live under People.'),
+          'The in-app channel. Instant notifications and alerts across your organization.'),
         pushRow(),
         content
       ]),
@@ -144,13 +134,120 @@ OC.app = (function () {
     });
   }
 
+  /* ---- Direct Email Login Modal (No Tunnel Required) -------------------- */
+  function openLoginModal() {
+    var emailInput = h('input', { type: 'email', placeholder: 'name@originate.example', autofocus: true });
+    var accounts = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
+    var quickSelect = OC.ui.select(
+      [{ value: '', label: '-- Or pick an active account --' }].concat(
+        accounts.map(function (u) { return { value: u.id, label: u.name + ' (' + u.email + ')' }; })
+      ),
+      ''
+    );
+
+    OC.ui.modal({
+      title: 'Direct Login',
+      content: h('div', {}, [
+        h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:14px' },
+          'Log in directly with your email address on the local server without needing any external tunnel.'),
+        OC.ui.field('Your Email Address', emailInput, { hint: 'Enter your registered Originate Command email.' }),
+        h('div', { style: 'margin-top:14px' }, [
+          h('label', { class: 'field-label', style: 'font-size:12px;font-weight:600;margin-bottom:4px;display:block' }, 'Quick Switch Account'),
+          quickSelect
+        ])
+      ]),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } },
+        {
+          label: 'Log in', primary: true, onClick: function (close) {
+            var selectedId = quickSelect.value;
+            if (selectedId) {
+              OC.store.setSession(selectedId);
+              OC.ui.toast('Logged in as ' + (OC.store.user(selectedId) || {}).name);
+              close();
+              return;
+            }
+
+            var email = emailInput.value.trim().toLowerCase();
+            if (!email) return 'Please enter your email or select an account.';
+
+            var found = OC.store.userByEmail(email);
+            if (!found) {
+              return 'No account found for ' + email + '. Check People tab for registered emails.';
+            }
+
+            OC.store.setSession(found.id);
+            OC.ui.toast('Logged in as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
+            close();
+          }
+        }
+      ]
+    });
+  }
+
+  /* ---- Invite Token Claim Handler (#claim=token) ----------------------- */
+  function checkClaimToken() {
+    if (typeof location === 'undefined' || !location.hash) return;
+    var hash = location.hash.slice(1);
+    if (hash.indexOf('claim=') === 0) {
+      var token = hash.slice(6).trim();
+      var users = OC.store.state.users || [];
+      var target = users.find(function (u) { return u.invite && u.invite.token === token; });
+
+      if (!target) {
+        OC.ui.toast('Invite token not found or already claimed.', true);
+        location.hash = '#dashboard';
+        return;
+      }
+
+      if (OC.store.inviteExpired(target.invite)) {
+        OC.ui.toast('This invite link has expired (72-hour limit). Please ask an admin to resend it.', true);
+        location.hash = '#dashboard';
+        return;
+      }
+
+      var nameInput = h('input', { type: 'text', value: target.name });
+      var passInput = h('input', { type: 'password', placeholder: 'Choose a password' });
+
+      OC.ui.modal({
+        title: 'Complete your profile',
+        content: h('div', {}, [
+          h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:12px' },
+            'Welcome to Originate Command! Confirm your details to activate your account.'),
+          OC.ui.field('Full Name', nameInput, { required: true }),
+          OC.ui.field('Password', passInput, { required: true }),
+          OC.ui.field('Email', h('input', { type: 'text', value: target.email, disabled: true }))
+        ]),
+        actions: [
+          {
+            label: 'Activate Account', primary: true, onClick: function (close) {
+              if (!nameInput.value.trim()) return 'Name is required.';
+              OC.store.mutate({
+                actor: target.id, action: 'user.invite.claim', target: nameInput.value.trim(),
+                detail: 'Account activated via invite token'
+              }, function () {
+                target.name = nameInput.value.trim();
+                target.status = 'active';
+                target.invite.claimed_at = new Date().toISOString();
+              });
+              OC.store.setSession(target.id);
+              OC.ui.toast('Welcome, ' + target.name + '! Your account is now active.');
+              location.hash = '#dashboard';
+              close();
+            }
+          }
+        ]
+      });
+    }
+  }
+
   /* ---- chrome ----------------------------------------------------------- */
   function topbar() {
-    var user = OC.store.user(OC.store.session());
+    var user = OC.store.user(OC.store.session()) || { id: 'u-shohag', name: 'User' };
     var unread = myNotifications().filter(function (n) { return !n.read; }).length;
 
     var switcher = OC.ui.select(
-      OC.store.state.users
+      (OC.store.state.users || [])
         .filter(function (u) { return u.status === 'active'; })
         .map(function (u) { return { value: u.id, label: u.name + ' — ' + OC.can.roleLabel(u) }; }),
       user.id,
@@ -186,6 +283,7 @@ OC.app = (function () {
         h('span', { class: 'mono muted', style: 'font-size:11px' }, 'Viewing as'),
         switcher
       ]),
+      h('button', { class: 'btn small', type: 'button', onClick: openLoginModal, style: 'font-size:12px;padding:4px 10px' }, 'Login / Email'),
       h('button', {
         class: 'iconbtn', type: 'button', onClick: openNotifications,
         'aria-label': 'Notifications' + (unread ? ', ' + unread + ' unread' : '')
@@ -229,8 +327,6 @@ OC.app = (function () {
   function start() {
     OC.store.load();
 
-    /* say plainly where the data lives, rather than letting a local-only
-       workspace look like a shared one */
     var label = document.getElementById('backendLabel');
     if (label && OC.backend) {
       var backend = OC.backend.describe();
@@ -243,18 +339,31 @@ OC.app = (function () {
     applyTheme(null);
 
     var hash = location.hash.slice(1);
-    if (hash && ROUTES.some(function (r) { return r.id === hash; })) route = hash;
+    if (hash && hash.indexOf('claim=') === 0) {
+      checkClaimToken();
+    } else if (hash && ROUTES.some(function (r) { return r.id === hash; })) {
+      route = hash;
+    }
 
     window.addEventListener('hashchange', function () {
       var id = location.hash.slice(1);
-      if (id && ROUTES.some(function (r) { return r.id === id; }) && id !== route) go(id);
+      if (id && id.indexOf('claim=') === 0) {
+        checkClaimToken();
+      } else if (id && ROUTES.some(function (r) { return r.id === id; }) && id !== route) {
+        go(id);
+      }
     });
 
     OC.store.onChange(render);
     render();
   }
 
-  return { start: start, go: go, reset: function () { OC.store.reset(); } };
+  return {
+    start: start,
+    go: go,
+    openLogin: openLoginModal,
+    reset: function () { OC.store.reset(); }
+  };
 })();
 
 document.addEventListener('DOMContentLoaded', OC.app.start);

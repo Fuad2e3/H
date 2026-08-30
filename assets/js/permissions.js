@@ -155,6 +155,26 @@ OC.can = (function () {
     return user.admin || note.author === user.id || isHead(user, note.department);
   }
 
+  function canEditInstruction(user, note) {
+    if (!user || !note) return false;
+    return user.admin || note.author === user.id || isHead(user, note.department);
+  }
+
+  function canDeleteInstruction(user, note) {
+    if (!user || !note) return false;
+    return user.admin || note.author === user.id || isHead(user, note.department);
+  }
+
+  function canEditComment(user, comment, item) {
+    if (!user || !comment) return false;
+    return user.admin || comment.author === user.id;
+  }
+
+  function canDeleteComment(user, comment, item) {
+    if (!user || !comment) return false;
+    return user.admin || comment.author === user.id || (item && isHead(user, item.department));
+  }
+
   function manageDepartment(user, deptId) {
     return !!user && (user.admin || isHead(user, deptId));
   }
@@ -259,6 +279,8 @@ OC.can = (function () {
     assignToGroup: assignToGroup, assignableGroups: assignableGroups,
     createGroup: createGroup, postInstruction: postInstruction, createTodo: createTodo,
     createClient: createClient, canEditTodo: canEditTodo,
+    canEditInstruction: canEditInstruction, canDeleteInstruction: canDeleteInstruction,
+    canEditComment: canEditComment, canDeleteComment: canDeleteComment,
     changeState: changeState, reassign: reassign, assignsOthers: assignsOthers, archiveInstruction: archiveInstruction,
     manageDepartment: manageDepartment, manageDepartments: manageDepartments,
     invite: invite, manageInvite: manageInvite, editAccount: canEditAccount, deleteAccount: canDeleteAccount, seeAudit: seeAudit,

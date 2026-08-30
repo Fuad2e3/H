@@ -374,6 +374,71 @@ OC.board = (function () {
       assignee.disabled = true;
     }
 
+    var actions = [
+      { label: 'Cancel', onClick: function (close) { close(); } },
+      {
+        label: 'Save changes', primary: true, onClick: function (close) {
+          var newTitle = title.value.trim();
+          if (!newTitle) return 'A todo needs a title.';
+          var selectedClient = clientPicker.getValue();
+          if (!selectedClient || selectedClient === '__new__') return 'Please select a client.';
+          if (!department.value) return 'Please select a department.';
+
+          var parts = assignee.value.split(':');
+          var oldAssignee = todo.assignee;
+          var oldAssigneeType = todo.assignee_type;
+
+          OC.store.mutate({
+            actor: user.id,
+            action: 'todo.edit',
+            target: newTitle,
+            detail: 'Updated todo "' + newTitle + '"'
+          }, function () {
+            todo.title = newTitle;
+            todo.description = desc.value.trim();
+            todo.client = selectedClient;
+            todo.department = department.value;
+            if (canReassign) {
+              todo.assignee_type = parts[0];
+              todo.assignee = parts[1];
+            }
+            todo.due = due.value;
+            todo.priority = priority.value;
+            todo.tags = tags.resolve();
+            todo.recurrence = recurrence.value;
+          });
+
+          if (canReassign && (oldAssignee !== parts[1] || oldAssigneeType !== parts[0])) {
+            var targets = parts[0] === 'user' ? [parts[1]] : (OC.store.group(parts[1]) || { members: [] }).members;
+            OC.store.notify(targets.filter(function (id) { return id !== user.id; }), user.name + ' assigned you: ' + todo.title, todo.id);
+          }
+
+          OC.ui.toast('Todo updated.');
+          close();
+        }
+      }
+    ];
+
+    if (OC.can.canEditTodo(user, todo)) {
+      actions.unshift({
+        label: 'Delete todo',
+        onClick: function (close) {
+          OC.ui.confirm('Permanently delete todo "' + todo.title + '"? This cannot be undone.', function () {
+            OC.store.mutate({
+              actor: user.id,
+              action: 'todo.delete',
+              target: todo.title,
+              detail: 'Deleted todo'
+            }, function () {
+              OC.store.state.todos = OC.store.state.todos.filter(function (t) { return t.id !== todo.id; });
+            });
+            OC.ui.toast('Todo deleted.');
+            close();
+          });
+        }
+      });
+    }
+
     OC.ui.modal({
       title: 'Edit todo',
       content: h('div', {}, [
@@ -387,50 +452,7 @@ OC.board = (function () {
         OC.ui.field('Tags', tags.node),
         OC.ui.field('Recurrence', recurrence)
       ]),
-      actions: [
-        { label: 'Cancel', onClick: function (close) { close(); } },
-        {
-          label: 'Save changes', primary: true, onClick: function (close) {
-            var newTitle = title.value.trim();
-            if (!newTitle) return 'A todo needs a title.';
-            var selectedClient = clientPicker.getValue();
-            if (!selectedClient || selectedClient === '__new__') return 'Please select a client.';
-            if (!department.value) return 'Please select a department.';
-
-            var parts = assignee.value.split(':');
-            var oldAssignee = todo.assignee;
-            var oldAssigneeType = todo.assignee_type;
-
-            OC.store.mutate({
-              actor: user.id,
-              action: 'todo.edit',
-              target: newTitle,
-              detail: 'Updated todo "' + newTitle + '"'
-            }, function () {
-              todo.title = newTitle;
-              todo.description = desc.value.trim();
-              todo.client = selectedClient;
-              todo.department = department.value;
-              if (canReassign) {
-                todo.assignee_type = parts[0];
-                todo.assignee = parts[1];
-              }
-              todo.due = due.value;
-              todo.priority = priority.value;
-              todo.tags = tags.resolve();
-              todo.recurrence = recurrence.value;
-            });
-
-            if (canReassign && (oldAssignee !== parts[1] || oldAssigneeType !== parts[0])) {
-              var targets = parts[0] === 'user' ? [parts[1]] : (OC.store.group(parts[1]) || { members: [] }).members;
-              OC.store.notify(targets.filter(function (id) { return id !== user.id; }), user.name + ' assigned you: ' + todo.title, todo.id);
-            }
-
-            OC.ui.toast('Todo updated.');
-            close();
-          }
-        }
-      ]
+      actions: actions
     });
   }
 
@@ -587,16 +609,26 @@ OC.board = (function () {
         class: 'btn small', type: 'button', onClick: function () { convertToTodo(note); }
       }, 'Convert to todo'));
     }
+    if (OC.can && OC.can.canEditInstruction && OC.can.canEditInstruction(user, note)) {
+      actions.push(h('button', {
+        class: 'btn small', type: 'button', onClick: function () { editInstruction(note); }
+      }, 'Edit'));
+    }
     if (OC.can.archiveInstruction(user, note) && !note.archived) {
       actions.push(h('button', {
         class: 'btn small', type: 'button', onClick: function () {
-          OC.ui.confirm('Archive this instruction? Instructions are never deleted (6.3).', function () {
+          OC.ui.confirm('Archive this instruction? It will remain in the historical record (6.3).', function () {
             OC.store.mutate({ actor: user.id, action: 'instruction.archive', target: note.body.slice(0, 48) }, function () {
               note.archived = true;
             });
           });
         }
       }, 'Archive'));
+    }
+    if (OC.can && OC.can.canDeleteInstruction && OC.can.canDeleteInstruction(user, note)) {
+      actions.push(h('button', {
+        class: 'btn small danger', type: 'button', onClick: function () { deleteInstruction(note); }
+      }, 'Delete'));
     }
 
     return h('article', { class: 'note' + (unread && !note.archived ? ' unread' : '') + (note.archived ? ' archived' : '') }, [
@@ -619,6 +651,89 @@ OC.board = (function () {
       OC.ui.reactionsBar('instruction', note),
       OC.can.commentOnInstruction(user, note) ? OC.ui.commentThread('instruction', note) : null
     ]);
+  }
+
+  function editInstruction(note) {
+    var user = me();
+    var body = h('textarea', {}, note.body || '');
+    var clientPicker = OC.ui.clientPicker(note.client || '');
+    var depts = user.admin ? OC.store.state.departments
+      : OC.store.state.departments.filter(function (d) { return OC.can.inDept(user, d.id); });
+    var department = OC.ui.select(optionsFor(depts, 'Select a department'), note.department || '');
+    var tags = OC.ui.tagPicker(note.tags || []);
+
+    var actions = [
+      { label: 'Cancel', onClick: function (close) { close(); } },
+      {
+        label: 'Save changes', primary: true, onClick: function (close) {
+          var newBody = body.value.trim();
+          if (!newBody) return 'Write the instruction text.';
+          var selectedClient = clientPicker.getValue();
+          if (!selectedClient || selectedClient === '__new__') return 'Please select a client.';
+          if (!department.value) return 'Please select a department.';
+
+          OC.store.mutate({
+            actor: user.id,
+            action: 'instruction.edit',
+            target: newBody.slice(0, 48),
+            detail: 'Updated instruction'
+          }, function () {
+            note.body = newBody;
+            note.client = selectedClient;
+            note.department = department.value;
+            note.tags = tags.resolve();
+          });
+
+          OC.ui.toast('Instruction updated.');
+          close();
+        }
+      }
+    ];
+
+    if (OC.can && OC.can.canDeleteInstruction && OC.can.canDeleteInstruction(user, note)) {
+      actions.unshift({
+        label: 'Delete instruction',
+        onClick: function (close) {
+          OC.ui.confirm('Permanently delete this instruction? This action cannot be undone.', function () {
+            OC.store.mutate({
+              actor: user.id,
+              action: 'instruction.delete',
+              target: note.body.slice(0, 48),
+              detail: 'Deleted instruction'
+            }, function () {
+              OC.store.deleteInstruction(note.id);
+            });
+            OC.ui.toast('Instruction deleted.');
+            close();
+          });
+        }
+      });
+    }
+
+    OC.ui.modal({
+      title: 'Edit instruction',
+      content: h('div', {}, [
+        OC.ui.field('Instruction', body, { required: true }),
+        OC.ui.field('Client', clientPicker.node, { required: true }),
+        OC.ui.field('Department', department, { required: true }),
+        OC.ui.field('Tags', tags.node)
+      ]),
+      actions: actions
+    });
+  }
+
+  function deleteInstruction(note) {
+    OC.ui.confirm('Permanently delete this instruction? This action cannot be undone.', function () {
+      OC.store.mutate({
+        actor: OC.store.session(),
+        action: 'instruction.delete',
+        target: note.body.slice(0, 48),
+        detail: 'Deleted instruction'
+      }, function () {
+        OC.store.deleteInstruction(note.id);
+      });
+      OC.ui.toast('Instruction deleted.');
+    });
   }
 
   function convertToTodo(note) {

@@ -436,6 +436,34 @@ OC.store = (function () {
       return entry;
     },
 
+    editComment: function (kind, id, commentId, body) {
+      var host = kind === 'todo' ? api.todo(id) : api.instruction(id);
+      if (!host || !host.comments) return null;
+      var target = null;
+      for (var i = 0; i < host.comments.length; i++) {
+        if (host.comments[i].id === commentId) {
+          target = host.comments[i];
+          break;
+        }
+      }
+      if (!target) return null;
+      target.body = body;
+      target.edited_at = new Date().toISOString();
+      return target;
+    },
+
+    deleteComment: function (kind, id, commentId) {
+      var host = kind === 'todo' ? api.todo(id) : api.instruction(id);
+      if (!host || !host.comments) return;
+      host.comments = host.comments.filter(function (c) { return c.id !== commentId; });
+      return host.comments;
+    },
+
+    deleteInstruction: function (id) {
+      if (!state.instructions) return;
+      state.instructions = state.instructions.filter(function (n) { return n.id !== id; });
+    },
+
     react: function (kind, id, emoji, userId) {
       var host = kind === 'todo' ? api.todo(id) : api.instruction(id);
       if (!host) return null;

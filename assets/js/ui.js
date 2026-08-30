@@ -347,10 +347,69 @@ OC.ui = (function () {
           h('span', {}, 'Visible to ' + deptName + ' team members & System Admin only.')
         ]),
         (item.comments || []).map(function (c) {
+          var canEdit = OC.can && OC.can.canEditComment ? OC.can.canEditComment(user, c, item) : (user && (user.admin || c.author === user.id));
+          var canDel = OC.can && OC.can.canDeleteComment ? OC.can.canDeleteComment(user, c, item) : (user && (user.admin || c.author === user.id));
+
           return h('div', { class: 'comment' }, [
             h('div', { class: 'comment-by' }, [
               person(c.author, 'strong'),
-              h('span', {}, fmtWhen(c.posted_at))
+              h('span', {}, fmtWhen(c.posted_at)),
+              c.edited_at ? h('span', { class: 'comment-edited-tag', style: 'font-size:9.5px;opacity:0.7;' }, '(edited)') : null,
+              (canEdit || canDel) ? h('div', { class: 'comment-tools push' }, [
+                canEdit ? h('button', {
+                  class: 'btn-inline',
+                  type: 'button',
+                  title: 'Edit comment',
+                  onClick: function (e) {
+                    e.preventDefault();
+                    var editInput = h('textarea', {}, c.body);
+                    modal({
+                      title: 'Edit comment',
+                      content: field('Comment', editInput, { required: true }),
+                      actions: [
+                        { label: 'Cancel', onClick: function (close) { close(); } },
+                        {
+                          label: 'Save', primary: true, onClick: function (close) {
+                            var newText = editInput.value.trim();
+                            if (!newText) return 'Comment cannot be empty.';
+                            OC.store.mutate({
+                              actor: user.id, action: kind + '.comment.edit',
+                              target: item.title || (item.body ? item.body.slice(0, 40) : item.id),
+                              detail: 'Edited comment'
+                            }, function () {
+                              OC.store.editComment(kind, item.id, c.id, newText);
+                            });
+                            toast('Comment updated.');
+                            if (onChange) onChange();
+                            else OC.store.emit();
+                            close();
+                          }
+                        }
+                      ]
+                    });
+                  }
+                }, 'Edit') : null,
+                canDel ? h('button', {
+                  class: 'btn-inline danger',
+                  type: 'button',
+                  title: 'Delete comment',
+                  onClick: function (e) {
+                    e.preventDefault();
+                    confirm('Delete this comment? This cannot be undone.', function () {
+                      OC.store.mutate({
+                        actor: user.id, action: kind + '.comment.delete',
+                        target: item.title || (item.body ? item.body.slice(0, 40) : item.id),
+                        detail: 'Deleted comment'
+                      }, function () {
+                        OC.store.deleteComment(kind, item.id, c.id);
+                      });
+                      toast('Comment deleted.');
+                      if (onChange) onChange();
+                      else OC.store.emit();
+                    });
+                  }
+                }, 'Delete') : null
+              ].filter(Boolean)) : null
             ]),
             h('div', { class: 'comment-body-text' }, c.body)
           ]);

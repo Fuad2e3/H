@@ -313,7 +313,7 @@ select {
   border: 1px solid var(--rule-strong);
   border-radius: var(--r1);
   font-size: 13.5px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -340,23 +340,54 @@ select {
   background: var(--card-bg);
 }
 
+/* Day Mode Specific Button Enhancements */
+:root[data-theme="light"] .btn,
+:root:not([data-theme="dark"]) .btn {
+  background: #FFFFFF;
+  color: #0F172A;
+  border-color: rgba(30, 41, 59, 0.18);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+:root[data-theme="light"] .btn:hover,
+:root:not([data-theme="dark"]) .btn:hover {
+  background: #EFF6FF;
+  border-color: #2563EB;
+  color: #1D4ED8;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.16);
+}
+
+/* Night Mode Specific Button Enhancements */
+:root[data-theme="dark"] .btn,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .btn {
+    background: #16243D;
+    color: #F8FAFC;
+    border-color: rgba(148, 163, 184, 0.22);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  }
+  :root:not([data-theme="light"]) .btn:hover {
+    background: rgba(59, 130, 246, 0.20);
+    border-color: #3B82F6;
+    color: #93C5FD;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+  }
+}
+
+/* Primary Action Buttons */
 .btn.primary {
   background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
-  border-color: rgba(37, 99, 235, 0.8);
-  color: #FFFFFF;
+  border-color: #1D4ED8;
+  color: #FFFFFF !important;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
 }
-:root[data-theme="dark"] .btn.primary {
-  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-  color: #FFFFFF;
-  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.40);
-}
+:root[data-theme="dark"] .btn.primary,
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .btn.primary {
     background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-    color: #FFFFFF;
-    box-shadow: 0 2px 10px rgba(59, 130, 246, 0.40);
+    border-color: #60A5FA;
+    color: #FFFFFF !important;
+    box-shadow: 0 3px 12px rgba(59, 130, 246, 0.45);
   }
 }
 .btn.primary:hover {
@@ -365,10 +396,11 @@ select {
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
 }
 
+/* Brand Orange Buttons */
 .btn.orange {
   background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
-  border-color: rgba(249, 115, 22, 0.8);
-  color: #FFFFFF;
+  border-color: #EA580C;
+  color: #FFFFFF !important;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
 }
@@ -376,7 +408,9 @@ select {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .btn.orange {
     background: linear-gradient(135deg, #FB923C 0%, #EA580C 100%);
-    box-shadow: 0 2px 10px rgba(251, 146, 60, 0.40);
+    border-color: #FDBA74;
+    color: #FFFFFF !important;
+    box-shadow: 0 3px 12px rgba(251, 146, 60, 0.45);
   }
 }
 .btn.orange:hover {
@@ -385,16 +419,25 @@ select {
   box-shadow: 0 6px 16px rgba(249, 115, 22, 0.45);
 }
 
+/* Danger / Destructive Buttons */
 .btn.danger {
   background: var(--signal-soft);
   color: var(--signal);
   border-color: rgba(225, 29, 72, 0.35);
   font-weight: 600;
 }
+:root[data-theme="dark"] .btn.danger,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .btn.danger {
+    background: rgba(244, 63, 94, 0.16);
+    color: #FB7185;
+    border-color: rgba(251, 113, 133, 0.40);
+  }
+}
 .btn.danger:hover {
-  background: var(--signal);
-  color: #FFFFFF;
-  border-color: var(--signal);
+  background: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%);
+  color: #FFFFFF !important;
+  border-color: #F43F5E;
   box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
   transform: translateY(-1px);
 }

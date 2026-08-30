@@ -13,12 +13,12 @@ console.log('=== dev3 server: logic.js unit tests ===');
 // 1. Seed verification
 const seed = logic.seed();
 assert.strictEqual(seed.departments.length, 6, 'Should have 6 departments');
-assert.strictEqual(seed.users.length, 11, 'Should have 11 users');
-assert.strictEqual(seed.clients.length, 5, 'Should have 5 clients');
+assert.strictEqual(seed.users.length, 1, 'Should have 1 system admin user in clean production seed');
+assert.strictEqual(seed.clients.length, 0, 'Should have 0 dummy clients');
 assert.strictEqual(seed.tags.length, 6, 'Should have 6 tags');
-assert.strictEqual(seed.todos.length, 14, 'Should have 14 seeded todos');
-assert.strictEqual(seed.instructions.length, 8, 'Should have 8 seeded instructions');
-console.log('✓ seed() entities verified');
+assert.strictEqual(seed.todos.length, 0, 'Should have 0 dummy todos');
+assert.strictEqual(seed.instructions.length, 0, 'Should have 0 dummy instructions');
+console.log('✓ clean production seed() entities verified (only system admin retained)');
 
 // 2. Recurrence tests (6.2)
 assert.strictEqual(logic.nextDue('2026-08-30', 'daily'), '2026-08-31');
@@ -40,15 +40,12 @@ assert.strictEqual(logic.daysLate('2026-08-29', today), 1);
 assert.strictEqual(logic.daysLate('2026-08-28', today), 2);
 assert.strictEqual(logic.daysLate('2026-08-27', today), 3);
 
-const deptsById = seed.departments.reduce((acc, d) => { acc[d.id] = d; return acc; }, {});
-const people = seed.users.map(u => ({
-  id: u.id,
-  admin: u.admin === true,
-  departments: u.departments.map(m => ({
-    department: m.department,
-    rank: deptsById[m.department].levels.indexOf(m.level)
-  }))
-}));
+// Test people in department hierarchy
+const people = [
+  { id: 'u-shohag', admin: true, departments: [] },
+  { id: 'u-nadia', admin: false, departments: [{ department: 'd-outreach', rank: 0 }] }, // head
+  { id: 'u-rifat', admin: false, departments: [{ department: 'd-outreach', rank: 1 }] }  // member
+];
 
 // Outreach assignee: u-rifat (member), head: u-nadia (rank 0), admin: u-shohag
 const lateTodo1 = { id: 't-test1', department: 'd-outreach', assignee: 'u-rifat', assignee_type: 'user', due: '2026-08-29', state: 'open' };

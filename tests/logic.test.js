@@ -15,20 +15,17 @@ const S = OC.store, C = OC.can;
 S.load();
 const u = id => S.user(id);
 
-console.log('=== store.js ===');
-ok('load returns state', !!S.state.users.length);
-ok('user lookup', u('u-nadia').name, 'Nadia Rahman');
+console.log('=== store.js: clean production seed ===');
+ok('load returns clean seed', S.state.users.length, 1);
+ok('admin user in seed', S.user('u-shohag').name, 'Shohag Munshe');
 ok('department lookup', S.department('d-outreach').name, 'Outreach Operations');
-ok('client lookup', S.client('c-chaim').name, 'Chaim');
-ok('group lookup', S.group('g-relaunch').members.length, 3);
 ok('tag lookup', S.tag('t-urgent').label, 'Urgent');
-ok('todo lookup', S.todo('t-1').title, 'Manual reply check');
-ok('instruction lookup', S.instruction('n-1').author, 'u-shohag');
+ok('clean todos in seed', S.state.todos.length, 0);
+ok('clean instructions in seed', S.state.instructions.length, 0);
+ok('clean clients in seed', S.state.clients.length, 0);
 ok('missing id returns null', S.user('nope'), null);
 ok('uid is unique', S.uid('x') !== S.uid('x'));
 ok('default session is admin', S.session(), 'u-shohag');
-S.setSession('u-mim'); ok('session set', S.session(), 'u-mim');
-S.setSession('u-shohag');
 
 let fired = 0; S.onChange(() => fired++);
 const auditBefore = S.state.audit.length;
@@ -40,17 +37,46 @@ S.mutate(null, () => {});
 ok('mutate with null skips the audit', S.state.audit.length, auditBefore + 1);
 
 const notifBefore = S.state.notifications.length;
-S.notify(['u-mim', 'u-rifat'], 'hello', 'ref1');
-ok('notify adds one row per person', S.state.notifications.length, notifBefore + 2);
+S.notify(['u-shohag'], 'hello', 'ref1');
+ok('notify adds one row per person', S.state.notifications.length, notifBefore + 1);
 ok('notify marks unread', S.state.notifications[0].read, false);
 S.notify([], 'ignored');
-ok('notify with nobody is a no-op', S.state.notifications.length, notifBefore + 2);
+ok('notify with nobody is a no-op', S.state.notifications.length, notifBefore + 1);
 ok('notify persisted to storage',
-   JSON.parse(localStorage.getItem('oc-state-v1')).notifications.length, notifBefore + 2);
+   JSON.parse(localStorage.getItem('oc-state-v1')).notifications.length, notifBefore + 1);
 
 S.reset();
-ok('reset restores the seed', S.state.todos.length, 14);
+ok('reset restores the clean seed', S.state.todos.length, 0);
 ok('reset clears notifications', S.state.notifications.length, 0);
+
+// Populate mock users, groups, and todos for full permission matrix testing
+S.state.users = [
+  { id: 'u-shohag', name: 'Shohag Munshe', title: 'Founder', admin: true, departments: [] },
+  { id: 'u-imran', name: 'Imran Sheikh', title: 'Operations Manager', admin: false, departments: [{ department: 'd-bizops', level: 'head' }, { department: 'd-admin', level: 'head' }] },
+  { id: 'u-nadia', name: 'Nadia Rahman', title: 'Outreach Director', admin: false, departments: [{ department: 'd-outreach', level: 'head' }, { department: 'd-bizops', level: 'member' }] },
+  { id: 'u-tanvir', name: 'Tanvir Hasan', title: 'Outreach Specialist', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
+  { id: 'u-mim', name: 'Mim Akter', title: 'Senior Strategist', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
+  { id: 'u-rifat', name: 'Rifat Chowdhury', title: 'Outreach Associate', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
+  { id: 'u-sadia', name: 'Sadia Islam', title: 'Lead Gen Head', admin: false, departments: [{ department: 'd-leadgen', level: 'head' }] },
+  { id: 'u-jubayer', name: 'Jubayer Alam', title: 'Researcher', admin: false, departments: [{ department: 'd-leadgen', level: 'member' }] },
+  { id: 'u-farhan', name: 'Farhan Kabir', title: 'Web Lead', admin: false, departments: [{ department: 'd-web', level: 'head' }] },
+  { id: 'u-ayesha', name: 'Ayesha Noor', title: 'Front-end Developer', admin: false, departments: [{ department: 'd-web', level: 'member' }] },
+  { id: 'u-piya', name: 'Piya Das', title: 'Social Media Head', admin: false, departments: [{ department: 'd-social', level: 'head' }, { department: 'd-admin', level: 'member' }] }
+];
+S.state.groups = [
+  { id: 'g-relaunch', name: 'Site Relaunch', members: ['u-tanvir', 'u-ayesha', 'u-shohag'], status: 'active' }
+];
+S.state.todos = [
+  { id: 't-1', title: 'Manual reply check', department: 'd-outreach', assignee_type: 'user', assignee: 'u-rifat', state: 'open' },
+  { id: 't-2', title: 'Book demo slots', department: 'd-outreach', assignee_type: 'user', assignee: 'u-mim', state: 'progress' },
+  { id: 't-3', title: 'Rebuild hero', department: 'd-web', assignee_type: 'group', assignee: 'g-relaunch', state: 'progress' },
+  { id: 't-4', title: 'Weekly sequence report', department: 'd-outreach', assignee_type: 'user', assignee: 'u-tanvir', state: 'done' },
+  { id: 't-6', title: 'Rewrite sequence', department: 'd-outreach', assignee_type: 'user', assignee: 'u-mim', state: 'blocked' },
+  { id: 't-8', title: 'Booking form redirect', department: 'd-web', assignee_type: 'user', assignee: 'u-ayesha', state: 'open' }
+];
+S.state.instructions = [
+  { id: 'n-1', body: 'Document context', author: 'u-shohag', department: 'd-outreach', read_by: [] }
+];
 
 console.log('=== permissions.js: hierarchy ===');
 ok('levelIn finds a membership', C.levelIn(u('u-tanvir'), 'd-outreach'), 'member');

@@ -30,33 +30,18 @@ function test(name, fn) {
 console.log('--- [1/5] Testing Domain Business Logic (dev3/API/lib/logic.js) ---');
 const logic = require('../dev3/API/lib/logic');
 
-test('seed() generates all OM SRS 001 entities with proper constraints', () => {
+test('seed() generates clean production workspace with System Admin only', () => {
   const data = logic.seed();
   assert.strictEqual(data.version, 1);
   assert.strictEqual(data.departments.length, 6);
-  assert.strictEqual(data.users.length, 11);
-  assert.strictEqual(data.clients.length, 5);
+  assert.strictEqual(data.users.length, 1, 'Clean production seed must have 1 user (System Admin)');
+  assert.strictEqual(data.users[0].id, 'u-shohag');
+  assert.strictEqual(data.users[0].admin, true);
+  assert.strictEqual(data.clients.length, 0, 'Clean production seed starts with 0 clients');
   assert.strictEqual(data.tags.length, 6);
-  assert.strictEqual(data.groups.length, 1);
-  assert.strictEqual(data.todos.length, 14);
-  assert.strictEqual(data.instructions.length, 8);
-
-  // Every todo must have mandatory client and department (5.2)
-  data.todos.forEach(t => {
-    assert.ok(t.client, `Todo ${t.id} must have a client`);
-    assert.ok(t.department, `Todo ${t.id} must have a department`);
-    assert.ok(['open', 'progress', 'blocked', 'done'].includes(t.state));
-    if (t.state === 'blocked') {
-      assert.ok(t.blocked_reason, `Blocked todo ${t.id} must have a blocked reason`);
-    }
-  });
-
-  // Every instruction must have mandatory client and department (5.2)
-  data.instructions.forEach(ins => {
-    assert.ok(ins.client, `Instruction ${ins.id} must have a client`);
-    assert.ok(ins.department, `Instruction ${ins.id} must have a department`);
-    assert.ok(Array.isArray(ins.read_by));
-  });
+  assert.strictEqual(data.groups.length, 0, 'Clean production seed starts with 0 groups');
+  assert.strictEqual(data.todos.length, 0, 'Clean production seed starts with 0 todos');
+  assert.strictEqual(data.instructions.length, 0, 'Clean production seed starts with 0 instructions');
 });
 
 test('Recurrence logic: daily, weekly, monthly, quarterly with end-of-month clamp', () => {
@@ -161,8 +146,9 @@ const db = require('../dev3/API/config/db');
 
 test('Database state initializes and mutates atomically', () => {
   const state = db.getState();
-  assert.ok(state.todos.length >= 14);
-  assert.ok(state.users.length === 11);
+  assert.ok(state.version === 1);
+  assert.strictEqual(state.users.length, 1);
+  assert.strictEqual(state.todos.length, 0);
 
   // Test mutation
   const initialAuditCount = state.audit.length;
@@ -173,7 +159,7 @@ test('Database state initializes and mutates atomically', () => {
       client: 'c-chaim',
       department: 'd-web',
       assignee_type: 'user',
-      assignee: 'u-farhan',
+      assignee: 'u-shohag',
       state: 'open',
       priority: 'normal',
       due: '2026-09-01',
@@ -212,7 +198,7 @@ require('../assets/js/permissions');
 
 test('store.js initializes state, lookups, and session', () => {
   OC.store.load();
-  assert.strictEqual(OC.store.state.users.length, 11);
+  assert.strictEqual(OC.store.state.users.length, 1);
   
   // Lookups
   const shohag = OC.store.user('u-shohag');
@@ -222,10 +208,20 @@ test('store.js initializes state, lookups, and session', () => {
   const dept = OC.store.department('d-outreach');
   assert.strictEqual(dept.name, 'Outreach Operations');
 
-  const client = OC.store.client('c-chaim');
-  assert.strictEqual(client.name, 'Chaim');
-
   // Direct email lookup (Point 1 requirement)
+  // Set up mock test users in memory
+  OC.store.state.users = [
+    { id: 'u-shohag', name: 'Shohag Munshe', email: 'shohag@originate.example', title: 'Founder', admin: true, departments: [] },
+    { id: 'u-imran', name: 'Imran Sheikh', email: 'imran@originate.example', title: 'Operations Manager', admin: false, departments: [{ department: 'd-bizops', level: 'head' }, { department: 'd-admin', level: 'head' }] },
+    { id: 'u-nadia', name: 'Nadia Rahman', email: 'nadia@originate.example', title: 'Outreach Director', admin: false, departments: [{ department: 'd-outreach', level: 'head' }, { department: 'd-bizops', level: 'member' }] },
+    { id: 'u-tanvir', name: 'Tanvir Hasan', email: 'tanvir@originate.example', title: 'Outreach Specialist', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
+    { id: 'u-mim', name: 'Mim Akter', email: 'mim@originate.example', title: 'Senior Strategist', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
+    { id: 'u-rifat', name: 'Rifat Chowdhury', email: 'rifat@originate.example', title: 'Outreach Associate', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] }
+  ];
+  OC.store.state.todos = [
+    { id: 't-1', title: 'Test Todo', department: 'd-outreach', client: 'c-1', assignee_type: 'user', assignee: 'u-rifat', state: 'open' }
+  ];
+
   const byEmail = OC.store.userByEmail('shohag@originate.example');
   assert.ok(byEmail);
   assert.strictEqual(byEmail.id, 'u-shohag');
@@ -242,7 +238,6 @@ test('store.js initializes state, lookups, and session', () => {
 });
 
 test('permissions.js: Role computation, visibility, assignment matrix, and state transitions', () => {
-  const users = OC.store.state.users;
   const shohag = OC.store.user('u-shohag'); // Admin
   const imran = OC.store.user('u-imran');   // Head of BizOps & Admin
   const nadia = OC.store.user('u-nadia');   // Head of Outreach
@@ -305,13 +300,13 @@ test('API: getState & getStats return full workspace data', () => {
   commandController.getState(req, res);
   assert.strictEqual(getStatus(), 200);
   assert.strictEqual(getData().version, 1);
-  assert.ok(getData().todos.length >= 14);
+  assert.strictEqual(getData().users.length, 1);
 
   const stats = mockReqRes();
   commandController.getStats(stats.req, stats.res);
   assert.strictEqual(stats.getStatus(), 200);
-  assert.ok(stats.getData().totalTodos >= 14);
-  assert.strictEqual(stats.getData().users, 11);
+  assert.strictEqual(stats.getData().totalTodos, 0);
+  assert.strictEqual(stats.getData().users, 1);
 });
 
 test('API: mutateState processes actions and stamps audit trail', () => {

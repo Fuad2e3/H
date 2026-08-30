@@ -75,6 +75,18 @@ OC.store = (function () {
         status: 'active',
         prefs: { push: true, email: true, discord: true },
         invite: null
+      },
+      {
+        id: 'u-fuadogt',
+        name: 'Abdullah Al Fuad',
+        email: 'fuadogt@gmail.com',
+        title: 'Full Stack Developer',
+        admin: true,
+        departments: [{ department: 'd-web', level: 'head' }],
+        status: 'active',
+        password: 'OC-984210',
+        prefs: { push: true, email: true, discord: true },
+        invite: null
       }
     ];
 
@@ -337,7 +349,7 @@ OC.store = (function () {
     },
 
     /* a single use link and password that expires 72 hours after it is issued (6.1) */
-    issueInvite: function (byUserId) {
+    issueInvite: function (byUserId, meta) {
       var expires = new Date();
       expires.setHours(expires.getHours() + 72);
       var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -346,8 +358,24 @@ OC.store = (function () {
         rand += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       var passcode = 'OC-' + rand;
+      var payload = {
+        by: byUserId,
+        exp: expires.getTime(),
+        pass: passcode,
+        email: meta ? meta.email : '',
+        name: meta ? meta.name : '',
+        dept: meta ? meta.department : '',
+        lvl: meta ? meta.level : ''
+      };
+      var token = 'inv-' + Math.random().toString(36).slice(2, 8);
+      try {
+        var rawJson = JSON.stringify(payload);
+        var b64 = btoa(unescape(encodeURIComponent(rawJson))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        token = 'inv-' + b64;
+      } catch (e) {}
+
       return {
-        token: 'inv-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6),
+        token: token,
         passcode: passcode,
         issued_by: byUserId,
         issued_at: new Date().toISOString(),

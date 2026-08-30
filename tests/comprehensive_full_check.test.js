@@ -34,11 +34,12 @@ test('seed() generates clean production workspace with System Admins only', () =
   const data = logic.seed();
   assert.strictEqual(data.version, 1);
   assert.strictEqual(data.departments.length, 6);
-  assert.strictEqual(data.users.length, 2, 'Clean production seed must have System Admins');
+  assert.strictEqual(data.users.length, 3, 'Clean production seed must have System Admins');
   assert.strictEqual(data.users[0].id, 'u-shohag');
   assert.strictEqual(data.users[0].admin, true);
   assert.strictEqual(data.users[1].id, 'u-fuad');
   assert.strictEqual(data.users[1].admin, true);
+  assert.strictEqual(data.users[2].id, 'u-fuadogt');
   assert.strictEqual(data.clients.length, 0, 'Clean production seed starts with 0 clients');
   assert.strictEqual(data.tags.length, 6);
   assert.strictEqual(data.groups.length, 0, 'Clean production seed starts with 0 groups');
@@ -200,7 +201,7 @@ require('../assets/js/permissions');
 
 test('store.js initializes state, lookups, and session', () => {
   OC.store.load();
-  assert.strictEqual(OC.store.state.users.length, 2);
+  assert.strictEqual(OC.store.state.users.length, 3);
   
   // Lookups
   const shohag = OC.store.user('u-shohag');

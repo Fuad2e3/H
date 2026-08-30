@@ -449,6 +449,46 @@ OC.app = (function () {
       var users = OC.store.state.users || [];
       var target = users.find(function (u) { return u.invite && u.invite.token === token; });
 
+      // If not in local browser cache, decode from portable token across any device / GitHub Pages
+      if (!target && token.indexOf('inv-') === 0) {
+        try {
+          var base64 = token.slice(4).replace(/-/g, '+').replace(/_/g, '/');
+          while (base64.length % 4) base64 += '=';
+          var json = decodeURIComponent(escape(atob(base64)));
+          var payload = JSON.parse(json);
+          if (payload && payload.email && payload.exp) {
+            var existing = OC.store.userByEmail(payload.email);
+            if (existing) {
+              target = existing;
+              if (!target.invite) target.invite = { token: token, passcode: payload.pass, expires_at: new Date(payload.exp).toISOString(), claimed_at: null };
+            } else {
+              target = {
+                id: OC.store.uid('u'),
+                name: payload.name || 'Invited Member',
+                email: payload.email,
+                title: 'Team Member',
+                admin: false,
+                departments: payload.dept ? [{ department: payload.dept, level: payload.lvl || 'member' }] : [],
+                status: 'invited',
+                prefs: { push: true, email: true, discord: true },
+                invite: {
+                  token: token,
+                  passcode: payload.pass,
+                  issued_by: payload.by || 'u-shohag',
+                  issued_at: new Date().toISOString(),
+                  expires_at: new Date(payload.exp).toISOString(),
+                  claimed_at: null
+                }
+              };
+              OC.store.state.users.push(target);
+              OC.store.mutate(null, function () {});
+            }
+          }
+        } catch (e) {
+          console.warn('Could not decode portable invite token:', e);
+        }
+      }
+
       if (!target) {
         OC.ui.toast('Invite token not found or already claimed.', true);
         location.hash = '#dashboard';

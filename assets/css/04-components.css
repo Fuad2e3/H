@@ -135,6 +135,47 @@
   flex: none;
 }
 
+/* ---- person mark & avatar ---------------------------------------------- */
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.mark-tint {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  line-height: 1;
+  user-select: none;
+  flex: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.mark-tint.tint-blueprint {
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+}
+.mark-tint.tint-brass {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+}
+.mark-tint.tint-success {
+  background: linear-gradient(135deg, #10B981, #059669);
+}
+.mark-tint.tint-signal {
+  background: linear-gradient(135deg, #F43F5E, #E11D48);
+}
+.mark-tint.tint-slate {
+  background: linear-gradient(135deg, #64748B, #475569);
+}
+
 /* ---- segmented control -------------------------------------------------- */
 .segmented {
   display: inline-flex;
@@ -404,6 +445,86 @@
 }
 :root[data-theme="dark"] .escalation {
   color: #FDE68A;
+}
+
+/* ---- todo item card ----------------------------------------------------- */
+.item {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-radius: var(--r2);
+  background: var(--card-bg);
+  padding: var(--s3) var(--s4) var(--s3) calc(var(--s4) + 6px);
+  box-shadow: var(--sh1);
+  transition: transform var(--t), border-color var(--t), box-shadow var(--t), background var(--t);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.item::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: var(--r2) 0 0 var(--r2);
+  background: var(--state-open);
+  opacity: 0.85;
+}
+.item.is-open::before {
+  background: linear-gradient(180deg, #2563EB, #3B82F6);
+}
+.item.is-progress::before {
+  background: linear-gradient(180deg, #F59E0B, #D97706);
+}
+.item.is-done::before {
+  background: linear-gradient(180deg, #10B981, #059669);
+  opacity: 0.6;
+}
+.item.is-done {
+  opacity: 0.75;
+}
+.item.is-blocked::before {
+  background: linear-gradient(180deg, #F43F5E, #E11D48);
+}
+.item.is-overdue {
+  border-color: rgba(225, 29, 72, 0.4);
+  background: linear-gradient(90deg, rgba(225, 29, 72, 0.04) 0%, var(--card-bg) 100%);
+}
+.item.is-overdue::before {
+  background: linear-gradient(180deg, #F43F5E, #E11D48);
+  box-shadow: 0 0 10px rgba(225, 29, 72, 0.5);
+}
+.item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh2);
+  border-color: var(--blueprint);
+}
+.item .title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.item .desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.item .meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.item .actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--rule);
 }
 
 /* ---- instruction item --------------------------------------------------- */

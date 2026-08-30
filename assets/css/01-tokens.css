@@ -1,7 +1,7 @@
 /* =========================================================================
    01-tokens.css — Modern Executive Design Tokens (OM SRS 001)
    Ultra-refined color scales, high-fidelity elevation, precision typography,
-   and fluid micro-transitions for Light and Dark modes.
+   radiant glows, and fluid micro-transitions for Light and Dark modes.
    Loaded first — every other stylesheet reads these custom properties.
    Originate Command · application
    ========================================================================= */
@@ -10,9 +10,9 @@
 :root[data-theme="light"] {
   color-scheme: light;
   
-  /* Core Neutrals & Backgrounds (Day Mode: Vibrant, crisp, luminous) */
-  --ink: #0F172A;            /* Slate-900: Deep rich text */
-  --paper: #F4F7FB;          /* Soft luminous canvas with cool tone */
+  /* Core Neutrals & Backgrounds (Day Mode: Crisp, luminous, modern slate) */
+  --ink: #0F172A;            /* Slate-900: Deep rich high-contrast text */
+  --paper: #F1F5F9;          /* Luminous soft background */
   --surface: #FFFFFF;        /* Pure card surface */
   --surface-alt: #F8FAFC;    /* Slate-50: Crisp sub-container */
   
@@ -43,99 +43,116 @@
   --card-bg: var(--surface);
   --card-bg-alt: var(--surface-alt);
   --rule: var(--border);
-  --rule-strong: rgba(30, 41, 59, 0.15);
+  --rule-strong: rgba(30, 41, 59, 0.14);
   
   /* Interactive Washes */
-  --tint: rgba(37, 99, 235, 0.06);
-  --tint-strong: rgba(37, 99, 235, 0.12);
+  --tint: rgba(37, 99, 235, 0.05);
+  --tint-strong: rgba(37, 99, 235, 0.10);
   
-  /* Multi-Layer Soft Ambient Shadows & Colorful Glows */
-  --shadow: 0 1px 3px rgba(30, 41, 59, 0.04), 0 10px 25px -5px rgba(30, 41, 59, 0.06);
-  --sh1: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
-  --sh2: 0 4px 12px -2px rgba(37, 99, 235, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.05);
-  --sh3: 0 20px 30px -8px rgba(37, 99, 235, 0.12), 0 8px 12px -4px rgba(15, 23, 42, 0.06);
-  --sh-glow: 0 0 24px rgba(37, 99, 235, 0.18);
-  --sh-orange-glow: 0 0 20px rgba(249, 115, 22, 0.22);
+  /* High-Fidelity Elevation & Soft Ambient Shadows */
+  --shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.03);
+  --sh1: 0 2px 5px -1px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --sh2: 0 10px 25px -4px rgba(37, 99, 235, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+  --sh3: 0 24px 48px -8px rgba(37, 99, 235, 0.14), 0 10px 18px -4px rgba(15, 23, 42, 0.06);
+  --sh-glow: 0 0 24px rgba(37, 99, 235, 0.16);
+  --sh-orange-glow: 0 0 22px rgba(249, 115, 22, 0.20);
+  
+  /* Gradients */
+  --grad-primary: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  --grad-orange: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+  --grad-danger: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%);
+  --grad-success: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  --grad-bar: linear-gradient(90deg, #2563EB 0%, #F97316 50%, #8B5CF6 100%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    /* Night Mode (Deep Midnight Velvet with Luminous Neon Accents) */
-    --ink: #F1F5F9;           /* Slate-100: Crisp text */
-    --text: #F1F5F9;
-    --text-secondary: #94A3B8;/* Slate-400: Clear secondary */
-    --bg: #0B1120;             /* Midnight velvet background */
-    --card-bg: #141E33;        /* Elevated midnight slate surface */
-    --card-bg-alt: #1C2B45;    /* Distinct sub-container */
+    /* Night Mode (Deep Midnight Navy with Vibrant Jewel Accents) */
+    --ink: #F8FAFC;           /* Slate-50: Bright crisp text */
+    --text: #F8FAFC;
+    --text-secondary: #94A3B8;/* Slate-400: Clear readable secondary */
+    --bg: #090E1A;             /* Deepest midnight obsidian background */
+    --card-bg: #111B2E;        /* Elevated obsidian navy card surface */
+    --card-bg-alt: #16243D;    /* Distinct sub-container surface */
     --brand-orange: #FB923C;
-    --brand-orange-soft: rgba(251, 146, 60, 0.14);
+    --brand-orange-soft: rgba(251, 146, 60, 0.15);
     --blueprint: #3B82F6;      /* Electric sapphire blue */
-    --blueprint-soft: rgba(59, 130, 246, 0.14);
+    --blueprint-soft: rgba(59, 130, 246, 0.15);
     --indigo: #818CF8;
-    --indigo-soft: rgba(129, 140, 248, 0.14);
+    --indigo-soft: rgba(129, 140, 248, 0.15);
     --purple: #A78BFA;
-    --purple-soft: rgba(167, 139, 250, 0.14);
+    --purple-soft: rgba(167, 139, 250, 0.15);
     --cyan: #38BDF8;
-    --cyan-soft: rgba(56, 189, 248, 0.14);
+    --cyan-soft: rgba(56, 189, 248, 0.15);
     --brass: #FBBF24;          /* Vivid radiant amber */
-    --brass-soft: rgba(251, 191, 36, 0.14);
+    --brass-soft: rgba(251, 191, 36, 0.15);
     --slate: #94A3B8;
     --signal: #FB7185;         /* Vibrant rose coral */
-    --signal-soft: rgba(251, 113, 133, 0.14);
+    --signal-soft: rgba(251, 113, 133, 0.15);
     --success: #34D399;        /* Vivid neon mint */
-    --success-soft: rgba(52, 211, 153, 0.14);
-    --border: rgba(148, 163, 184, 0.12);
-    --rule: rgba(148, 163, 184, 0.12);
-    --rule-strong: rgba(148, 163, 184, 0.22);
+    --success-soft: rgba(52, 211, 153, 0.15);
+    --border: rgba(148, 163, 184, 0.10);
+    --rule: rgba(148, 163, 184, 0.10);
+    --rule-strong: rgba(148, 163, 184, 0.20);
     --tint: rgba(59, 130, 246, 0.10);
-    --tint-strong: rgba(59, 130, 246, 0.20);
-    --shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
-    --sh1: 0 1px 3px rgba(0, 0, 0, 0.35);
-    --sh2: 0 4px 14px rgba(0, 0, 0, 0.40);
-    --sh3: 0 20px 40px rgba(0, 0, 0, 0.55);
-    --sh-glow: 0 0 28px rgba(59, 130, 246, 0.22);
-    --sh-orange-glow: 0 0 24px rgba(251, 146, 60, 0.24);
+    --tint-strong: rgba(59, 130, 246, 0.18);
+    --shadow: 0 8px 30px rgba(0, 0, 0, 0.50);
+    --sh1: 0 2px 6px rgba(0, 0, 0, 0.35);
+    --sh2: 0 8px 24px rgba(0, 0, 0, 0.45);
+    --sh3: 0 24px 50px rgba(0, 0, 0, 0.65);
+    --sh-glow: 0 0 28px rgba(59, 130, 246, 0.24);
+    --sh-orange-glow: 0 0 24px rgba(251, 146, 60, 0.26);
+    --grad-primary: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    --grad-orange: linear-gradient(135deg, #FB923C 0%, #EA580C 100%);
+    --grad-danger: linear-gradient(135deg, #FB7185 0%, #E11D48 100%);
+    --grad-success: linear-gradient(135deg, #34D399 0%, #059669 100%);
+    --grad-bar: linear-gradient(90deg, #3B82F6 0%, #FB923C 50%, #A78BFA 100%);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  /* Night Mode (Deep Midnight Velvet with Luminous Neon Accents) */
-  --ink: #F1F5F9;           /* Slate-100: Crisp text */
-  --text: #F1F5F9;
-  --text-secondary: #94A3B8;/* Slate-400: Clear secondary */
-  --bg: #0B1120;             /* Midnight velvet background */
-  --card-bg: #141E33;        /* Elevated midnight slate surface */
-  --card-bg-alt: #1C2B45;    /* Distinct sub-container */
+  /* Night Mode (Deep Midnight Navy with Vibrant Jewel Accents) */
+  --ink: #F8FAFC;           /* Slate-50: Bright crisp text */
+  --text: #F8FAFC;
+  --text-secondary: #94A3B8;/* Slate-400: Clear readable secondary */
+  --bg: #090E1A;             /* Deepest midnight obsidian background */
+  --card-bg: #111B2E;        /* Elevated obsidian navy card surface */
+  --card-bg-alt: #16243D;    /* Distinct sub-container surface */
   --brand-orange: #FB923C;
-  --brand-orange-soft: rgba(251, 146, 60, 0.14);
+  --brand-orange-soft: rgba(251, 146, 60, 0.15);
   --blueprint: #3B82F6;      /* Electric sapphire blue */
-  --blueprint-soft: rgba(59, 130, 246, 0.14);
+  --blueprint-soft: rgba(59, 130, 246, 0.15);
   --indigo: #818CF8;
-  --indigo-soft: rgba(129, 140, 248, 0.14);
+  --indigo-soft: rgba(129, 140, 248, 0.15);
   --purple: #A78BFA;
-  --purple-soft: rgba(167, 139, 250, 0.14);
+  --purple-soft: rgba(167, 139, 250, 0.15);
   --cyan: #38BDF8;
-  --cyan-soft: rgba(56, 189, 248, 0.14);
+  --cyan-soft: rgba(56, 189, 248, 0.15);
   --brass: #FBBF24;          /* Vivid radiant amber */
-  --brass-soft: rgba(251, 191, 36, 0.14);
+  --brass-soft: rgba(251, 191, 36, 0.15);
   --slate: #94A3B8;
   --signal: #FB7185;         /* Vibrant rose coral */
-  --signal-soft: rgba(251, 113, 133, 0.14);
+  --signal-soft: rgba(251, 113, 133, 0.15);
   --success: #34D399;        /* Vivid neon mint */
-  --success-soft: rgba(52, 211, 153, 0.14);
-  --border: rgba(148, 163, 184, 0.12);
-  --rule: rgba(148, 163, 184, 0.12);
-  --rule-strong: rgba(148, 163, 184, 0.22);
+  --success-soft: rgba(52, 211, 153, 0.15);
+  --border: rgba(148, 163, 184, 0.10);
+  --rule: rgba(148, 163, 184, 0.10);
+  --rule-strong: rgba(148, 163, 184, 0.20);
   --tint: rgba(59, 130, 246, 0.10);
-  --tint-strong: rgba(59, 130, 246, 0.20);
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
-  --sh1: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --sh2: 0 4px 14px rgba(0, 0, 0, 0.40);
-  --sh3: 0 20px 40px rgba(0, 0, 0, 0.55);
-  --sh-glow: 0 0 28px rgba(59, 130, 246, 0.22);
-  --sh-orange-glow: 0 0 24px rgba(251, 146, 60, 0.24);
+  --tint-strong: rgba(59, 130, 246, 0.18);
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.50);
+  --sh1: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --sh2: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --sh3: 0 24px 50px rgba(0, 0, 0, 0.65);
+  --sh-glow: 0 0 28px rgba(59, 130, 246, 0.24);
+  --sh-orange-glow: 0 0 24px rgba(251, 146, 60, 0.26);
+  --grad-primary: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  --grad-orange: linear-gradient(135deg, #FB923C 0%, #EA580C 100%);
+  --grad-danger: linear-gradient(135deg, #FB7185 0%, #E11D48 100%);
+  --grad-success: linear-gradient(135deg, #34D399 0%, #059669 100%);
+  --grad-bar: linear-gradient(90deg, #3B82F6 0%, #FB923C 50%, #A78BFA 100%);
 }
 
 /* Application Layout & Scale Tokens --------------------------------------- */
@@ -155,10 +172,10 @@
   --s6: 32px;
   --s7: 48px;
 
-  /* Executive rounded borders */
+  /* Modern Executive rounded borders */
   --r1: 8px;       /* Form controls, buttons, chips */
   --r2: 12px;      /* Cards, panels, containers */
-  --r3: 16px;      /* Modals, floating popups */
+  --r3: 18px;      /* Modals, floating popups */
   --r-pill: 9999px;/* Status tags & pills */
 
   /* Control heights */
@@ -168,6 +185,6 @@
   /* Structural dimensions */
   --topbar-h: 66px;
 
-  /* Easing & Transition timing */
-  --t: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* Fluid Easing & Transition timing */
+  --t: 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }

@@ -1,177 +1,119 @@
-/* Logic suite — store.js and permissions.js, no browser required.
-   Run from the repository root:  node tests/logic.test.js
-   Originate Command · application */
+/* =========================================================================
+   logic.test.js — the permission engine the browser uses to draw
+   permissions.js decides what the interface offers. The server decides what
+   it will actually do, and server/tests/api.test.js covers that. Both matter:
+   a person should not be shown a button that the server would refuse.
+
+   From the project root:  npm run test:logic
+   Originate Command · OM SRS 001
+   ========================================================================= */
 
 require('./harness.js');
-loadFile('assets/js/store.js');
-loadFile('assets/js/permissions.js');
+loadFile('assets/js/core/permissions.js');
 
-let pass = 0, fail = [];
+let passed = 0;
+const failures = [];
 function ok(label, got, want = true) {
   const good = JSON.stringify(got) === JSON.stringify(want);
-  if (good) pass++; else fail.push(`${label}  got=${JSON.stringify(got)} want=${JSON.stringify(want)}`);
+  good ? passed++ : failures.push(`${label}  got=${JSON.stringify(got)} want=${JSON.stringify(want)}`);
+  console.log((good ? '  PASS ' : '  FAIL ') + label);
 }
-const S = OC.store, C = OC.can;
-S.load();
-const u = id => S.user(id);
 
-console.log('=== store.js ===');
-ok('load returns state', !!S.state.users.length);
-ok('user lookup', u('u-nadia').name, 'Nadia Rahman');
-ok('department lookup', S.department('d-outreach').name, 'Outreach Operations');
-ok('client lookup', S.client('c-chaim').name, 'Chaim');
-ok('group lookup', S.group('g-relaunch').members.length, 3);
-ok('tag lookup', S.tag('t-urgent').label, 'Urgent');
-ok('todo lookup', S.todo('t-1').title, 'Manual reply check');
-ok('instruction lookup', S.instruction('n-1').author, 'u-shohag');
-ok('missing id returns null', S.user('nope'), null);
-ok('uid is unique', S.uid('x') !== S.uid('x'));
-ok('default session is admin', S.session(), 'u-shohag');
-S.setSession('u-mim'); ok('session set', S.session(), 'u-mim');
-S.setSession('u-shohag');
+/* the workspace the seed creates, as the browser holds it */
+const STATE = {
+  departments: [
+    { id: 'd-outreach', name: 'Outreach Operations', levels: ['head', 'lead', 'senior', 'member'] },
+    { id: 'd-web', name: 'Web Development', levels: ['head', 'lead', 'member'] },
+    { id: 'd-bizops', name: 'Business Operations', levels: ['head', 'lead', 'member'] }
+  ],
+  users: [
+    { id: 'u-shohag', name: 'Shohag Munshe', admin: true, departments: [] },
+    { id: 'u-nadia', name: 'Nadia Rahman', admin: false,
+      departments: [{ department: 'd-outreach', level: 'head' }, { department: 'd-bizops', level: 'member' }] },
+    { id: 'u-tanvir', name: 'Tanvir Hasan', admin: false, departments: [{ department: 'd-outreach', level: 'lead' }] },
+    { id: 'u-mim', name: 'Mim Akter', admin: false, departments: [{ department: 'd-outreach', level: 'senior' }] },
+    { id: 'u-rifat', name: 'Rifat Chowdhury', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
+    { id: 'u-farhan', name: 'Farhan Kabir', admin: false, departments: [{ department: 'd-web', level: 'head' }] },
+    { id: 'u-ayesha', name: 'Ayesha Noor', admin: false, departments: [{ department: 'd-web', level: 'member' }] }
+  ],
+  groups: [{ id: 'g-relaunch', name: 'Chaim Site Relaunch',
+             members: ['u-tanvir', 'u-ayesha', 'u-shohag'], status: 'active' }],
+  todos: [
+    { id: 't-1', title: 'Manual reply check', department: 'd-outreach', assignee_type: 'user',
+      assignee: 'u-rifat', state: 'open', due: '2026-08-28' },
+    { id: 't-2', title: 'Fix the form', department: 'd-web', assignee_type: 'user',
+      assignee: 'u-ayesha', state: 'open', due: '2026-08-28' },
+    { id: 't-3', title: 'Rebuild the hero', department: 'd-web', assignee_type: 'group',
+      assignee: 'g-relaunch', state: 'open', due: '2026-08-28' }
+  ],
+  instructions: [{ id: 'n-1', author: 'u-shohag', department: 'd-outreach', read_by: [] }],
+  clients: [], tags: [], notifications: [], audit: [], saved_filters: []
+};
 
-let fired = 0; S.onChange(() => fired++);
-const auditBefore = S.state.audit.length;
-S.mutate({ actor: 'u-shohag', action: 'test.action', target: 'x', detail: 'd' }, () => {});
-ok('mutate writes an audit entry', S.state.audit.length, auditBefore + 1);
-ok('mutate emits a change', fired, 1);
-ok('audit newest first', S.state.audit[0].action, 'test.action');
-S.mutate(null, () => {});
-ok('mutate with null skips the audit', S.state.audit.length, auditBefore + 1);
+/* permissions.js reads the workspace through OC.store, so stand in for it */
+OC.store = {
+  get state() { return STATE; },
+  user: (id) => STATE.users.find((u) => u.id === id) || null,
+  department: (id) => STATE.departments.find((d) => d.id === id) || null,
+  group: (id) => STATE.groups.find((g) => g.id === id) || null,
+  todo: (id) => STATE.todos.find((t) => t.id === id) || null,
+  instruction: (id) => STATE.instructions.find((n) => n.id === id) || null,
+  session: () => 'u-shohag'
+};
 
-const notifBefore = S.state.notifications.length;
-S.notify(['u-mim', 'u-rifat'], 'hello', 'ref1');
-ok('notify adds one row per person', S.state.notifications.length, notifBefore + 2);
-ok('notify marks unread', S.state.notifications[0].read, false);
-S.notify([], 'ignored');
-ok('notify with nobody is a no-op', S.state.notifications.length, notifBefore + 2);
-ok('notify persisted to storage',
-   JSON.parse(localStorage.getItem('oc-state-v1')).notifications.length, notifBefore + 2);
+const C = OC.can;
+const u = (id) => OC.store.user(id);
 
-S.reset();
-ok('reset restores the seed', S.state.todos.length, 14);
-ok('reset clears notifications', S.state.notifications.length, 0);
+console.log('=== hierarchy is a position, not a name (3.4) ===');
+ok('rank comes from the department\'s own list', C.rank('d-outreach', 'senior'), 2);
+ok('the same name ranks differently elsewhere', C.rank('d-web', 'member'), 2);
+ok('an unknown level ranks last', C.rank('d-outreach', 'director'), Infinity);
+ok('head is rank zero', C.isHead(u('u-nadia'), 'd-outreach'));
+ok('and only in their own department', C.isHead(u('u-nadia'), 'd-web'), false);
+ok('one person can hold two departments (3.3)', C.departmentsOf(u('u-nadia')), ['d-outreach', 'd-bizops']);
 
-console.log('=== permissions.js: hierarchy ===');
-ok('levelIn finds a membership', C.levelIn(u('u-tanvir'), 'd-outreach'), 'lead');
-ok('levelIn outside a department', C.levelIn(u('u-tanvir'), 'd-web'), null);
-ok('rank head is 0', C.rank('d-outreach', 'head'), 0);
-ok('custom level ranks between lead and member', C.rank('d-outreach', 'senior'), 2);
-ok('unknown level ranks last', C.rank('d-outreach', 'nope'), Infinity);
-ok('isHead', C.isHead(u('u-nadia'), 'd-outreach'));
-ok('isHead is department-scoped', C.isHead(u('u-nadia'), 'd-web'), false);
-ok('isLead', C.isLead(u('u-tanvir'), 'd-outreach'));
-ok('inDept', C.inDept(u('u-rifat'), 'd-outreach'));
-ok('headOfAny for a head', C.headOfAny(u('u-piya')));
-ok('headOfAny false for a lead', C.headOfAny(u('u-tanvir')), false);
-ok('one person heads two departments', C.departmentsOf(u('u-imran')), ['d-bizops', 'd-admin']);
-ok('inGroup', C.inGroup(u('u-ayesha'), 'g-relaunch'));
-ok('inGroup false for an outsider', C.inGroup(u('u-rifat'), 'g-relaunch'), false);
+console.log('\n=== role labels ===');
+ok('admin', C.roleLabel(u('u-shohag')), 'System Admin');
+ok('head', C.roleLabel(u('u-nadia')), 'Department Head');
+ok('lead', C.roleLabel(u('u-tanvir')), 'Team Lead');
+ok('a custom level keeps its own name', C.roleLabel(u('u-mim')), 'Senior');
+ok('member', C.roleLabel(u('u-rifat')), 'Member');
 
-console.log('=== permissions.js: role labels ===');
-ok('admin label', C.roleLabel(u('u-shohag')), 'System Admin');
-ok('head label', C.roleLabel(u('u-nadia')), 'Department Head');
-ok('lead label', C.roleLabel(u('u-tanvir')), 'Team Lead');
-ok('custom level label', C.roleLabel(u('u-mim')), 'Senior');
-ok('member label', C.roleLabel(u('u-rifat')), 'Member');
-ok('highest grant wins across departments', C.roleLabel(u('u-piya')), 'Department Head');
+console.log('\n=== what the interface offers (3.1, 3.2) ===');
+ok('a member is offered their own department\'s work', C.seeTodo(u('u-rifat'), OC.store.todo('t-1')));
+ok('not another department\'s', C.seeTodo(u('u-rifat'), OC.store.todo('t-2')), false);
+ok('group membership crosses that line (4.2)', C.seeTodo(u('u-tanvir'), OC.store.todo('t-3')));
+ok('a member may only assign to themselves', C.assignableUsers(u('u-rifat')).map((x) => x.id), ['u-rifat']);
+ok('a lead is offered their own team',
+  C.assignableUsers(u('u-tanvir')).map((x) => x.id).sort(), ['u-mim', 'u-rifat', 'u-tanvir']);
+ok('a lead is not offered their head', C.assignTo(u('u-tanvir'), 'u-nadia'), false);
+ok('nor another department', C.assignTo(u('u-tanvir'), 'u-ayesha'), false);
+ok('the admin is offered everyone', C.assignableUsers(u('u-shohag')).length, STATE.users.length);
 
-console.log('=== permissions.js: assignment matrix ===');
-const people = ['u-shohag','u-imran','u-nadia','u-tanvir','u-mim','u-rifat','u-sadia','u-jubayer','u-farhan','u-ayesha','u-piya'];
-// every account may assign to itself, and nobody may assign upward
-people.forEach(id => ok(`${id} may assign to self`, C.assignTo(u(id), id)));
-ok('member cannot assign to a peer', C.assignTo(u('u-rifat'), 'u-mim'), false);
-ok('senior cannot assign to a member', C.assignTo(u('u-mim'), 'u-rifat'), false);
-ok('lead assigns to senior below', C.assignTo(u('u-tanvir'), 'u-mim'));
-ok('lead assigns to member below', C.assignTo(u('u-tanvir'), 'u-rifat'));
-ok('lead cannot assign to its head', C.assignTo(u('u-tanvir'), 'u-nadia'), false);
-ok('lead cannot assign to another lead', C.assignTo(u('u-tanvir'), 'u-sadia'), false);
-ok('head assigns to its lead', C.assignTo(u('u-nadia'), 'u-tanvir'));
-ok('head cannot cross departments', C.assignTo(u('u-nadia'), 'u-ayesha'), false);
-ok('head cannot assign to another head in the same dept', C.assignTo(u('u-imran'), 'u-imran'));
-ok('admin assigns to everyone', C.assignableUsers(u('u-shohag')).length, 11);
-ok('member assignable list is self only', C.assignableUsers(u('u-rifat')).map(x => x.id), ['u-rifat']);
-ok('lead assignable list', C.assignableUsers(u('u-tanvir')).map(x => x.id).sort(), ['u-mim','u-rifat','u-tanvir']);
-ok('head assignable list', C.assignableUsers(u('u-nadia')).map(x => x.id).sort(), ['u-mim','u-nadia','u-rifat','u-tanvir']);
+console.log('\n=== the buttons a role does not get ===');
+ok('a member is not shown Reassign (6.2)', C.reassign(u('u-rifat'), OC.store.todo('t-1')), false);
+ok('a senior is not either', C.reassign(u('u-mim'), OC.store.todo('t-1')), false);
+ok('a lead is', C.reassign(u('u-tanvir'), OC.store.todo('t-1')));
+ok('a member is not shown New group (4.2)', C.createGroup(u('u-rifat')), false);
+ok('a head is', C.createGroup(u('u-nadia')));
+ok('a lead is not shown Invite (6.1)', C.invite(u('u-tanvir')), false);
+ok('only the admin is shown department controls (4.1)',
+  [C.manageDepartments(u('u-shohag')), C.manageDepartments(u('u-nadia'))], [true, false]);
+ok('only the admin sees the audit log (8.2)',
+  [C.seeAudit(u('u-shohag')), C.seeAudit(u('u-nadia'))], [true, false]);
+ok('anyone may post an instruction (6.3)',
+  STATE.users.every((x) => C.postInstruction(x)));
 
-console.log('=== permissions.js: groups ===');
-ok('admin may create a group', C.createGroup(u('u-shohag')));
-ok('head may create a group', C.createGroup(u('u-nadia')));
-ok('lead may not', C.createGroup(u('u-tanvir')), false);
-ok('member may not', C.createGroup(u('u-rifat')), false);
-ok('admin may assign to a group', C.assignToGroup(u('u-shohag'), 'g-relaunch'));
-ok('group member may assign to it', C.assignToGroup(u('u-ayesha'), 'g-relaunch'));
-ok('outsider member may not', C.assignToGroup(u('u-rifat'), 'g-relaunch'), false);
-ok('assignableGroups excludes archived', (() => {
-  S.state.groups[0].status = 'archived';
-  const n = C.assignableGroups(u('u-shohag')).length;
-  S.state.groups[0].status = 'active';
-  return n;
-})(), 0);
+console.log('\n=== escalation, for what the card shows (9.4) ===');
+const chain = C.escalationChain(OC.store.todo('t-1'));
+ok('the chain climbs in order', chain.map((c) => c.step),
+  ['Assignee', 'Team lead, day one', 'Department head, day two', 'Leadership, day three']);
+ok('it starts with the assignee', chain[0].users, ['u-rifat']);
+ok('a group todo names every member',
+  C.escalationChain(OC.store.todo('t-3'))[0].users.sort(), ['u-ayesha', 'u-shohag', 'u-tanvir']);
+ok('nothing before it is late', C.escalationReached(OC.store.todo('t-1'), 0), 0);
+ok('it stops at leadership', C.escalationReached(OC.store.todo('t-1'), 99), 3);
 
-console.log('=== permissions.js: visibility ===');
-const t1 = S.todo('t-1'), t3 = S.todo('t-3'), n1 = S.instruction('n-1');
-ok('admin sees every todo', S.state.todos.every(t => C.seeTodo(u('u-shohag'), t)));
-ok('assignee sees own todo', C.seeTodo(u('u-rifat'), t1));
-ok('department colleague sees it', C.seeTodo(u('u-mim'), t1));
-ok('other department does not', C.seeTodo(u('u-ayesha'), t1), false);
-ok('group member sees a cross-department todo', C.seeTodo(u('u-tanvir'), t3));
-ok('non-group outsider does not', C.seeTodo(u('u-rifat'), t3), false);
-ok('author always sees own instruction', C.seeInstruction(u('u-shohag'), n1));
-ok('department sees the instruction', C.seeInstruction(u('u-rifat'), n1));
-ok('other department does not', C.seeInstruction(u('u-jubayer'), n1), false);
-ok('visibleUsers: admin sees all', C.visibleUsers(u('u-shohag')).length, 11);
-ok('visibleUsers: member sees own department', C.visibleUsers(u('u-rifat')).map(x=>x.id).sort(),
-   ['u-mim','u-nadia','u-rifat','u-tanvir']);
-
-console.log('=== permissions.js: state changes ===');
-ok('assignee may change state', C.changeState(u('u-rifat'), t1));
-ok('their lead may change state', C.changeState(u('u-tanvir'), t1));
-ok('a peer may not', C.changeState(u('u-mim'), t1), false);
-ok('group member may change a group todo', C.changeState(u('u-ayesha'), t3));
-ok('assignee may not reassign', C.reassign(u('u-rifat'), t1), false);
-ok('lead may reassign', C.reassign(u('u-tanvir'), t1));
-ok('head of the todo department may reassign', C.reassign(u('u-nadia'), t1));
-ok('author may archive own instruction', C.archiveInstruction(u('u-shohag'), n1));
-ok('department head may archive', C.archiveInstruction(u('u-nadia'), n1));
-ok('member may not archive', C.archiveInstruction(u('u-rifat'), n1), false);
-ok('manageDepartment: head yes', C.manageDepartment(u('u-nadia'), 'd-outreach'));
-ok('manageDepartment: lead no', C.manageDepartment(u('u-tanvir'), 'd-outreach'), false);
-ok('invite: head yes', C.invite(u('u-nadia')));
-ok('invite: lead no', C.invite(u('u-tanvir')), false);
-ok('audit: admin only', [C.seeAudit(u('u-shohag')), C.seeAudit(u('u-nadia'))], [true, false]);
-ok('postInstruction is open to everyone', people.every(id => C.postInstruction(u(id))));
-
-console.log('=== permissions.js: escalation (9.4) ===');
-const chain = C.escalationChain(S.todo('t-2'));
-ok('chain order', chain.map(c => c.step),
-   ['Assignee','Team lead, day one','Department head, day two','Leadership, day three']);
-ok('chain never removes earlier recipients', chain[0].users, ['u-mim']);
-ok('leadership is the admin tier', chain[3].users, ['u-shohag']);
-ok('group todo expands to its members', C.escalationChain(t3)[0].users.sort(),
-   ['u-ayesha','u-shohag','u-tanvir']);
-ok('not escalated before it is late', C.escalationReached(S.todo('t-2'), 0), 0);
-ok('one day late reaches the lead', C.escalationReached(S.todo('t-2'), 1), 1);
-ok('escalation stops at leadership', C.escalationReached(S.todo('t-2'), 99), 3);
-
-console.log('\npassed: ' + pass);
-if (fail.length) { console.log('FAILED ' + fail.length + ':'); fail.forEach(f => console.log('  ' + f)); process.exit(1); }
-else console.log('FAILURES: none');
-
-console.log('\n=== reassign, after the fix ===');
-let p2 = 0, f2 = [];
-function ok2(l, g, w = true) { (JSON.stringify(g) === JSON.stringify(w)) ? p2++ : f2.push(`${l} got=${JSON.stringify(g)}`); }
-ok2('member cannot reassign own work', C.reassign(u('u-rifat'), t1), false);
-ok2('senior cannot reassign', C.reassign(u('u-mim'), S.todo('t-6')), false);
-ok2('lead reassigns work of a member below', C.reassign(u('u-tanvir'), t1));
-ok2('lead reassigns work assigned to itself', C.reassign(u('u-tanvir'), S.todo('t-4')));
-ok2('head reassigns inside its department', C.reassign(u('u-nadia'), t1));
-ok2('head cannot reassign another department', C.reassign(u('u-nadia'), S.todo('t-8')), false);
-ok2('admin reassigns anything', C.reassign(u('u-shohag'), S.todo('t-8')));
-ok2('group member in a lead role may move group work', C.reassign(u('u-tanvir'), t3));
-ok2('member still changes state on own work', C.changeState(u('u-rifat'), t1));
-ok2('assignsOthers: member false', C.assignsOthers(u('u-rifat')), false);
-ok2('assignsOthers: lead true', C.assignsOthers(u('u-tanvir')));
-console.log('passed: ' + p2);
-console.log(f2.length ? 'FAILED:\n  ' + f2.join('\n  ') : 'FAILURES: none');
-if (f2.length) process.exit(1);
+console.log('\npassed: ' + passed);
+console.log(failures.length ? 'FAILED ' + failures.length + ':\n  ' + failures.join('\n  ') : 'FAILURES: none');
+process.exit(failures.length ? 1 : 0);

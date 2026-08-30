@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>Originate Command</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%224%22%20fill%3D%22%233D6B94%22%2F%3E%3Ctext%20x%3D%2216%22%20y%3D%2222%22%20text-anchor%3D%22middle%22%20fill%3D%22%23fff%22%20font-family%3D%22Georgia%2C%27Times%20New%20Roman%27%2Cserif%22%20font-size%3D%2215%22%20font-weight%3D%22700%22%3EOC%3C%2Ftext%3E%3C%2Fsvg%3E">
 <meta name="description" content="Unified todo board and instruction system for Originate Marketing, built to the OM SRS 001 specification.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,24 +34,23 @@
   <p>
     <span>Originate Command · built to <a href="spec/">OM SRS 001</a></span>
     <span>·</span>
-    <span id="backendLabel">demonstration data held in this browser only</span>
-    <span>·</span>
-    <button class="btn link" type="button" onclick="OC.app.reset()">reset data</button>
+    <span id="backendLabel">served from your own server</span>
+
   </p>
 </footer>
 
 <!-- icons, data and rules first, then shared helpers, then views, then the shell -->
-<script src="assets/js/firebase-config.js" defer></script>
-<script src="assets/js/backend.js" defer></script>
-<script src="assets/js/icons.js" defer></script>
-<script src="assets/js/store.js" defer></script>
-<script src="assets/js/permissions.js" defer></script>
-<script src="assets/js/ui.js" defer></script>
-<script src="assets/js/board.js" defer></script>
-<script src="assets/js/dashboard.js" defer></script>
-<script src="assets/js/groups.js" defer></script>
-<script src="assets/js/reports.js" defer></script>
-<script src="assets/js/people.js" defer></script>
+<!-- data and rules, then shared helpers, then views, then the shell -->
+<script src="assets/js/ui/icons.js" defer></script>
+<script src="assets/js/core/permissions.js" defer></script>
+<script src="assets/js/core/api-store.js" defer></script>
+<script src="assets/js/ui/ui.js" defer></script>
+<script src="assets/js/views/board.js" defer></script>
+<script src="assets/js/views/dashboard.js" defer></script>
+<script src="assets/js/views/groups.js" defer></script>
+<script src="assets/js/views/reports.js" defer></script>
+<script src="assets/js/views/people.js" defer></script>
 <script src="assets/js/app.js" defer></script>
+<script src="assets/js/core/session.js" defer></script>
 </body>
 </html>

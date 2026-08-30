@@ -8,12 +8,39 @@ Run from the repository root:  python3 tests/sweep.test.py
 Set CHROME_PATH if Chromium lives somewhere else.
 Originate Command · application
 """
-import os, pathlib, sys
+import os, pathlib, socket, subprocess, sys, tempfile, time, urllib.request
 from playwright.sync_api import sync_playwright
 
 CHROME = os.environ.get('CHROME_PATH', '/opt/pw-browsers/chromium-1194/chrome-linux/chrome')
-url = pathlib.Path('index.html').resolve().as_uri()
 problems = []
+
+
+def start_server():
+    """Its own server, database and port, so nothing else can interfere."""
+    db = pathlib.Path(tempfile.mkdtemp()) / 'sweep.db'
+    env = dict(os.environ, OC_DB=str(db))
+    subprocess.run(['node', 'server/src/seed.js'], env=env, check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    with socket.socket() as s:
+        s.bind(('127.0.0.1', 0))
+        port = s.getsockname()[1]
+    proc = subprocess.Popen(['node', 'server/src/index.js'], env=dict(env, PORT=str(port)),
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    base = f'http://127.0.0.1:{port}/'
+    for _ in range(50):
+        try:
+            urllib.request.urlopen(base, timeout=1)
+            return proc, base
+        except Exception:
+            time.sleep(0.2)
+    proc.kill()
+    raise SystemExit('the server did not come up')
+
+
+SERVER, url = start_server()
+
+ACCOUNTS = ['shohag', 'imran', 'nadia', 'tanvir', 'mim', 'rifat',
+            'sadia', 'jubayer', 'farhan', 'ayesha', 'piya']
 
 with sync_playwright() as pw:
     b = pw.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
@@ -29,12 +56,17 @@ with sync_playwright() as pw:
     def shut():
         page.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>{d.close();d.remove();})")
 
-    users = page.locator('.who select option').all_inner_texts()
     clicks = 0
-    for u in users:
+    for who in ACCOUNTS:
         shut()
-        page.select_option('.who select', label=u)
-        page.wait_for_timeout(180)
+        if page.locator('.topbar').count():
+            page.locator('.iconbtn:has-text("Sign out")').click()
+            page.wait_for_timeout(1200)
+        page.locator('.signin-card input[type=text]').fill(who + '@originate.example')
+        page.locator('.signin-card input[type=password]').fill('originate')
+        page.locator('.signin-card button[type=submit]').click()
+        page.wait_for_timeout(2200)
+        u = who
         for view in ('Dashboard', 'Board', 'Groups', 'Reports', 'People'):
             shut()
             page.get_by_role('button', name=view, exact=True).click()
@@ -45,8 +77,8 @@ with sync_playwright() as pw:
                 try:
                     if not bt.is_visible():
                         continue
-                    if (bt.inner_text() or '').strip() in ('Revoke',):
-                        continue           # removes the row the loop is walking
+                    if (bt.inner_text() or '').strip() in ('Revoke', 'Sign out'):
+                        continue           # one removes the row being walked, the other ends the session
                     bt.click(timeout=1200)
                     clicks += 1
                     page.wait_for_timeout(70)
@@ -72,8 +104,10 @@ with sync_playwright() as pw:
             if new:
                 problems.append(f"{u} / {view}: {new}")
 
-    print(f"{len(users)} accounts x 5 views, {clicks} controls clicked")
+    print(f"{len(ACCOUNTS)} accounts x 5 views, {clicks} controls clicked")
     print("PROBLEMS:", problems or "none")
     b.close()
 
+SERVER.terminate()
+SERVER.wait(timeout=10)
 sys.exit(1 if problems else 0)

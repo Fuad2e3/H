@@ -152,15 +152,8 @@ OC.board = (function () {
         {
           label: 'Pin', primary: true, onClick: function (close) {
             if (!input.value.trim()) return 'Give the filter a name.';
-            var snapshot = JSON.parse(JSON.stringify(filters));
-            OC.store.mutate(null, function () {
-              OC.store.state.saved_filters.push({
-                id: OC.store.uid('sf'), name: input.value.trim(),
-                owner: OC.store.session(), filters: snapshot
-              });
-            });
-            OC.ui.toast('Filter pinned.');
-            close();
+            return OC.store.pinFilter(input.value.trim(), JSON.parse(JSON.stringify(filters)))
+              .then(function () { OC.ui.toast('Filter pinned.'); });
           }
         }
       ]
@@ -178,12 +171,7 @@ OC.board = (function () {
           h('button', {
             type: 'button',
             'aria-label': 'Remove pinned filter ' + f.name,
-            onClick: function (e) {
-              e.stopPropagation();
-              OC.store.mutate(null, function () {
-                OC.store.state.saved_filters = OC.store.state.saved_filters.filter(function (x) { return x.id !== f.id; });
-              });
-            }
+            onClick: function (e) { e.stopPropagation(); OC.store.unpinFilter(f.id).catch(function () { }); }
           }, '×')
         ]);
       })
@@ -239,12 +227,7 @@ OC.board = (function () {
           {
             label: 'Mark blocked', primary: true, onClick: function (close) {
               if (!reason.value.trim()) return 'A blocked todo needs a reason.';
-              OC.store.mutate({ actor: user.id, action: 'todo.blocked', target: todo.title, detail: reason.value.trim() }, function () {
-                todo.state = 'blocked';
-                todo.blocked_reason = reason.value.trim();
-              });
-              OC.store.notify([todo.created_by], todo.title + ' was marked blocked by ' + user.name, todo.id);
-              close();
+              return OC.store.updateTodo(todo.id, { state: 'blocked', blocked_reason: reason.value.trim() });
             }
           }
         ]
@@ -252,23 +235,18 @@ OC.board = (function () {
       return;
     }
 
-    OC.store.mutate({ actor: user.id, action: 'todo.state', target: todo.title, detail: todo.state + ' → ' + next }, function () {
-      todo.state = next;
-      if (next !== 'blocked') todo.blocked_reason = null;
-
+    OC.store.updateTodo(todo.id, { state: next }).then(function () {
       /* a recurring todo regenerates as a fresh instance on completion (6.2) */
-      if (next === 'done' && todo.recurrence && todo.recurrence !== 'none' && !todo.spawned) {
-        todo.spawned = true;
-        var copy = JSON.parse(JSON.stringify(todo));
-        copy.id = OC.store.uid('t');
-        copy.state = 'open';
-        copy.spawned = false;
-        copy.blocked_reason = null;
-        copy.due = nextDue(todo.due, todo.recurrence);
-        copy.created_at = new Date().toISOString();
-        copy.comments = [];
-        OC.store.state.todos.push(copy);
-      }
+      if (next !== 'done' || !todo.recurrence || todo.recurrence === 'none' || todo.spawned) return;
+      return OC.store.updateTodo(todo.id, { spawned: true }).then(function () {
+        return OC.store.createTodo({
+          title: todo.title, description: todo.description,
+          client: todo.client, department: todo.department,
+          assignee_type: todo.assignee_type, assignee: todo.assignee,
+          priority: todo.priority, due: nextDue(todo.due, todo.recurrence),
+          recurrence: todo.recurrence, tags: todo.tags
+        }).catch(function () { });
+      });
     });
 
     if (next === 'done') OC.ui.toast('Marked done' + (todo.recurrence !== 'none' ? ', next instance created.' : '.'));
@@ -328,10 +306,7 @@ OC.board = (function () {
 
   function archiveTodo(todo) {
     OC.ui.confirm('Archive "' + todo.title + '"? Nothing is deleted — it stays in the record (7.0).', function () {
-      OC.store.mutate({ actor: OC.store.session(), action: 'todo.archive', target: todo.title }, function () {
-        todo.archived = true;
-      });
-      OC.ui.toast('Archived.');
+      OC.store.updateTodo(todo.id, { archived: true }).then(function () { OC.ui.toast('Archived.'); });
     });
   }
 
@@ -348,15 +323,8 @@ OC.board = (function () {
         {
           label: 'Reassign', primary: true, onClick: function (close) {
             var parts = control.value.split(':');
-            var before = OC.ui.assigneeName(todo);
-            OC.store.mutate({ actor: user.id, action: 'todo.reassign', target: todo.title, detail: before + ' → ' + control.selectedOptions[0].textContent }, function () {
-              todo.assignee_type = parts[0];
-              todo.assignee = parts[1];
-            });
-            var targets = parts[0] === 'user' ? [parts[1]] : (OC.store.group(parts[1]) || { members: [] }).members;
-            OC.store.notify(targets, user.name + ' assigned you: ' + todo.title, todo.id);
-            OC.ui.toast('Reassigned.');
-            close();
+            return OC.store.updateTodo(todo.id, { assignee_type: parts[0], assignee: parts[1] })
+              .then(function () { OC.ui.toast('Reassigned.'); });
           }
         }
       ]
@@ -416,24 +384,24 @@ OC.board = (function () {
             if (parts[0] === 'user' && !OC.can.assignTo(user, parts[1])) return 'You cannot assign work to that person (3.2).';
 
             var todo = {
-              id: OC.store.uid('t'),
               title: title.value.trim(), description: desc.value.trim(),
               client: client.value, department: department.value,
               assignee_type: parts[0], assignee: parts[1],
               state: 'open', priority: priority.value, due: due.value,
-              recurrence: recurrence.value, created_by: user.id,
-              created_at: new Date().toISOString(), tags: tags.resolve(), comments: []
+              recurrence: recurrence.value, tags: []
             };
-            if (priority.value === 'high' && todo.tags.indexOf('t-urgent') === -1) todo.tags.push('t-urgent');
-
-            OC.store.mutate({ actor: user.id, action: 'todo.create', target: todo.title, detail: 'assigned to ' + OC.ui.assigneeName(todo) }, function () {
-              OC.store.state.todos.push(todo);
+            /* a tag typed into the field is created on the server first, so
+               the todo carries its real id (6.4) */
+            /* a tag typed into the field is created on the server first, so the
+               todo carries its real id (6.4). The dialog closes only once the
+               server has accepted it. */
+            return tags.resolveAsync().then(function (tagIds) {
+              todo.tags = tagIds;
+              return OC.store.createTodo(todo);
+            }).then(function (created) {
+              OC.ui.toast('Todo created.');
+              if (onCreated) onCreated(created);
             });
-            var targets = parts[0] === 'user' ? [parts[1]] : (OC.store.group(parts[1]) || { members: [] }).members;
-            OC.store.notify(targets.filter(function (id) { return id !== user.id; }), user.name + ' assigned you: ' + todo.title, todo.id);
-            if (onCreated) onCreated(todo);
-            OC.ui.toast('Todo created.');
-            close();
           }
         }
       ]
@@ -448,10 +416,9 @@ OC.board = (function () {
     });
     if (!carry.length) { OC.ui.toast('Nothing unfinished from yesterday to carry over.', true); return; }
     OC.ui.confirm('Carry ' + carry.length + ' unfinished todo(s) from yesterday into today?', function () {
-      OC.store.mutate({ actor: user.id, action: 'todo.carry', target: carry.length + ' todos', detail: 'copied from ' + yesterday }, function () {
-        carry.forEach(function (t) { t.due = OC.ui.today(); });
-      });
-      OC.ui.toast(carry.length + ' todo(s) moved to today.');
+      Promise.all(carry.map(function (t) {
+        return OC.store.updateTodo(t.id, { due: OC.ui.today() }).catch(function () { });
+      })).then(function () { OC.ui.toast(carry.length + ' todo(s) moved to today.'); });
     });
   }
 
@@ -478,7 +445,7 @@ OC.board = (function () {
     if (unread) {
       actions.push(h('button', {
         class: 'btn small', type: 'button', onClick: function () {
-          OC.store.mutate(null, function () { note.read_by.push(user.id); });
+          OC.store.updateInstruction(note.id, { read: true }).catch(function () { });
         }
       }, 'Mark as read'));
     }
@@ -491,9 +458,7 @@ OC.board = (function () {
       actions.push(h('button', {
         class: 'btn small', type: 'button', onClick: function () {
           OC.ui.confirm('Archive this instruction? Instructions are never deleted (6.3).', function () {
-            OC.store.mutate({ actor: user.id, action: 'instruction.archive', target: note.body.slice(0, 48) }, function () {
-              note.archived = true;
-            });
+            OC.store.updateInstruction(note.id, { archived: true }).catch(function () { });
           });
         }
       }, 'Archive'));
@@ -528,8 +493,7 @@ OC.board = (function () {
     }, function (todo) {
       /* only once the todo actually exists — cancelling must leave the
          instruction unconverted */
-      OC.store.mutate({ actor: OC.store.session(), action: 'instruction.convert', target: todo.title },
-        function () { note.linked_todo = todo.id; });
+      OC.store.updateInstruction(note.id, { linked_todo: todo.id }).catch(function () { });
     });
   }
 
@@ -558,22 +522,19 @@ OC.board = (function () {
             if (!department.value) return 'Select a department. This is required by 5.2.';
 
             var note = {
-              id: OC.store.uid('n'), body: body.value.trim(), author: user.id,
-              client: client.value, department: department.value, tags: tags.resolve(),
-              posted_at: new Date().toISOString(), read_by: [user.id],
-              archived: false, linked_todo: null, comments: []
+              body: body.value.trim(), client: client.value,
+              department: department.value, tags: []
             };
 
-            OC.store.mutate({ actor: user.id, action: 'instruction.post', target: note.body.slice(0, 48), detail: 'tagged ' + (OC.store.client(note.client) || {}).name }, function () {
-              OC.store.state.instructions.push(note);
+            /* a tag typed into the field is created on the server first, so the
+               instruction carries its real id (6.4). The dialog closes only
+               once the server has accepted the post. */
+            return tags.resolveAsync().then(function (tagIds) {
+              note.tags = tagIds;
+              return OC.store.postInstruction(note);
+            }).then(function () {
+              OC.ui.toast('Instruction posted.');
             });
-
-            var audience = OC.store.state.users.filter(function (u) {
-              return u.id !== user.id && OC.can.seeInstruction(u, note);
-            }).map(function (u) { return u.id; });
-            OC.store.notify(audience, user.name + ' posted an instruction for ' + (OC.store.client(note.client) || {}).name, note.id);
-            OC.ui.toast('Instruction posted to ' + audience.length + ' people.');
-            close();
           }
         }
       ]

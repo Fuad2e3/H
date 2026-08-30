@@ -1,0 +1,16 @@
+{
+  "name": "originate-command",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unified todo board and instruction system for Originate Marketing (OM SRS 001)",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "start": "node server/src/index.js",
+    "seed": "node server/src/seed.js",
+    "test": "node server/tests/api.test.js && node tests/logic.test.js",
+    "test:api": "node server/tests/api.test.js",
+    "test:logic": "node tests/logic.test.js",
+    "test:ui": "python3 tests/ui.test.py",
+    "test:sweep": "python3 tests/sweep.test.py"
+  }
+}

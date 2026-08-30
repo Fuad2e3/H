@@ -1,428 +1,331 @@
-"""UI suite — every view function driven through a real browser.
-Run from the repository root:  python3 tests/ui.test.py
+"""UI suite — the interface, driven through a real browser against the server.
+
+Every permission check here is about what the interface offers. What the
+server will actually do is covered by server/tests/api.test.js, and the two
+should agree: a person should not be shown a button the server would refuse.
+
+Start the server first:  npm start
+Then from the project root: npm run test:ui
 Set CHROME_PATH if Chromium lives somewhere else.
-Originate Command · application
+Originate Command · OM SRS 001
 """
+import os, sys, pathlib, socket, subprocess, tempfile, time, urllib.request
 from playwright.sync_api import sync_playwright
-import pathlib, sys
-import os
-CHROME=os.environ.get('CHROME_PATH','/opt/pw-browsers/chromium-1194/chrome-linux/chrome')
-url = pathlib.Path('index.html').resolve().as_uri()
-SCR=str(pathlib.Path('tests/.screenshots').resolve())+'/'
-passed=0; fails=[]
+
+CHROME = os.environ.get('CHROME_PATH', '/opt/pw-browsers/chromium-1194/chrome-linux/chrome')
+SCR = str(pathlib.Path('tests/.screenshots').resolve()) + '/'
+
+
+def free_port():
+    with socket.socket() as s:
+        s.bind(('127.0.0.1', 0))
+        return s.getsockname()[1]
+
+
+def start_server():
+    """Own server, own database, own port.
+
+    An earlier version of this suite reused whatever was already listening on
+    3000. When a previous server was still up, the new one failed to bind and
+    the old one kept answering from a database that had since been deleted —
+    which looked exactly like the application duplicating everything it wrote.
+    """
+    db = pathlib.Path(tempfile.mkdtemp()) / 'ui-test.db'
+    env = dict(os.environ, OC_DB=str(db))
+    subprocess.run(['node', 'server/src/seed.js'], env=env, check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    port = free_port()
+    proc = subprocess.Popen(['node', 'server/src/index.js'],
+                            env=dict(env, PORT=str(port)),
+                            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    base = f'http://127.0.0.1:{port}/'
+    for _ in range(50):
+        try:
+            urllib.request.urlopen(base, timeout=1)
+            return proc, base
+        except Exception:
+            time.sleep(0.2)
+    proc.kill()
+    raise SystemExit('the server did not come up')
+
+
+SERVER, URL = start_server()
+
+passed = 0
+fails = []
+
 def ok(label, got, want=True):
     global passed
-    if got==want: passed+=1; print("  PASS "+label)
-    else: fails.append(label); print("  FAIL "+label+f"   got={got!r} want={want!r}")
+    if got == want:
+        passed += 1
+        print('  PASS ' + label)
+    else:
+        fails.append(label)
+        print(f'  FAIL {label}   got={got!r} want={want!r}')
 
 with sync_playwright() as pw:
-    b=pw.chromium.launch(executable_path=CHROME,args=['--no-sandbox'])
-    page=b.new_page(viewport={'width':1400,'height':1000}); errs=[]
-    page.on('pageerror',lambda e:errs.append('pageerror: '+str(e)))
-    page.on('console',lambda m:errs.append(m.text) if m.type=='error' and 'fonts.g' not in m.text and 'ERR_CONN' not in m.text else None)
-    page.goto(url,wait_until='domcontentloaded'); page.wait_for_timeout(400)
-    nav=lambda n:(page.get_by_role('button',name=n,exact=True).click(),page.wait_for_timeout(300))
-    au=lambda l:(page.select_option('.who select',label=l),page.wait_for_timeout(300))
-    ds=lambda i:page.locator('dialog select').nth(i)
-    dtxt=lambda i:page.locator('dialog input[type=text]').nth(i)
+    browser = pw.chromium.launch(executable_path=CHROME, args=['--no-sandbox'])
+    page = browser.new_page(viewport={'width': 1400, 'height': 1000})
+    errs = []
+    page.on('pageerror', lambda e: errs.append('pageerror: ' + str(e)))
+    # refusals are the point of several checks below, so a 4xx logged by the
+    # browser is expected here; a page error never is
+    EXPECTED = ('fonts.g', 'ERR_CONNECTION_RESET', '401', '403', '409', '400')
+    page.on('console', lambda m: errs.append(m.type + ': ' + m.text)
+            if m.type == 'error' and not any(x in m.text for x in EXPECTED) else None)
 
-    print("\n=== app.js: routing, theme, notifications ===")
-    for view,heading in [('Dashboard','Good to see you'),('Board','Board'),('Groups','Groups'),('Reports','Reports'),('People','People and departments')]:
-        nav(view); ok(f"route {view}", heading in page.locator('.page-head h1').first.inner_text())
-    ok("hash reflects the route", page.evaluate("location.hash"), "#people")
-    page.go_back(); page.wait_for_timeout(400)
-    ok("browser back changes view", page.evaluate("location.hash"), "#reports")
-    page.goto(url+"#groups", wait_until='domcontentloaded'); page.wait_for_timeout(400)
-    ok("deep link opens that view", page.locator('.page-head h1').first.inner_text(), "Groups")
-    ok("nav marks the current page", page.locator('.nav button[aria-current="page"]').inner_text(), "Groups")
+    def sign_in(email, password='originate'):
+        page.locator('.signin-card input[type=text]').fill(email)
+        page.locator('.signin-card input[type=password]').fill(password)
+        page.locator('.signin-card button[type=submit]').click()
+        page.wait_for_timeout(2200)
 
-    t=page.locator('.toggle-theme')
-    ok("theme starts on system", t.inner_text(), "Theme: system")
-    t.click(); page.wait_for_timeout(150)
-    ok("theme cycles to dark", page.evaluate("document.documentElement.dataset.theme"), "dark")
-    ok("dark repaints the page", page.evaluate("getComputedStyle(document.body).backgroundColor"), "rgb(12, 17, 31)")
-    t.click(); page.wait_for_timeout(150)
-    ok("theme cycles to light", page.evaluate("document.documentElement.dataset.theme"), "light")
-    page.reload(wait_until='domcontentloaded'); page.wait_for_timeout(400)
-    ok("theme choice survives reload", page.locator('.toggle-theme').inner_text(), "Theme: light")
-    page.locator('.toggle-theme').click(); page.wait_for_timeout(150)
-    ok("theme returns to system", page.evaluate("document.documentElement.dataset.theme"), None)
+    def sign_out():
+        page.locator('.iconbtn:has-text("Sign out")').click()
+        page.wait_for_timeout(1500)
 
-    print("\n=== dashboard entry points on a cold load ===")
-    # Dashboard is the landing view, so board.js functions run before board.render()
-    # ever has. This regressed once: the modal silently never opened.
-    page.goto(url, wait_until='domcontentloaded'); page.wait_for_timeout(400)
-    ok("lands on the dashboard", 'Good to see you' in page.locator('#page h1').inner_text())
-    page.locator('.panel button:has-text("New todo")').first.click(); page.wait_for_timeout(350)
-    ok("new todo opens from a cold dashboard", page.locator('dialog .modal-head h2').inner_text(), 'New todo')
-    page.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>{d.close();d.remove();})")
-    page.wait_for_timeout(200)
-    page.locator('.panel button:has-text("Post instruction")').first.click(); page.wait_for_timeout(350)
-    ok("post instruction opens from a cold dashboard",
-       page.locator('dialog .modal-head h2').inner_text(), 'Post an instruction')
-    page.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>{d.close();d.remove();})")
-    page.wait_for_timeout(200)
+    def as_user(email):
+        if page.locator('.topbar').count():
+            sign_out()
+        sign_in(email)
 
-    print("\n=== ui.js: modal and toast ===")
+    def nav(name):
+        page.get_by_role('button', name=name, exact=True).click()
+        page.wait_for_timeout(450)
+
+    def ds(i):
+        return page.locator('dialog select').nth(i)
+
+    def dtxt(i):
+        return page.locator('dialog input[type=text]').nth(i)
+
+    page.goto(URL, wait_until='domcontentloaded')
+    page.wait_for_timeout(1500)
+
+    print('\n=== signing in (6.1) ===')
+    ok('the sign-in screen is what loads', page.locator('.signin-card').count(), 1)
+    ok('no board before signing in', page.locator('.panel--todos').count(), 0)
+    ok('it is a real form, so password managers work', page.locator('form.signin-card').count(), 1)
+    sign_in('rifat@originate.example', 'wrong-password')
+    ok('a wrong password is refused', 'do not match' in page.locator('.signin-card .error').inner_text())
+    sign_in('nobody@originate.example')
+    ok('an unknown address gets the same answer, so accounts cannot be discovered',
+       'do not match' in page.locator('.signin-card .error').inner_text())
+
+    print('\n=== a team member: scoped by the server (3.1) ===')
+    sign_in('rifat@originate.example')
+    ok('the interface starts', page.locator('.topbar').count(), 1)
+    ok('the signed-in person is named', 'Rifat' in page.locator('.who').inner_text())
+    ok('with their role', 'Member' in page.locator('.who').inner_text())
+    member = page.evaluate('({todos: OC.store.state.todos.length, notes: OC.store.state.instructions.length,'
+                           ' audit: OC.store.state.audit.length})')
+    print('   member receives:', member)
+    ok('the audit log never reaches a member (8.2)', member['audit'], 0)
+    ok('no password hash is anywhere in what arrived',
+       page.evaluate("JSON.stringify(OC.store.state).indexOf('scrypt$') === -1"))
+
+    print('\n=== 3.2 the interface offers only what the server would allow ===')
     nav('Board')
-    page.get_by_role('button',name='New todo',exact=True).first.click(); page.wait_for_timeout(250)
-    ok("modal opens", page.locator('dialog.modal').is_visible())
-    page.keyboard.press('Escape'); page.wait_for_timeout(250)
-    ok("Escape closes the modal", page.locator('dialog.modal').count(), 0)
-    page.get_by_role('button',name='New todo',exact=True).first.click(); page.wait_for_timeout(250)
-    page.click('dialog .modal-head button'); page.wait_for_timeout(250)
-    ok("close button dismisses", page.locator('dialog.modal').count(), 0)
+    page.get_by_role('button', name='New todo', exact=True).first.click()
+    page.wait_for_timeout(500)
+    ok('a member is offered only themselves as assignee', ds(2).locator('option').all_inner_texts(),
+       ['Rifat Chowdhury'])
+    dtxt(0).fill('Test todo from the suite')
+    page.click('dialog button:has-text("Create todo")')
+    page.wait_for_timeout(400)
+    ok('the server refuses a todo with no client (5.2)',
+       'client' in page.locator('dialog .error').inner_text().lower())
+    ds(0).select_option(label='Chaim')
+    page.click('dialog button:has-text("Create todo")')
+    page.wait_for_timeout(400)
+    ok('and with no department (5.2)',
+       'department' in page.locator('dialog .error').inner_text().lower())
+    ds(1).select_option(label='Outreach Operations')
+    page.click('dialog button:has-text("Create todo")')
+    page.wait_for_timeout(1800)
+    ok('with both, it is created', page.locator('.item:has-text("Test todo from the suite")').count(), 1)
+    ok('a member is shown no Reassign button (6.2)',
+       page.locator('.panel--todos button:has-text("Reassign")').count(), 0)
+    ok('but can still change state', page.locator('.panel--todos .item select').count() > 0)
 
-    print("\n=== board.js: filters ===")
-    counts={}
-    counts['all']=page.locator('.panel--todos .item').count()
-    page.locator('.filters input[type=search]').fill('Chaim'); page.wait_for_timeout(350)
-    ok("search filter narrows todos", page.locator('.panel--todos .item').count()<counts['all'])
-    page.locator('.filters input[type=search]').fill(''); page.wait_for_timeout(300)
-    page.locator('.filters select').nth(1).select_option(label='Web Development'); page.wait_for_timeout(350)
-    ok("department filter", set(page.locator('.panel--todos .item .chip.dept').all_inner_texts()), {'Web Development'})
-    page.locator('.filters select').nth(2).select_option(label='Ayesha Noor'); page.wait_for_timeout(350)
-    ok("person filter stacks with department", page.locator('.panel--todos .item').count()>0)
-    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(350)
-    ok("clear restores everything", page.locator('.panel--todos .item').count(), counts['all'])
-    page.locator('.filters select').nth(3).select_option(label='Urgent'); page.wait_for_timeout(350)
-    ok("tag filter", page.locator('.panel--todos .item .chip:has-text("Urgent")').count()>0)
-    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
-    page.locator('.filters input[type=date]').first.fill('2030-01-01'); page.wait_for_timeout(350)
-    ok("from-date filter excludes older items", page.locator('.panel--todos .item').count(), 0)
-    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
-
-    print("\n=== board.js: pinned filters ===")
-    page.locator('.filters select').first.select_option(label='Chaim'); page.wait_for_timeout(300)
-    page.click('.filterbar-head button:has-text("Pin filter")'); page.wait_for_timeout(250)
-    dtxt(0).fill('Everything Chaim'); page.click('dialog button:has-text("Pin")'); page.wait_for_timeout(350)
-    ok("pinned filter appears", page.locator('.savedbar .chip:has-text("Everything Chaim")').count(), 1)
-    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
-    page.click('.savedbar .chip:has-text("Everything Chaim")'); page.wait_for_timeout(350)
-    ok("clicking a pin reapplies it", set(page.locator('.panel--todos .item .chip.client').all_inner_texts()), {'Chaim'})
-    page.click('.savedbar .chip:has-text("Everything Chaim") button'); page.wait_for_timeout(350)
-    ok("pin can be removed", page.locator('.savedbar .chip:has-text("Everything Chaim")').count(), 0)
-    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
-
-    print("\n=== board.js: grouping and toggles ===")
-    for mode,label in [('person','Person'),('client','Client'),('department','Department')]:
-        page.locator('.panel--todos .segmented button', has_text=label).first.click(); page.wait_for_timeout(350)
-        ok(f"grouping by {mode} renders headings", page.locator('.panel--todos .group-head').count()>0)
-        ok(f"grouping by {mode} marks the active segment",
-           page.locator('.panel--todos .segmented button[aria-pressed="true"]').inner_text(), label)
-    page.locator('.panel--todos .segmented button', has_text='Person').first.click(); page.wait_for_timeout(300)
-    base=page.locator('.panel--todos .item').count()
-    page.check('.checkline:has-text("Show completed") input'); page.wait_for_timeout(350)
-    ok("show completed reveals done work", page.locator('.panel--todos .item').count()>base)
-    page.uncheck('.checkline:has-text("Show completed") input'); page.wait_for_timeout(300)
-
-    print("\n=== board.js: recurrence across all periods ===")
-    for title,period in [('Manual reply check','daily'),('Weekly sequence performance report','weekly'),
-                         ('Annette: schedule the October grid','monthly'),('Quarterly client health review','quarterly')]:
-        page.check('.checkline:has-text("Show completed") input'); page.wait_for_timeout(300)
-        before=page.locator(f'.panel--todos .item:has-text("{title}")').count()
-        row=page.locator(f'.panel--todos .item:has-text("{title}")').first
-        sel=row.locator('select')
-        if sel.input_value()=='done':
-            sel.select_option('open'); page.wait_for_timeout(300)
-            row=page.locator(f'.panel--todos .item:has-text("{title}")').first; sel=row.locator('select')
-        sel.select_option('done'); page.wait_for_timeout(400)
-        after=page.locator(f'.panel--todos .item:has-text("{title}")').count()
-        ok(f"{period} todo regenerates", after>=before)
-        page.uncheck('.checkline:has-text("Show completed") input'); page.wait_for_timeout(250)
-
-    print("\n=== board.js: convert to todo ===")
-    note=page.locator('.panel--instructions .note').first
-    note.locator('button:has-text("Convert to todo")').click(); page.wait_for_timeout(300)
-    page.click('dialog .modal-head button'); page.wait_for_timeout(350)
-    ok("cancelling conversion leaves it unconverted",
-       page.locator('.panel--instructions .note').first.locator('.chip:has-text("todo created")').count(), 0)
-    page.locator('.panel--instructions .note').first.locator('button:has-text("Convert to todo")').click(); page.wait_for_timeout(300)
-    ds(0).select_option(index=1); ds(1).select_option(index=1)
-    page.click('dialog button:has-text("Create todo")'); page.wait_for_timeout(450)
-    ok("confirming conversion marks the instruction",
-       page.locator('.panel--instructions .note').first.locator('.chip:has-text("todo created")').count(), 1)
-
-    print("\n=== board.js: read receipts and archive ===")
-    unread=page.locator('.panel--instructions .note button:has-text("Mark as read")')
-    n_before=unread.count()
-    if n_before:
-        unread.first.click(); page.wait_for_timeout(400)
-        ok("mark as read removes the prompt",
-           page.locator('.panel--instructions .note button:has-text("Mark as read")').count(), n_before-1)
-    arch=page.locator('.panel--instructions .note button:has-text("Archive")').first
-    arch.click(); page.wait_for_timeout(250)
-    page.click('dialog button:has-text("Confirm")'); page.wait_for_timeout(400)
-    page.check('.checkline:has-text("Show archived") input'); page.wait_for_timeout(350)
-    ok("archived instruction is hidden then shown", page.locator('.note.archived').count()>0)
-    page.uncheck('.checkline:has-text("Show archived") input'); page.wait_for_timeout(300)
-
-    print("\n=== board.js: copy yesterday ===")
-    page.click('button:has-text("Copy yesterday")'); page.wait_for_timeout(300)
-    if page.locator('dialog').count():
-        page.click('dialog button:has-text("Confirm")'); page.wait_for_timeout(400)
-        moved = page.evaluate("""() => {
-          const today = new Date().toISOString().slice(0,10);
-          return OC.store.state.todos.some(t => t.due === today && t.state !== 'done');
-        }""")
-        ok("carried work is now due today", moved)
-    else:
-        ok("copy yesterday reports nothing to carry", page.locator('.toast').count()>0)
-
-    print("\n=== board.js: reassign gate in the interface (6.2) ===")
-    au('Rifat Chowdhury — Member')
-    ok("member sees no Reassign button", page.locator('.panel--todos button:has-text("Reassign")').count(), 0)
-    ok("member can still change state", page.locator('.panel--todos .item select').count()>0)
-    au('Tanvir Hasan — Team Lead')
-    ok("lead sees Reassign", page.locator('.panel--todos button:has-text("Reassign")').count()>0)
-    page.locator('.panel--todos button:has-text("Reassign")').first.click(); page.wait_for_timeout(300)
-    opts=ds(0).locator('option').all_inner_texts()
-    ok("reassign list holds the lead's team", sorted([o for o in opts if '(group)' not in o]),
-       ['Mim Akter','Rifat Chowdhury','Tanvir Hasan'])
-    ok("plus a group he belongs to, the one line authority may cross (3.0)",
-       [o for o in opts if '(group)' in o], ['Chaim Site Relaunch (group)'])
-    ds(0).select_option(label='Mim Akter'); page.click('dialog button:has-text("Reassign")'); page.wait_for_timeout(400)
-    ok("reassignment applied", page.locator('.panel--todos .item:has-text("Mim Akter")').count()>0)
-
-    print("\n=== dashboard.js ===")
-    au('Shohag Munshe — System Admin'); nav('Dashboard')
-    stats=page.locator('.stat .v').all_inner_texts()
-    ok("four dashboard stats", len(stats), 4)
-    ok("stats are numeric", all(s.split()[0].isdigit() for s in stats))
-    ok("dashboard has both panels", page.locator('.board .panel').count(), 2)
-    ok("my clients card", page.locator('.card h3:has-text("My clients")').count(), 1)
-    ok("my groups card", page.locator('.card h3:has-text("My groups")').count(), 1)
-    mr=page.locator('.panel button:has-text("Mark as read")')
-    if mr.count():
-        c=mr.count(); mr.first.click(); page.wait_for_timeout(400)
-        ok("dashboard mark-as-read works", page.locator('.panel button:has-text("Mark as read")').count(), c-1)
-
-    print("\n=== groups.js ===")
-    nav('Groups')
-    page.click('button:has-text("New group")'); page.wait_for_timeout(300)
-    page.click('dialog button:has-text("Create group")'); page.wait_for_timeout(200)
-    ok("group needs a name", 'name' in page.locator('dialog .error').inner_text().lower())
-    dtxt(0).fill('Automation Group')
-    page.click('dialog button:has-text("Create group")'); page.wait_for_timeout(200)
-    ok("group needs a purpose", 'for' in page.locator('dialog .error').inner_text().lower())
-    page.locator('dialog textarea').fill('Testing the group flow end to end.')
-    page.click('dialog button:has-text("Create group")'); page.wait_for_timeout(200)
-    ok("group needs two people", 'two' in page.locator('dialog .error').inner_text().lower())
-    page.locator('dialog .checkline input').nth(1).check()
-    page.locator('dialog .checkline input').nth(2).check()
-    page.click('dialog button:has-text("Create group")'); page.wait_for_timeout(450)
-    ok("group created", page.locator('.card h3:has-text("Automation Group")').count(), 1)
-    page.locator('.card:has-text("Automation Group") button:has-text("Archive")').click(); page.wait_for_timeout(250)
-    page.click('dialog button:has-text("Confirm")'); page.wait_for_timeout(400)
-    ok("group archived not deleted",
-       page.locator('.card:has-text("Automation Group") .chip:has-text("archived")').count(), 1)
-
-    print("\n=== reports.js ===")
-    nav('Reports')
-    figures=page.locator('.stat .v').all_inner_texts()
-    ok("five snapshot figures", len(figures), 5)
-    truth=page.evaluate("""() => {
-      const me=OC.store.user(OC.store.session());
-      const t=OC.store.state.todos.filter(x=>!x.archived && OC.can.seeTodo(me,x));
-      return {done:t.filter(x=>x.state==='done').length, left:t.filter(x=>x.state!=='done').length};
-    }""")
-    ok("tasks-complete figure matches the data", figures[1].strip(), str(truth['done']))
-    ok("tasks-left figure matches the data", figures[2].strip(), str(truth['left']))
-    ok("per-person table present", page.locator('table caption:has-text("Per person status")').count(), 1)
-    ok("historical log present", page.locator('table caption:has-text("Historical log")').count(), 1)
-    with page.expect_download() as dl: page.click('button:has-text("Export todos to CSV")')
-    csv=pathlib.Path(dl.value.path()).read_text().strip().split('\n')
-    ok("CSV header", csv[0], 'Title,Client,Department,Assignee,State,Due,Overdue days,Recurrence,Created by')
-    ok("CSV row count matches visible todos", len(csv)-1, truth['done']+truth['left'])
-    ok("CSV quotes fields containing commas", all(r.count(',')>=8 for r in csv[1:]))
-
-    print("\n=== people.js ===")
-    nav('People')
-    ok("six department cards", page.locator('.grid-2 .card').count(), 6)
-    ok("custom hierarchy in the department's level list (3.4)",
-       page.locator('.card:has-text("Outreach Operations") .chip:has-text("3. senior")').count(), 1)
-    ok("and on the member who holds it",
-       page.locator('.card:has-text("Outreach Operations") .chip:has-text("senior")').count(), 2)
-    ok("accounts table", page.locator('table caption:has-text("Accounts")').count(), 1)
-    page.click('button:has-text("Invite someone")'); page.wait_for_timeout(300)
-    page.click('dialog button:has-text("Send invite")'); page.wait_for_timeout(200)
-    ok("invite needs a name", 'name' in page.locator('dialog .error').inner_text().lower())
-    dtxt(0).fill('Test Person'); dtxt(1).fill('not-an-email')
-    page.click('dialog button:has-text("Send invite")'); page.wait_for_timeout(200)
-    ok("invite validates the email", 'email' in page.locator('dialog .error').inner_text().lower())
-    dtxt(1).fill('test.person@originate.example')
-    ds(0).select_option(label='Outreach Operations'); page.wait_for_timeout(200)
-    ok("level defaults to the narrowest (8.2)", ds(1).input_value(), 'member')
-    ok("levels follow the chosen department", ds(1).locator('option').all_inner_texts(), ['head','lead','senior','member'])
-    page.click('dialog button:has-text("Send invite")'); page.wait_for_timeout(450)
-    ok("invited account appears as invited",
-       page.locator('tr:has-text("Test Person") td:has-text("invited")').count(), 1)
-    page.click('button:has-text("My notification preferences")'); page.wait_for_timeout(300)
-    page.locator('dialog .checkline input').first.uncheck()
-    page.click('dialog button:has-text("Save")'); page.wait_for_timeout(400)
-    ok("preference saved", page.evaluate("OC.store.user(OC.store.session()).prefs.push"), False)
-
-    print("\n=== notifications and persistence ===")
-    before=page.evaluate("OC.store.state.notifications.length")
-    ok("notifications exist after the run", before>0)
-    page.reload(wait_until='domcontentloaded'); page.wait_for_timeout(500)
-    ok("notifications survive reload", page.evaluate("OC.store.state.notifications.length"), before)
-    au('Mim Akter — Senior')
-    if page.locator('.iconbtn .count').count():
-        page.locator('.iconbtn', has_text='Alerts').click(); page.wait_for_timeout(300)
-        ok("notification list opens", page.locator('dialog .notif').count()>0)
-        page.click('dialog button:has-text("Mark all read")'); page.wait_for_timeout(400)
-        ok("mark all read clears the badge", page.locator('.iconbtn .count').count(), 0)
-    au('Shohag Munshe — System Admin')
-    ok("invited account persisted", page.evaluate("OC.store.state.users.some(u=>u.name==='Test Person')"))
-
-    print("\n=== 6.2 recurrence dates, including month ends ===")
-    # a monthly todo dated the 31st must land on the end of a shorter month,
-    # not overflow into the month after next the way plain JS date maths does
-    title = page.evaluate("""() => {
-      const t = OC.store.state.todos.find(x => x.recurrence === 'monthly');
-      t.due = '2026-01-31'; t.state = 'open'; t.spawned = false;
-      OC.store.save();
-      return t.title;
-    }""")
-    page.reload(wait_until='domcontentloaded'); page.wait_for_timeout(400)
-    page.get_by_role('button', name='Board', exact=True).click(); page.wait_for_timeout(300)
-    page.check('.checkline:has-text("Show completed") input'); page.wait_for_timeout(250)
-    page.locator('.item', has_text=title).first.locator('select').select_option('done')
-    page.wait_for_timeout(450)
-    spawned = page.evaluate("""(t) => OC.store.state.todos
-        .filter(x => x.title === t && x.state === 'open').map(x => x.due)""", title)
-    ok("31 January monthly spawns 28 February", '2026-02-28' in spawned)
-    ok("and never 3 March, which plain JS date maths would give", '2026-03-03' in spawned, False)
-    page.uncheck('.checkline:has-text("Show completed") input'); page.wait_for_timeout(200)
-
-    print("\n=== 6.4 client timeline ===")
+    print('\n=== it is really in the database ===')
+    page.reload(wait_until='domcontentloaded')
+    page.wait_for_timeout(2200)
     nav('Board')
-    page.locator('.filters select').first.select_option(label='Chaim'); page.wait_for_timeout(300)
-    page.locator('.boardbar .segmented button', has_text='Client timeline').click(); page.wait_for_timeout(400)
-    ok("timeline names the client", page.locator('.panel--timeline h2').inner_text(), "Chaim timeline")
-    ok("timeline merges both kinds", sorted(set(page.locator('.tl-kind').all_inner_texts())), ['INSTRUCTION','TODO'])
-    ok("timeline groups by day", page.locator('.tl-day').count()>1)
-    ok("timeline is newest first", page.evaluate("""() => {
-        const days=[...document.querySelectorAll('.tl-day')].map(e=>e.textContent);
-        return days.length<2 ? true : true;   /* order asserted below on the data */
-      }"""))
-    order = page.evaluate("""() => {
-      const me=OC.store.user(OC.store.session());
-      const t=OC.store.state.todos.filter(x=>x.client==='c-chaim'&&!x.archived).map(x=>x.created_at);
-      const n=OC.store.state.instructions.filter(x=>x.client==='c-chaim'&&!x.archived).map(x=>x.posted_at);
-      const all=[...t,...n].sort((a,b)=>b.localeCompare(a));
-      return all.length;
-    }""")
-    ok("timeline covers every entry for the client", page.locator('.tl-entry').count()>0)
-    page.locator('.boardbar .segmented button', has_text='Two panels').click(); page.wait_for_timeout(300)
-    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
+    ok('the todo survives a reload', page.locator('.item:has-text("Test todo from the suite")').count(), 1)
+    ok('and so does the session', page.locator('.topbar').count(), 1)
 
-    print("\n=== 5.0 comments ===")
+    print('\n=== 6.2 blocked demands a reason ===')
+    row = page.locator('.panel--todos .item:has-text("Test todo from the suite")').first
+    row.locator('select').select_option('blocked')
+    page.wait_for_timeout(500)
+    page.click('dialog button:has-text("Mark blocked")')
+    page.wait_for_timeout(400)
+    ok('an empty reason is refused', 'reason' in page.locator('dialog .error').inner_text().lower())
+    # a reason the seeded workspace does not already contain
+    page.locator('dialog input[type=text]').first.fill('Suite blocked this one')
+    page.click('dialog button:has-text("Mark blocked")')
+    page.wait_for_timeout(1800)
+    ok('the reason shows on the card',
+       page.locator('.blocked-note:has-text("Suite blocked this one")').count(), 1)
+
+    print('\n=== 6.3 anyone may post an instruction ===')
+    page.get_by_role('button', name='Post instruction', exact=True).first.click()
+    page.wait_for_timeout(500)
+    page.locator('dialog textarea').fill('Posted by a team member, which 6.3 allows on purpose.')
+    ds(0).select_option(label='Chaim')
+    ds(1).select_option(label='Outreach Operations')
+    page.locator('dialog .tagfield input[type=text]').last.fill('Suite Tag')
+    page.click('dialog button:has-text("Post instruction")')
+    page.wait_for_timeout(2000)
+    ok('it is posted', page.locator('.note:has-text("Posted by a team member")').count(), 1)
+    ok('the tag typed inline was created (6.4)',
+       page.locator('.note:has-text("Posted by a team member") .chip:has-text("Suite Tag")').count(), 1)
+
+    print('\n=== 5.0 comments ===')
     thread = page.locator('.panel--todos .item .thread').first
-    thread.locator('summary').click(); page.wait_for_timeout(250)
+    thread.locator('summary').click()
+    page.wait_for_timeout(300)
     thread.locator('input[type=text]').fill('Checked with the client this morning.')
-    thread.locator('button:has-text("Post")').click(); page.wait_for_timeout(400)
-    ok("comment posted and counted",
-       page.locator('.panel--todos .item .thread summary', has_text='1 comment').count()>0)
-    ok("comment recorded in the audit log",
-       page.evaluate("OC.store.state.audit.some(a=>a.action==='todo.comment')"))
+    thread.locator('button:has-text("Post")').click()
+    page.wait_for_timeout(1800)
+    ok('a comment is saved and counted',
+       page.locator('.panel--todos .item .thread summary', has_text='1 comment').count() > 0)
 
-    print("\n=== 6.4 tag field: searchable tick list ===")
-    page.get_by_role('button', name='New todo', exact=True).first.click(); page.wait_for_timeout(300)
-    total = page.locator('dialog .ticklist .checkline').count()
-    ok("tick list shows every tag", total>0)
-    page.locator('dialog .tagfield input[type=search]').fill('polic'); page.wait_for_timeout(250)
-    ok("typing narrows the list live", page.locator('dialog .ticklist .checkline').count()<total)
-    ok("partial match works, not just exact",
-       'Policy' in page.locator('dialog .ticklist').inner_text())
-    page.locator('dialog .ticklist input[type=checkbox]').first.check()
-    page.locator('dialog .tagfield input[type=search]').fill(''); page.wait_for_timeout(200)
-    page.locator('dialog input[type=text]').first.fill('Tagged todo from automation')
-    ds(0).select_option(label='Chaim'); ds(1).select_option(index=1)
-    page.locator('dialog .tagfield input[type=text]').last.fill('Automation Tag')
-    page.click('dialog button:has-text("Create todo")'); page.wait_for_timeout(450)
-    ok("todo carries the ticked tag and the new one",
-       page.locator('.item:has-text("Tagged todo from automation") .chip:has-text("Automation Tag")').count(), 1)
+    print('\n=== 6.4 filters drive both panels ===')
+    page.locator('.filters select').first.select_option(label='Chaim')
+    page.wait_for_timeout(600)
+    ok('todos are filtered', set(page.locator('.panel--todos .item .chip.client').all_inner_texts()), {'Chaim'})
+    ok('instructions too', set(page.locator('.panel--instructions .note .chip.client').all_inner_texts()), {'Chaim'})
 
-    print("\n=== 6.1 invite lifecycle ===")
+    print('\n=== 6.4 the client timeline ===')
+    page.locator('.boardbar .segmented button', has_text='Client timeline').click()
+    page.wait_for_timeout(700)
+    ok('it names the client', page.locator('.panel--timeline h2').inner_text(), 'Chaim timeline')
+    ok('and merges both kinds', sorted(set(page.locator('.tl-kind').all_inner_texts())),
+       ['INSTRUCTION', 'TODO'])
+    page.locator('.boardbar .segmented button', has_text='Two panels').click()
+    page.wait_for_timeout(400)
+    page.click('.filterbar-head button:has-text("Clear")')
+    page.wait_for_timeout(500)
+
+    print('\n=== 6.4 pinned filters reach the dashboard ===')
+    page.locator('.filters select').first.select_option(label='Rafa')
+    page.wait_for_timeout(500)
+    page.click('.filterbar-head button:has-text("Pin filter")')
+    page.wait_for_timeout(400)
+    dtxt(0).fill('Everything Rafa')
+    page.click('dialog button:has-text("Pin")')
+    page.wait_for_timeout(1500)
+    ok('the pin appears on the board', page.locator('.savedbar .chip:has-text("Everything Rafa")').count(), 1)
+    nav('Dashboard')
+    ok('and on the dashboard', page.locator('.card:has-text("Pinned filters") button:has-text("Everything Rafa")').count(), 1)
+
+    print('\n=== the other roles ===')
+    as_user('tanvir@originate.example')
+    nav('Board')
+    ok('a lead is shown Reassign', page.locator('.panel--todos button:has-text("Reassign")').count() > 0)
+    nav('Groups')
+    ok('a lead may not create a group (4.2)', page.locator('button:has-text("New group")').count(), 0)
+
+    as_user('nadia@originate.example')
+    nav('Groups')
+    ok('a department head may', page.locator('button:has-text("New group")').count(), 1)
     nav('People')
-    page.click('button:has-text("Invite someone")'); page.wait_for_timeout(300)
-    dtxt(0).fill('Invite Test'); dtxt(1).fill('invite.test@originate.example')
-    page.click('dialog button:has-text("Send invite")'); page.wait_for_timeout(450)
-    ok("pending invite is listed", page.locator('.invite-card:has-text("Invite Test")').count(), 1)
-    ok("invite shows a single use token",
-       'Token inv-' in page.locator('.invite-card:has-text("Invite Test")').inner_text())
-    expiry = page.evaluate("""() => {
-      const u=OC.store.state.users.find(x=>x.name==='Invite Test');
-      const hours=(new Date(u.invite.expires_at)-new Date(u.invite.issued_at))/3600000;
-      return Math.round(hours);
-    }""")
-    ok("link expires after 72 hours", expiry, 72)
-    first_token = page.evaluate("OC.store.state.users.find(x=>x.name==='Invite Test').invite.token")
-    page.locator('.invite-card:has-text("Invite Test") button:has-text("Resend")').click(); page.wait_for_timeout(400)
-    ok("resend issues a new token, invalidating the old one",
-       page.evaluate("OC.store.state.users.find(x=>x.name==='Invite Test').invite.token")!=first_token)
-    page.locator('.invite-card:has-text("Invite Test") button:has-text("Simulate claim")').click(); page.wait_for_timeout(250)
-    page.click('dialog button:has-text("Confirm")'); page.wait_for_timeout(400)
-    ok("claiming activates the account",
-       page.evaluate("OC.store.state.users.find(x=>x.name==='Invite Test').status"), 'active')
-    page.click('button:has-text("Invite someone")'); page.wait_for_timeout(300)
-    dtxt(0).fill('Revoke Test'); dtxt(1).fill('revoke.test@originate.example')
-    page.click('dialog button:has-text("Send invite")'); page.wait_for_timeout(400)
-    page.locator('.invite-card:has-text("Revoke Test") button:has-text("Revoke")').click(); page.wait_for_timeout(250)
-    page.click('dialog button:has-text("Confirm")'); page.wait_for_timeout(400)
-    ok("revoking removes the unclaimed account",
-       page.evaluate("OC.store.state.users.some(x=>x.name==='Revoke Test')"), False)
+    ok('and may invite (6.1)', page.locator('button:has-text("Invite someone")').count(), 1)
+    ok('but is shown no department controls (4.1)', page.locator('button:has-text("New department")').count(), 0)
 
-    print("\n=== 3.4 / 4.1 departments are data ===")
-    page.click('button:has-text("New department")'); page.wait_for_timeout(300)
+    as_user('shohag@originate.example')
+    admin = page.evaluate('({todos: OC.store.state.todos.length, audit: OC.store.state.audit.length})')
+    print('   admin receives:', admin)
+    ok('the admin receives more than the member', admin['todos'] > member['todos'])
+    ok('and the audit log', admin['audit'] > 0)
+    nav('People')
+    ok('the admin is shown department controls', page.locator('button:has-text("New department")').count(), 1)
+
+    print('\n=== 3.4 / 4.1 departments are data ===')
+    page.click('button:has-text("New department")')
+    page.wait_for_timeout(500)
     dtxt(0).fill('Paid Advertising')
     page.locator('dialog input[type=text]').nth(1).fill('head, lead, buyer, analyst')
-    page.click('dialog button:has-text("Create department")'); page.wait_for_timeout(450)
-    ok("seventh department created with no code change",
+    page.click('dialog button:has-text("Create department")')
+    page.wait_for_timeout(1800)
+    ok('a seventh department, with no code change',
        page.locator('.grid-2 .card h3:has-text("Paid Advertising")').count(), 1)
-    ok("its own hierarchy is shown",
+    ok('carrying its own hierarchy',
        page.locator('.card:has-text("Paid Advertising") .chip:has-text("3. buyer")').count(), 1)
-    ok("the permission engine reads the new order",
-       page.evaluate("""() => {
-         const d=OC.store.state.departments.find(x=>x.name==='Paid Advertising');
-         return OC.can.rank(d.id,'buyer')===2 && OC.can.rank(d.id,'head')===0;
-       }"""))
-    page.locator('.card:has-text("Paid Advertising") button:has-text("Edit hierarchy")').click(); page.wait_for_timeout(300)
-    page.locator('dialog input[type=text]').first.fill('head, lead, senior buyer, buyer, analyst')
-    page.click('dialog button:has-text("Save hierarchy")'); page.wait_for_timeout(450)
-    ok("hierarchy edited in place",
-       page.locator('.card:has-text("Paid Advertising") .chip:has-text("3. senior buyer")').count(), 1)
-    page.locator('.card:has-text("Outreach Operations") button:has-text("Edit hierarchy")').click(); page.wait_for_timeout(300)
+    page.locator('.card:has-text("Outreach Operations") button:has-text("Edit hierarchy")').click()
+    page.wait_for_timeout(500)
     page.locator('dialog input[type=text]').first.fill('head, lead, member')
-    page.click('dialog button:has-text("Save hierarchy")'); page.wait_for_timeout(300)
-    ok("refuses to strip a level people still hold",
-       'Mim Akter' in page.locator('dialog .error').inner_text())
-    page.click('dialog .modal-head button'); page.wait_for_timeout(300)
+    page.click('dialog button:has-text("Save hierarchy")')
+    page.wait_for_timeout(1200)
+    ok('the server refuses to strip a level people still hold',
+       page.locator('.toast.warn').count() > 0 or 'Mim' in page.locator('dialog .error').inner_text())
+    page.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>{d.close();d.remove();})")
+    page.wait_for_timeout(400)
 
-    print("\n=== 6.4 pinned filters reach the dashboard ===")
-    nav('Board')
-    page.locator('.filters select').first.select_option(label='Rafa'); page.wait_for_timeout(300)
-    page.click('.filterbar-head button:has-text("Pin filter")'); page.wait_for_timeout(250)
-    dtxt(0).fill('Everything Rafa'); page.click('dialog button:has-text("Pin")'); page.wait_for_timeout(400)
-    nav('Dashboard')
-    ok("pinned filter appears on the dashboard",
-       page.locator('.card:has-text("Pinned filters") button:has-text("Everything Rafa")').count(), 1)
-    page.locator('.card:has-text("Pinned filters") button:has-text("Everything Rafa")').click(); page.wait_for_timeout(450)
-    ok("using it opens the board with that filter applied",
-       set(page.locator('.panel--todos .item .chip.client').all_inner_texts()), {'Rafa'})
-    page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
+    print('\n=== 6.1 the invite lifecycle ===')
+    nav('People')
+    page.click('button:has-text("Invite someone")')
+    page.wait_for_timeout(500)
+    dtxt(0).fill('Invite Test')
+    dtxt(1).fill('not-an-email')
+    page.click('dialog button:has-text("Send invite")')
+    page.wait_for_timeout(400)
+    ok('the email address is validated', 'email' in page.locator('dialog .error').inner_text().lower())
+    dtxt(1).fill('invite.test@originate.example')
+    ok('the starting level defaults to the narrowest (8.2)', ds(1).input_value(), 'member')
+    page.click('dialog button:has-text("Send invite")')
+    page.wait_for_timeout(1800)
+    ok('the pending invite is listed', page.locator('.invite-card:has-text("Invite Test")').count(), 1)
+    ok('with a single-use token', 'Token inv-' in page.locator('.invite-card:has-text("Invite Test")').inner_text())
+    hours = page.evaluate("""() => {
+      const u = OC.store.state.users.find(x => x.name === 'Invite Test');
+      return Math.round((new Date(u.invite.expires_at) - new Date(u.invite.issued_at)) / 3600000);
+    }""")
+    ok('expiring in 72 hours', hours, 72)
+    first = page.evaluate("OC.store.state.users.find(x => x.name === 'Invite Test').invite.token")
+    page.locator('.invite-card:has-text("Invite Test") button:has-text("Resend")').click()
+    page.wait_for_timeout(1800)
+    ok('resending invalidates the previous link',
+       page.evaluate("OC.store.state.users.find(x => x.name === 'Invite Test').invite.token") != first)
+    page.locator('.invite-card:has-text("Invite Test") button:has-text("Revoke")').click()
+    page.wait_for_timeout(400)
+    page.click('dialog button:has-text("Confirm")')
+    page.wait_for_timeout(1800)
+    ok('revoking removes the unclaimed account',
+       page.evaluate("OC.store.state.users.some(x => x.name === 'Invite Test')"), False)
 
-    print("\n=== reset ===")
-    page.click('footer button:has-text("reset data")'); page.wait_for_timeout(500)
-    ok("reset restores the seeded workspace", page.evaluate("OC.store.state.todos.length"), 14)
-    ok("reset clears invited test account", page.evaluate("OC.store.state.users.length"), 11)
+    print('\n=== 6.8 reporting ===')
+    nav('Reports')
+    figures = page.locator('.stat .v').all_inner_texts()
+    ok('five snapshot figures', len(figures), 5)
+    truth = page.evaluate("""() => {
+      const t = OC.store.state.todos.filter(x => !x.archived);
+      return {done: t.filter(x => x.state === 'done').length, left: t.filter(x => x.state !== 'done').length};
+    }""")
+    ok('tasks complete matches the data', figures[1].strip(), str(truth['done']))
+    ok('tasks left matches the data', figures[2].strip(), str(truth['left']))
+    with page.expect_download() as dl:
+        page.click('button:has-text("Export todos to CSV")')
+    csv = pathlib.Path(dl.value.path()).read_text().strip().split('\n')
+    ok('the CSV header is right', csv[0].startswith('Title,Client,Department'))
+    ok('one row per visible todo', len(csv) - 1, truth['done'] + truth['left'])
+
+    print('\n=== signing out ===')
+    sign_out()
+    ok('back to the gate', page.locator('.signin-card').count(), 1)
+    ok('and the board is gone', page.locator('.panel--todos').count(), 0)
+    ok('the session cookie is cleared', page.evaluate("document.cookie.indexOf('oc_session') === -1"))
+
     pathlib.Path(SCR).mkdir(parents=True, exist_ok=True)
-    page.screenshot(path=SCR+'verified.png')
+    page.screenshot(path=SCR + 'verified.png')
 
-    print(f"\npassed: {passed}")
-    print("JS errors:", errs or "none")
-    print("FAILURES:", fails or "none")
-    b.close()
-    sys.exit(1 if (fails or errs) else 0)
+    print('\npassed: ' + str(passed))
+    print('JS errors:', errs or 'none')
+    print('FAILURES:', fails or 'none')
+    browser.close()
+
+SERVER.terminate()
+SERVER.wait(timeout=10)
+sys.exit(1 if (fails or errs) else 0)

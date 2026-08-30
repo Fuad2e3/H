@@ -1,8 +1,10 @@
+# the database and anything else the running server writes
+server/data/
+
+# test output
 tests/.screenshots/
-backend/node_modules/
-backend/package-lock.json
-backend/functions/node_modules/
-backend/.firebase/
-firebase-debug.log
-firestore-debug.log
-ui-debug.log
+
+# editors and platforms
+.DS_Store
+*.log
+node_modules/

@@ -101,9 +101,9 @@ OC.app = (function () {
   }
 
   /* ---- notifications (9.0, in-app channel) ------------------------------ */
+  /* the server sends only this person's notifications (3.1) */
   function myNotifications() {
-    var id = OC.store.session();
-    return OC.store.state.notifications.filter(function (n) { return n.user === id; });
+    return (OC.store.state.notifications || []).slice();
   }
 
   function openNotifications() {
@@ -133,9 +133,7 @@ OC.app = (function () {
       actions: [
         {
           label: 'Mark all read', onClick: function (close) {
-            OC.store.mutate(null, function () {
-              myNotifications().forEach(function (n) { n.read = true; });
-            });
+            OC.store.markNotificationsRead().catch(function () { });
             close();
           }
         },
@@ -148,17 +146,6 @@ OC.app = (function () {
   function topbar() {
     var user = OC.store.user(OC.store.session());
     var unread = myNotifications().filter(function (n) { return !n.read; }).length;
-
-    var switcher = OC.ui.select(
-      OC.store.state.users
-        .filter(function (u) { return u.status === 'active'; })
-        .map(function (u) { return { value: u.id, label: u.name + ' — ' + OC.can.roleLabel(u) }; }),
-      user.id,
-      {
-        'aria-label': 'Signed in as',
-        onChange: function (e) { OC.store.setSession(e.target.value); }
-      }
-    );
 
     var THEME_ICONS = ['monitor', 'moon', 'sun'];
     function paintThemeButton(btn) {
@@ -183,8 +170,10 @@ OC.app = (function () {
         ])
       ]),
       h('div', { class: 'who push' }, [
-        h('span', { class: 'mono muted', style: 'font-size:11px' }, 'Viewing as'),
-        switcher
+        h('span', { class: 'mono muted', style: 'font-size:11px' }, 'Signed in as'),
+        h('span', { class: 'person strong' }, [OC.ui.mark(user.id), user.name]),
+        h('span', { class: 'chip role' }, OC.can.roleLabel(user)),
+        h('button', { class: 'iconbtn', type: 'button', onClick: OC.session.signOut }, 'Sign out')
       ]),
       h('button', {
         class: 'iconbtn', type: 'button', onClick: openNotifications,
@@ -227,15 +216,11 @@ OC.app = (function () {
 
   /* ---- boot ------------------------------------------------------------- */
   function start() {
-    OC.store.load();
 
-    /* say plainly where the data lives, rather than letting a local-only
-       workspace look like a shared one */
     var label = document.getElementById('backendLabel');
-    if (label && OC.backend) {
-      var backend = OC.backend.describe();
-      label.textContent = backend.label;
-      label.title = backend.detail;
+    if (label) {
+      label.title = 'Every permission is decided by the server before anything ' +
+                    'reaches this page (8.1), not by what this screen chooses to draw.';
     }
 
     var saved = readTheme();
@@ -257,4 +242,5 @@ OC.app = (function () {
   return { start: start, go: go, reset: function () { OC.store.reset(); } };
 })();
 
-document.addEventListener('DOMContentLoaded', OC.app.start);
+/* session.js owns the boot: there is nothing to draw before the server says
+   who this is and hands over the workspace (8.1). */

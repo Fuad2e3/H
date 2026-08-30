@@ -122,7 +122,7 @@ OC.dashboard = (function () {
                   isUnread ? h('div', { class: 'actions' }, [
                     h('button', {
                       class: 'btn small', type: 'button', onClick: function () {
-                        OC.store.mutate(null, function () { n.read_by.push(user.id); });
+                        OC.store.updateInstruction(n.id, { read: true }).catch(function () { });
                       }
                     }, 'Mark as read')
                   ]) : null

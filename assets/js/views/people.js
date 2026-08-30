@@ -52,21 +52,13 @@ OC.people = (function () {
           label: 'Send invite', primary: true, onClick: function (close) {
             if (!name.value.trim()) return 'Enter a name.';
             if (!/.+@.+\..+/.test(email.value)) return 'Enter a valid email address.';
-            var account = {
-              id: OC.store.uid('u'), name: name.value.trim(), email: email.value.trim(),
-              title: title.value.trim() || 'Team member', admin: false, status: 'invited',
-              departments: [{ department: deptSelect.value, level: levelSelect.value }],
-              prefs: { push: true, email: true, discord: false },
-              invite: OC.store.issueInvite(user.id)
-            };
-            OC.store.mutate({
-              actor: user.id, action: 'user.invite', target: account.name,
-              detail: (OC.store.department(deptSelect.value) || {}).name + ' as ' + levelSelect.value
-            }, function () {
-              OC.store.state.users.push(account);
+            return OC.store.inviteUser({
+              name: name.value.trim(), email: email.value.trim(),
+              title: title.value.trim() || 'Team member',
+              departments: [{ department: deptSelect.value, level: levelSelect.value }]
+            }).then(function () {
+              OC.ui.toast('Invite issued. The link is single use and expires in 72 hours.');
             });
-            OC.ui.toast('Invite issued. The link is single use and expires in 72 hours.');
-            close();
           }
         }
       ]
@@ -93,11 +85,9 @@ OC.people = (function () {
         { label: 'Cancel', onClick: function (close) { close(); } },
         {
           label: 'Save', primary: true, onClick: function (close) {
-            OC.store.mutate({ actor: user.id, action: 'user.prefs', target: user.name }, function () {
-              user.prefs = { push: push.checked, email: email.checked, discord: discord.checked };
-            });
-            OC.ui.toast('Preferences saved.');
-            close();
+            return OC.store.updateUser(user.id, {
+              prefs: { push: push.checked, email: email.checked, discord: discord.checked }
+            }).then(function () { OC.ui.toast('Preferences saved.'); });
           }
         }
       ]
@@ -106,29 +96,24 @@ OC.people = (function () {
 
   function resend(account) {
     var user = me();
-    OC.store.mutate({ actor: user.id, action: 'user.invite.resend', target: account.name,
-                      detail: 'new single use link, 72 hour expiry' }, function () {
-      account.invite = OC.store.issueInvite(user.id);
-    });
-    OC.ui.toast('A fresh link was issued. The previous one no longer works.');
+    OC.store.request('POST', '/api/users/' + account.id + '/invite')
+      .then(function () { return OC.store.refresh(); })
+      .then(function () {
+        OC.ui.toast('A fresh link was issued. The previous one no longer works.');
+      });
   }
 
   function revoke(account) {
     OC.ui.confirm('Withdraw the invite for ' + account.name + '? The link stops working immediately.', function () {
-      OC.store.mutate({ actor: OC.store.session(), action: 'user.invite.revoke', target: account.name }, function () {
-        OC.store.state.users = OC.store.state.users.filter(function (u) { return u.id !== account.id; });
-      });
-      OC.ui.toast('Invite withdrawn.');
+      OC.store.deleteUser(account.id).then(function () { OC.ui.toast('Invite withdrawn.'); });
     });
   }
 
   function claim(account) {
     OC.ui.confirm('Simulate ' + account.name + ' following their link and completing their profile?', function () {
-      OC.store.mutate({ actor: account.id, action: 'user.invite.claim', target: account.name }, function () {
-        account.invite.claimed_at = new Date().toISOString();
-        account.status = 'active';
-      });
-      OC.ui.toast(account.name + ' is now an active account.');
+      var invite = Object.assign({}, account.invite, { claimed_at: new Date().toISOString() });
+      OC.store.updateUser(account.id, { invite: invite, status: 'active' })
+        .then(function () { OC.ui.toast(account.name + ' is now an active account.'); });
     });
   }
 
@@ -180,13 +165,8 @@ OC.people = (function () {
             if (!name.value.trim()) return 'Give the department a name.';
             var list = levels.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
             if (list.length < 2) return 'A department needs at least two levels.';
-            var dept = { id: OC.store.uid('d'), name: name.value.trim(), levels: list };
-            OC.store.mutate({ actor: user.id, action: 'department.create', target: dept.name,
-                              detail: list.join(' → ') }, function () {
-              OC.store.state.departments.push(dept);
-            });
-            OC.ui.toast('Department created. No development work required (4.1).');
-            close();
+            return OC.store.createDepartment({ name: name.value.trim(), levels: list })
+              .then(function () { OC.ui.toast('Department created. No development work required (4.1).'); });
           }
         }
       ]
@@ -209,21 +189,9 @@ OC.people = (function () {
           label: 'Save hierarchy', primary: true, onClick: function (close) {
             var list = levels.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
             if (list.length < 2) return 'A department needs at least two levels.';
-            var orphaned = OC.store.state.users.filter(function (u) {
-              var lv = OC.can.levelIn(u, dept.id);
-              return lv && list.indexOf(lv) === -1;
+            return OC.store.updateDepartment(dept.id, { levels: list }).then(function () {
+              OC.ui.toast('Hierarchy saved. Permissions follow the new order immediately.');
             });
-            if (orphaned.length) {
-              return 'Removing a level that people still hold: ' +
-                orphaned.map(function (u) { return u.name; }).join(', ') + '. Move them first.';
-            }
-            var before = dept.levels.join(' → ');
-            OC.store.mutate({ actor: user.id, action: 'department.hierarchy', target: dept.name,
-                              detail: before + '  =>  ' + list.join(' → ') }, function () {
-              dept.levels = list;
-            });
-            OC.ui.toast('Hierarchy saved. Permissions follow the new order immediately.');
-            close();
           }
         }
       ]

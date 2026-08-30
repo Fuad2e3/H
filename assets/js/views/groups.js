@@ -48,18 +48,9 @@ OC.groups = (function () {
             var members = boxes.filter(function (b) { return b.box.checked; }).map(function (b) { return b.id; });
             if (members.length < 2) return 'A group needs at least two people.';
 
-            var group = {
-              id: OC.store.uid('g'), name: name.value.trim(), purpose: purpose.value.trim(),
-              members: members, created_by: user.id, status: 'active',
-              created_at: new Date().toISOString()
-            };
-            OC.store.mutate({ actor: user.id, action: 'group.create', target: group.name, detail: members.length + ' members' }, function () {
-              OC.store.state.groups.push(group);
-            });
-            OC.store.notify(members.filter(function (id) { return id !== user.id; }),
-              user.name + ' added you to the group ' + group.name, group.id);
-            OC.ui.toast('Group created.');
-            close();
+            return OC.store.createGroup({
+              name: name.value.trim(), purpose: purpose.value.trim(), members: members
+            }).then(function () { OC.ui.toast('Group created.'); });
           }
         }
       ]
@@ -68,10 +59,8 @@ OC.groups = (function () {
 
   function archive(group) {
     OC.ui.confirm('Archive "' + group.name + '"? Groups are archived, never deleted, so their history stays for reporting (6.5).', function () {
-      OC.store.mutate({ actor: OC.store.session(), action: 'group.archive', target: group.name }, function () {
-        group.status = 'archived';
-      });
-      OC.ui.toast('Group archived.');
+      OC.store.updateGroup(group.id, { status: 'archived' })
+        .then(function () { OC.ui.toast('Group archived.'); });
     });
   }
 

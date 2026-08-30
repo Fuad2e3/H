@@ -208,22 +208,20 @@ OC.ui = (function () {
     return {
       node: h('div', { class: 'tagfield' }, [search, list, newTag]),
       /* returns the chosen tags, creating the typed one first if there is one */
+      /* the chosen tags; a typed one is created on the server first, so the
+         id in the returned list is the real one */
       resolve: function () {
+        return chosen.slice();
+      },
+      pending: function () { return newTag.value.trim(); },
+      resolveAsync: function () {
         var out = chosen.slice();
         var label = newTag.value.trim();
-        if (label) {
-          var existing = OC.store.state.tags.filter(function (t) {
-            return t.label.toLowerCase() === label.toLowerCase();
-          })[0];
-          if (existing) {
-            if (out.indexOf(existing.id) === -1) out.push(existing.id);
-          } else {
-            var made = { id: OC.store.uid('t'), label: label, kind: 'custom' };
-            OC.store.state.tags.push(made);
-            out.push(made.id);
-          }
-        }
-        return out;
+        if (!label) return Promise.resolve(out);
+        return OC.store.createTag(label, 'custom').then(function (tag) {
+          if (out.indexOf(tag.id) === -1) out.push(tag.id);
+          return out;
+        });
       }
     };
   }
@@ -252,13 +250,10 @@ OC.ui = (function () {
             class: 'btn small', type: 'button', onClick: function () {
               if (!body.value.trim()) return;
               var text = body.value.trim();
-              OC.store.mutate({
-                actor: OC.store.session(), action: kind + '.comment',
-                target: item.title || item.body.slice(0, 40), detail: text
-              }, function () {
-                OC.store.comment(kind, item.id, text, OC.store.session());
+              body.value = '';
+              OC.store.addComment(kind, item.id, text).then(function () {
+                if (onChange) onChange();
               });
-              if (onChange) onChange();
             }
           }, 'Post')
         ])
@@ -290,11 +285,32 @@ OC.ui = (function () {
         class: 'btn' + (a.primary ? ' primary' : ''),
         type: 'button',
         onClick: function () {
-          var problem = a.onClick ? a.onClick(close) : null;
-          if (problem) {
+          if (button.disabled) return;
+          function report(problem) {
             errorText.textContent = problem;
             errorBox.hidden = false;
           }
+          var outcome = a.onClick ? a.onClick(close) : null;
+
+          /* an action that talks to the server returns a promise. The dialog
+             stays open and the button stays disabled until the server has
+             answered, so a refusal is shown here rather than the dialog
+             closing on a change that never happened. */
+          if (outcome && typeof outcome.then === 'function') {
+            button.disabled = true;
+            errorBox.hidden = true;
+            outcome.then(function (problem) {
+              button.disabled = false;
+              /* only a string is a message to show. An action that resolves
+                 with the record it just saved has succeeded. */
+              if (typeof problem === 'string' && problem) report(problem); else close();
+            }).catch(function (error) {
+              button.disabled = false;
+              report((error && error.message) || 'The server refused that.');
+            });
+            return;
+          }
+          if (outcome) report(outcome);
         }
       }, a.label);
       if (a.primary) primaryButton = button;

@@ -137,6 +137,88 @@ OC.app = (function () {
   }
 
   /* ---- Dedicated Initial Login Screen ----------------------------------- */
+  function openGoogleAccountChooser(onSelect) {
+    var users = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
+    var otherEmailInput = h('input', { type: 'email', autocomplete: 'email' });
+    var showOther = false;
+    var listContainer = h('div', { class: 'google-account-list' });
+
+    function refresh(closeModal) {
+      OC.ui.clear(listContainer);
+      var items = users.map(function (u) {
+        return h('div', {
+          class: 'google-account-item',
+          tabindex: '0',
+          onClick: function () {
+            closeModal();
+            onSelect(u.email);
+          }
+        }, [
+          h('div', { class: 'google-avatar' }, u.name ? u.name.slice(0, 2).toUpperCase() : 'U'),
+          h('div', { class: 'google-account-info' }, [
+            h('div', { class: 'google-account-name' }, u.name),
+            h('div', { class: 'google-account-email' }, u.email)
+          ]),
+          h('span', { class: 'chip role push' }, OC.can.roleLabel(u))
+        ]);
+      });
+
+      var useOtherBtn = h('div', {
+        class: 'google-account-item google-use-other',
+        tabindex: '0',
+        onClick: function () {
+          showOther = !showOther;
+          refresh(closeModal);
+        }
+      }, [
+        h('div', { class: 'google-avatar other' }, '+'),
+        h('div', { class: 'google-account-info' }, [
+          h('div', { class: 'google-account-name' }, 'Use another account'),
+          h('div', { class: 'google-account-email' }, 'Sign in with a different Gmail address')
+        ])
+      ]);
+      items.push(useOtherBtn);
+
+      if (showOther) {
+        var otherBox = h('div', { style: 'margin-top:12px;padding:12px;background:var(--card-bg-alt);border-radius:var(--r1);' }, [
+          OC.ui.field('Enter Gmail Address', otherEmailInput, { hint: 'Must be registered in the workspace database.' }),
+          h('button', {
+            class: 'btn primary small',
+            type: 'button',
+            style: 'margin-top:8px;width:100%;',
+            onClick: function () {
+              if (otherEmailInput.value.trim()) {
+                closeModal();
+                onSelect(otherEmailInput.value.trim());
+              }
+            }
+          }, 'Verify & Continue')
+        ]);
+        items.push(otherBox);
+      }
+
+      OC.ui.append(listContainer, items);
+    }
+
+    OC.ui.modal({
+      title: 'Choose an account',
+      content: h('div', { class: 'google-chooser-wrapper' }, [
+        h('p', { class: 'muted', style: 'font-size:13px;margin-bottom:14px;' },
+          'Select your registered Google/Gmail account to connect to Originate Command:'),
+        listContainer
+      ]),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } }
+      ]
+    });
+
+    var backdrop = document.querySelector('.modal-backdrop');
+    var closeFn = function () {
+      if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+    };
+    refresh(closeFn);
+  }
+
   function renderLoginScreen(host) {
     OC.ui.clear(host);
 
@@ -184,13 +266,22 @@ OC.app = (function () {
       }
     }, [
       errorBox,
-      OC.ui.field('Connected Gmail / Email Address', emailInput, {
-        hint: 'Connect your Gmail or work email. The system verifies your database record and loads your role permissions.'
-      }),
-      h('button', { class: 'btn primary connect-btn', type: 'submit' }, [
+      h('button', {
+        class: 'btn primary connect-btn',
+        type: 'button',
+        style: 'height:46px;font-size:15px;',
+        onClick: function () {
+          openGoogleAccountChooser(function (selectedEmail) {
+            performLogin(selectedEmail);
+          });
+        }
+      }, [
         OC.icon('google'),
-        'Connect with Gmail / Email'
-      ])
+        'Connect with Google / Gmail'
+      ]),
+      h('div', { class: 'login-divider' }, 'or sign in with email directly'),
+      OC.ui.field('Email Address', emailInput),
+      h('button', { class: 'btn', type: 'submit' }, 'Sign In / Continue')
     ]);
 
     var card = h('div', { class: 'login-card' }, [

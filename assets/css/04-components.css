@@ -1173,6 +1173,66 @@ dialog.modal.fallback {
   margin-left: auto;
 }
 
+/* ---- google account chooser modal styles -------------------------------- */
+.google-account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.google-account-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--card-bg-alt);
+  border: 1px solid var(--rule);
+  border-radius: var(--r1);
+  cursor: pointer;
+  transition: all var(--t);
+  user-select: none;
+}
+.google-account-item:hover, .google-account-item:focus {
+  background: var(--tint);
+  border-color: var(--blueprint);
+  transform: translateY(-1px);
+}
+.google-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #2563EB;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.google-avatar.other {
+  background: var(--rule);
+  color: var(--text);
+  font-size: 18px;
+}
+.google-account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.google-account-name {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.google-account-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 /* ---- client picker inline row ------------------------------------------ */
 .client-picker-row {
   display: flex;

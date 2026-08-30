@@ -92,7 +92,8 @@ OC.dashboard = (function () {
                         OC.ui.stateChip(t.state),
                         h('span', { class: late ? 'chip overdue' : '' }, OC.ui.dueLabel(t.due)),
                         t.assignee_type === 'group' ? h('span', { class: 'chip group' }, OC.ui.assigneeName(t)) : null
-                      ])
+                      ]),
+                      OC.ui.reactionsBar('todo', t)
                     ]);
                   })
                 ]);
@@ -119,13 +120,15 @@ OC.dashboard = (function () {
                   ]),
                   h('div', { class: 'body' }, n.body),
                   h('div', { class: 'tags' }, [OC.ui.clientChip(n.client), OC.ui.deptChip(n.department), n.tags.map(OC.ui.tagChip)]),
+                  OC.ui.reactionsBar('instruction', n),
                   isUnread ? h('div', { class: 'actions' }, [
                     h('button', {
                       class: 'btn small', type: 'button', onClick: function () {
                         OC.store.mutate(null, function () { n.read_by.push(user.id); });
                       }
                     }, 'Mark as read')
-                  ]) : null
+                  ]) : null,
+                  OC.can.canSeeComments(user, n) ? OC.ui.commentThread('instruction', n) : null
                 ]);
               })
             : h('div', { class: 'empty' }, [OC.icon('inbox'), 'No instructions are addressed to you.']))

@@ -296,6 +296,9 @@ OC.board = (function () {
     var cls = 'item is-' + todo.state + (overdue ? ' is-overdue' : '');
 
     var actions = [stateSelect(todo)];
+    if (OC.can.canEditTodo(user, todo)) {
+      actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { editTodo(todo); } }, 'Edit'));
+    }
     if (OC.can.reassign(user, todo)) {
       actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { reassignTodo(todo); } }, 'Reassign'));
     }
@@ -322,7 +325,8 @@ OC.board = (function () {
         : null,
       escalationNote(todo),
       h('div', { class: 'actions' }, actions),
-      OC.can.commentOnTodo(user, todo) ? OC.ui.commentThread('todo', todo) : null
+      OC.ui.reactionsBar('todo', todo),
+      OC.can.canSeeComments(user, todo) ? OC.ui.commentThread('todo', todo) : null
     ]);
   }
 
@@ -332,6 +336,101 @@ OC.board = (function () {
         todo.archived = true;
       });
       OC.ui.toast('Archived.');
+    });
+  }
+
+  function editTodo(todo) {
+    var user = me();
+    var title = h('input', { type: 'text', value: todo.title || '' });
+    var desc = h('textarea', {}, todo.description || '');
+    var clientPicker = OC.ui.clientPicker(todo.client || '');
+    var depts = user.admin ? OC.store.state.departments
+      : OC.store.state.departments.filter(function (d) { return OC.can.inDept(user, d.id); });
+    var department = OC.ui.select(optionsFor(depts, 'Select a department'), todo.department || '');
+
+    var people = OC.can.assignableUsers(user).map(function (u) { return { value: 'user:' + u.id, label: u.name }; });
+    var groups = OC.can.assignableGroups(user).map(function (g) { return { value: 'group:' + g.id, label: g.name + ' (group)' }; });
+    var currentAssigneeValue = (todo.assignee_type || 'user') + ':' + (todo.assignee || user.id);
+    var allAssigneeOptions = people.concat(groups);
+    var hasCurrentOption = allAssigneeOptions.some(function (opt) { return opt.value === currentAssigneeValue; });
+    if (!hasCurrentOption && todo.assignee) {
+      allAssigneeOptions.unshift({ value: currentAssigneeValue, label: OC.ui.assigneeName(todo) });
+    }
+
+    var assignee = OC.ui.select(allAssigneeOptions, currentAssigneeValue);
+    var due = h('input', { type: 'date', value: todo.due || OC.ui.today() });
+    var priority = OC.ui.select([
+      { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }
+    ], todo.priority || 'normal');
+    var tags = OC.ui.tagPicker(todo.tags || []);
+    var recurrence = OC.ui.select([
+      { value: 'none', label: 'One time' }, { value: 'daily', label: 'Daily' },
+      { value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' },
+      { value: 'quarterly', label: 'Quarterly' }
+    ], todo.recurrence || 'none');
+
+    var canReassign = OC.can.reassign(user, todo);
+    if (!canReassign) {
+      assignee.disabled = true;
+    }
+
+    OC.ui.modal({
+      title: 'Edit todo',
+      content: h('div', {}, [
+        OC.ui.field('Title', title, { required: true }),
+        OC.ui.field('Description', desc),
+        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select client or click "+ New Client" (5.2).' }),
+        OC.ui.field('Department', department, { required: true }),
+        OC.ui.field('Assign to', assignee, { required: true, hint: canReassign ? 'Reassign to team member or group.' : 'Only authorized leads/admins can reassign (3.2).' }),
+        OC.ui.field('Due date', due, { required: true }),
+        OC.ui.field('Priority', priority),
+        OC.ui.field('Tags', tags.node),
+        OC.ui.field('Recurrence', recurrence)
+      ]),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } },
+        {
+          label: 'Save changes', primary: true, onClick: function (close) {
+            var newTitle = title.value.trim();
+            if (!newTitle) return 'A todo needs a title.';
+            var selectedClient = clientPicker.getValue();
+            if (!selectedClient || selectedClient === '__new__') return 'Please select a client.';
+            if (!department.value) return 'Please select a department.';
+
+            var parts = assignee.value.split(':');
+            var oldAssignee = todo.assignee;
+            var oldAssigneeType = todo.assignee_type;
+
+            OC.store.mutate({
+              actor: user.id,
+              action: 'todo.edit',
+              target: newTitle,
+              detail: 'Updated todo "' + newTitle + '"'
+            }, function () {
+              todo.title = newTitle;
+              todo.description = desc.value.trim();
+              todo.client = selectedClient;
+              todo.department = department.value;
+              if (canReassign) {
+                todo.assignee_type = parts[0];
+                todo.assignee = parts[1];
+              }
+              todo.due = due.value;
+              todo.priority = priority.value;
+              todo.tags = tags.resolve();
+              todo.recurrence = recurrence.value;
+            });
+
+            if (canReassign && (oldAssignee !== parts[1] || oldAssigneeType !== parts[0])) {
+              var targets = parts[0] === 'user' ? [parts[1]] : (OC.store.group(parts[1]) || { members: [] }).members;
+              OC.store.notify(targets.filter(function (id) { return id !== user.id; }), user.name + ' assigned you: ' + todo.title, todo.id);
+            }
+
+            OC.ui.toast('Todo updated.');
+            close();
+          }
+        }
+      ]
     });
   }
 
@@ -517,6 +616,7 @@ OC.board = (function () {
         ? 'Read by ' + readers.length + ': ' + readers.join(', ')
         : 'Nobody has read this yet'),
       actions.length ? h('div', { class: 'actions' }, actions) : null,
+      OC.ui.reactionsBar('instruction', note),
       OC.can.commentOnInstruction(user, note) ? OC.ui.commentThread('instruction', note) : null
     ]);
   }

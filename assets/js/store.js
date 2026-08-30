@@ -436,6 +436,26 @@ OC.store = (function () {
       return entry;
     },
 
+    react: function (kind, id, emoji, userId) {
+      var host = kind === 'todo' ? api.todo(id) : api.instruction(id);
+      if (!host) return null;
+      host.reactions = host.reactions || {};
+      var list = (host.reactions[emoji] || []).slice();
+      var idx = list.indexOf(userId);
+      if (idx > -1) {
+        list.splice(idx, 1);
+        if (list.length === 0) {
+          delete host.reactions[emoji];
+        } else {
+          host.reactions[emoji] = list;
+        }
+      } else {
+        list.push(userId);
+        host.reactions[emoji] = list;
+      }
+      return host.reactions;
+    },
+
     notify: function (userIds, text, ref) {
       if (!userIds || !userIds.length) return;
       var at = new Date().toISOString();

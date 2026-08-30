@@ -191,9 +191,25 @@ OC.can = (function () {
     return canEditAccount(actor, targetAccount);
   }
 
-  /* anyone who may see an item may discuss it (5.0, Comment) */
-  function commentOnTodo(user, todo) { return seeTodo(user, todo); }
-  function commentOnInstruction(user, note) { return seeInstruction(user, note); }
+  /* System Admin, Department Head, todo creator, or assignee may edit a todo */
+  function canEditTodo(user, todo) {
+    if (!user || !todo) return false;
+    if (user.admin) return true;
+    if (isHead(user, todo.department)) return true;
+    if (todo.created_by === user.id) return true;
+    if (todo.assignee_type === 'user' && todo.assignee === user.id) return true;
+    return false;
+  }
+
+  /* Comments are visible strictly to members of that department and System Admin */
+  function canSeeComments(user, item) {
+    if (!user || !item) return false;
+    if (user.admin) return true;
+    return inDept(user, item.department);
+  }
+
+  function commentOnTodo(user, todo) { return canSeeComments(user, todo); }
+  function commentOnInstruction(user, note) { return canSeeComments(user, note); }
   function seeAudit(user) { return !!user && user.admin; }
 
   /* people whose work this account may review in reports */
@@ -242,11 +258,11 @@ OC.can = (function () {
     assignTo: assignTo, assignableUsers: assignableUsers,
     assignToGroup: assignToGroup, assignableGroups: assignableGroups,
     createGroup: createGroup, postInstruction: postInstruction, createTodo: createTodo,
-    createClient: createClient,
+    createClient: createClient, canEditTodo: canEditTodo,
     changeState: changeState, reassign: reassign, assignsOthers: assignsOthers, archiveInstruction: archiveInstruction,
     manageDepartment: manageDepartment, manageDepartments: manageDepartments,
     invite: invite, manageInvite: manageInvite, editAccount: canEditAccount, deleteAccount: canDeleteAccount, seeAudit: seeAudit,
-    commentOnTodo: commentOnTodo, commentOnInstruction: commentOnInstruction,
+    canSeeComments: canSeeComments, commentOnTodo: commentOnTodo, commentOnInstruction: commentOnInstruction,
     visibleUsers: visibleUsers,
     escalationChain: escalationChain, escalationReached: escalationReached
   };

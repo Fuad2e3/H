@@ -9,105 +9,132 @@
 :root {
   color-scheme: light;
   
-  /* Core Neutrals & Backgrounds (Day Mode: Soft warm-matte, zero glare) */
-  --ink: #1E293B;            /* Slate-800: Soft dark slate rather than harsh black */
-  --paper: #F8FAFC;          /* Slate-50: Soothing matte background */
-  --surface: #FFFFFF;        /* Clean card surface */
-  --surface-alt: #F1F5F9;    /* Slate-100: Soft tinted sub-container */
+  /* Core Neutrals & Backgrounds (Day Mode: Vibrant, crisp, luminous) */
+  --ink: #0F172A;            /* Slate-900: Deep rich text */
+  --paper: #F4F7FB;          /* Soft luminous canvas with cool tone */
+  --surface: #FFFFFF;        /* Pure card surface */
+  --surface-alt: #F8FAFC;    /* Slate-50: Crisp sub-container */
   
-  /* Brand Accent Tokens (Soft, harmonious, low-fatigue tones) */
-  --blueprint: #2563EB;      /* Calm royal cobalt */
+  /* Brand Accent Tokens (Vibrant, high-energy executive colors) */
+  --brand-orange: #F97316;   /* Energetic Originate Orange */
+  --brand-orange-soft: #FFF7ED; /* Warm peach wash */
+  --blueprint: #2563EB;      /* Vivid royal cobalt blue */
   --blueprint-soft: #EFF6FF; /* Soft sky wash */
-  --brass: #D97706;          /* Warm honey amber */
+  --indigo: #6366F1;         /* Vivid royal indigo */
+  --indigo-soft: #EEF2FF;    /* Soft indigo wash */
+  --purple: #8B5CF6;         /* Electric violet */
+  --purple-soft: #F5F3FF;    /* Soft purple wash */
+  --cyan: #0284C7;           /* Electric cyan-blue */
+  --cyan-soft: #E0F2FE;      /* Soft cyan wash */
+  --brass: #D97706;          /* Luminous honey amber */
   --brass-soft: #FEF3C7;     /* Soft amber wash */
   --slate: #64748B;          /* Balanced slate secondary */
-  --signal: #E11D48;         /* Soft rose red, non-abrasive */
+  --signal: #E11D48;         /* Vibrant coral rose / red */
   --signal-soft: #FFE4E6;    /* Soft rose wash */
-  --success: #059669;        /* Serene emerald */
+  --success: #059669;        /* Vivid mint emerald */
   --success-soft: #ECFDF5;   /* Soft mint wash */
   
   /* Structural Variables */
-  --border: rgba(30, 41, 59, 0.09);
+  --border: rgba(30, 41, 59, 0.08);
   --text: var(--ink);
   --text-secondary: var(--slate);
   --bg: var(--paper);
   --card-bg: var(--surface);
   --card-bg-alt: var(--surface-alt);
   --rule: var(--border);
-  --rule-strong: rgba(30, 41, 59, 0.16);
+  --rule-strong: rgba(30, 41, 59, 0.15);
   
   /* Interactive Washes */
-  --tint: rgba(37, 99, 235, 0.05);
-  --tint-strong: rgba(37, 99, 235, 0.10);
+  --tint: rgba(37, 99, 235, 0.06);
+  --tint-strong: rgba(37, 99, 235, 0.12);
   
-  /* Multi-Layer Soft Ambient Shadows */
-  --shadow: 0 1px 3px rgba(30, 41, 59, 0.04), 0 10px 25px -5px rgba(30, 41, 59, 0.04);
-  --sh1: 0 1px 2px rgba(30, 41, 59, 0.04);
-  --sh2: 0 4px 8px -1px rgba(30, 41, 59, 0.06), 0 2px 4px -2px rgba(30, 41, 59, 0.04);
-  --sh3: 0 20px 25px -5px rgba(30, 41, 59, 0.08), 0 8px 10px -6px rgba(30, 41, 59, 0.04);
-  --sh-glow: 0 0 20px rgba(37, 99, 235, 0.12);
+  /* Multi-Layer Soft Ambient Shadows & Colorful Glows */
+  --shadow: 0 1px 3px rgba(30, 41, 59, 0.04), 0 10px 25px -5px rgba(30, 41, 59, 0.06);
+  --sh1: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --sh2: 0 4px 12px -2px rgba(37, 99, 235, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.05);
+  --sh3: 0 20px 30px -8px rgba(37, 99, 235, 0.12), 0 8px 12px -4px rgba(15, 23, 42, 0.06);
+  --sh-glow: 0 0 24px rgba(37, 99, 235, 0.18);
+  --sh-orange-glow: 0 0 20px rgba(249, 115, 22, 0.22);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    /* Night Mode (Velvet Slate, anti-glare, eye protection) */
-    --ink: #E2E8F0;           /* Slate-200: Soft off-white, no harsh high-contrast glare */
-    --text: #E2E8F0;
-    --text-secondary: #94A3B8;/* Slate-400: Soothing secondary */
-    --bg: #0F172A;             /* Slate-900: Deep velvet background, not pitch black */
-    --card-bg: #182234;        /* Soft elevated card surface */
-    --card-bg-alt: #223048;    /* Calm sub-container */
-    --blueprint: #60A5FA;      /* Soft sky blue */
-    --blueprint-soft: rgba(96, 165, 250, 0.12);
-    --brass: #FBBF24;          /* Warm soothing amber */
-    --brass-soft: rgba(251, 191, 36, 0.12);
+    /* Night Mode (Deep Midnight Velvet with Luminous Neon Accents) */
+    --ink: #F1F5F9;           /* Slate-100: Crisp text */
+    --text: #F1F5F9;
+    --text-secondary: #94A3B8;/* Slate-400: Clear secondary */
+    --bg: #0B1120;             /* Midnight velvet background */
+    --card-bg: #141E33;        /* Elevated midnight slate surface */
+    --card-bg-alt: #1C2B45;    /* Distinct sub-container */
+    --brand-orange: #FB923C;
+    --brand-orange-soft: rgba(251, 146, 60, 0.14);
+    --blueprint: #3B82F6;      /* Electric sapphire blue */
+    --blueprint-soft: rgba(59, 130, 246, 0.14);
+    --indigo: #818CF8;
+    --indigo-soft: rgba(129, 140, 248, 0.14);
+    --purple: #A78BFA;
+    --purple-soft: rgba(167, 139, 250, 0.14);
+    --cyan: #38BDF8;
+    --cyan-soft: rgba(56, 189, 248, 0.14);
+    --brass: #FBBF24;          /* Vivid radiant amber */
+    --brass-soft: rgba(251, 191, 36, 0.14);
     --slate: #94A3B8;
-    --signal: #F87171;         /* Gentle coral red */
-    --signal-soft: rgba(248, 113, 113, 0.12);
-    --success: #34D399;        /* Soft mint emerald */
-    --success-soft: rgba(52, 211, 153, 0.12);
-    --border: rgba(148, 163, 184, 0.14);
-    --rule: rgba(148, 163, 184, 0.14);
+    --signal: #FB7185;         /* Vibrant rose coral */
+    --signal-soft: rgba(251, 113, 133, 0.14);
+    --success: #34D399;        /* Vivid neon mint */
+    --success-soft: rgba(52, 211, 153, 0.14);
+    --border: rgba(148, 163, 184, 0.12);
+    --rule: rgba(148, 163, 184, 0.12);
     --rule-strong: rgba(148, 163, 184, 0.22);
-    --tint: rgba(96, 165, 250, 0.08);
-    --tint-strong: rgba(96, 165, 250, 0.16);
-    --shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-    --sh1: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --sh2: 0 4px 12px rgba(0, 0, 0, 0.35);
-    --sh3: 0 20px 35px rgba(0, 0, 0, 0.45);
-    --sh-glow: 0 0 24px rgba(96, 165, 250, 0.18);
+    --tint: rgba(59, 130, 246, 0.10);
+    --tint-strong: rgba(59, 130, 246, 0.20);
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+    --sh1: 0 1px 3px rgba(0, 0, 0, 0.35);
+    --sh2: 0 4px 14px rgba(0, 0, 0, 0.40);
+    --sh3: 0 20px 40px rgba(0, 0, 0, 0.55);
+    --sh-glow: 0 0 28px rgba(59, 130, 246, 0.22);
+    --sh-orange-glow: 0 0 24px rgba(251, 146, 60, 0.24);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  /* Night Mode (Velvet Slate, anti-glare, eye protection) */
-  --ink: #E2E8F0;           /* Slate-200: Soft off-white, no harsh high-contrast glare */
-  --text: #E2E8F0;
-  --text-secondary: #94A3B8;/* Slate-400: Soothing secondary */
-  --bg: #0F172A;             /* Slate-900: Deep velvet background, not pitch black */
-  --card-bg: #182234;        /* Soft elevated card surface */
-  --card-bg-alt: #223048;    /* Calm sub-container */
-  --blueprint: #60A5FA;      /* Soft sky blue */
-  --blueprint-soft: rgba(96, 165, 250, 0.12);
-  --brass: #FBBF24;          /* Warm soothing amber */
-  --brass-soft: rgba(251, 191, 36, 0.12);
+  /* Night Mode (Deep Midnight Velvet with Luminous Neon Accents) */
+  --ink: #F1F5F9;           /* Slate-100: Crisp text */
+  --text: #F1F5F9;
+  --text-secondary: #94A3B8;/* Slate-400: Clear secondary */
+  --bg: #0B1120;             /* Midnight velvet background */
+  --card-bg: #141E33;        /* Elevated midnight slate surface */
+  --card-bg-alt: #1C2B45;    /* Distinct sub-container */
+  --brand-orange: #FB923C;
+  --brand-orange-soft: rgba(251, 146, 60, 0.14);
+  --blueprint: #3B82F6;      /* Electric sapphire blue */
+  --blueprint-soft: rgba(59, 130, 246, 0.14);
+  --indigo: #818CF8;
+  --indigo-soft: rgba(129, 140, 248, 0.14);
+  --purple: #A78BFA;
+  --purple-soft: rgba(167, 139, 250, 0.14);
+  --cyan: #38BDF8;
+  --cyan-soft: rgba(56, 189, 248, 0.14);
+  --brass: #FBBF24;          /* Vivid radiant amber */
+  --brass-soft: rgba(251, 191, 36, 0.14);
   --slate: #94A3B8;
-  --signal: #F87171;         /* Gentle coral red */
-  --signal-soft: rgba(248, 113, 113, 0.12);
-  --success: #34D399;        /* Soft mint emerald */
-  --success-soft: rgba(52, 211, 153, 0.12);
-  --border: rgba(148, 163, 184, 0.14);
-  --rule: rgba(148, 163, 184, 0.14);
+  --signal: #FB7185;         /* Vibrant rose coral */
+  --signal-soft: rgba(251, 113, 133, 0.14);
+  --success: #34D399;        /* Vivid neon mint */
+  --success-soft: rgba(52, 211, 153, 0.14);
+  --border: rgba(148, 163, 184, 0.12);
+  --rule: rgba(148, 163, 184, 0.12);
   --rule-strong: rgba(148, 163, 184, 0.22);
-  --tint: rgba(96, 165, 250, 0.08);
-  --tint-strong: rgba(96, 165, 250, 0.16);
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-  --sh1: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --sh2: 0 4px 12px rgba(0, 0, 0, 0.35);
-  --sh3: 0 20px 35px rgba(0, 0, 0, 0.45);
-  --sh-glow: 0 0 24px rgba(96, 165, 250, 0.18);
+  --tint: rgba(59, 130, 246, 0.10);
+  --tint-strong: rgba(59, 130, 246, 0.20);
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  --sh1: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --sh2: 0 4px 14px rgba(0, 0, 0, 0.40);
+  --sh3: 0 20px 40px rgba(0, 0, 0, 0.55);
+  --sh-glow: 0 0 28px rgba(59, 130, 246, 0.22);
+  --sh-orange-glow: 0 0 24px rgba(251, 146, 60, 0.24);
 }
 
 /* Application Layout & Scale Tokens --------------------------------------- */
@@ -128,17 +155,17 @@
   --s7: 48px;
 
   /* Executive rounded borders */
-  --r1: 6px;       /* Form controls, buttons, chips */
-  --r2: 10px;      /* Cards, panels, containers */
-  --r3: 14px;      /* Modals, floating popups */
+  --r1: 8px;       /* Form controls, buttons, chips */
+  --r2: 12px;      /* Cards, panels, containers */
+  --r3: 16px;      /* Modals, floating popups */
   --r-pill: 9999px;/* Status tags & pills */
 
   /* Control heights */
-  --ctl: 38px;
-  --ctl-sm: 30px;
+  --ctl: 40px;
+  --ctl-sm: 32px;
 
   /* Structural dimensions */
-  --topbar-h: 64px;
+  --topbar-h: 66px;
 
   /* Easing & Transition timing */
   --t: 180ms cubic-bezier(0.4, 0, 0.2, 1);

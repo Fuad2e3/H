@@ -228,37 +228,148 @@ OC.ui = (function () {
     };
   }
 
+  /* ---- reactions bar (react to todos & instructions) --------------------- */
+  var EMOJIS = ['👍', '❤️', '🔥', '👏', '🎉', '🚀', '👀', '✅'];
+
+  function reactionsBar(kind, item, onChange) {
+    var user = OC.store.user(OC.store.session());
+    if (!user || !item) return null;
+    var reactions = item.reactions || {};
+    var reactionKeys = Object.keys(reactions).filter(function (k) {
+      return Array.isArray(reactions[k]) && reactions[k].length > 0;
+    });
+
+    var wrap = h('div', { class: 'reactions-bar' });
+    var pickerPop = null;
+
+    function toggleReact(emoji) {
+      var list = (item.reactions && item.reactions[emoji]) || [];
+      var had = list.indexOf(user.id) > -1;
+      OC.store.mutate({
+        actor: user.id, action: kind + '.react',
+        target: item.title || (item.body ? item.body.slice(0, 40) : item.id),
+        detail: emoji + ' (' + (had ? 'removed' : 'added') + ') by ' + user.name
+      }, function () {
+        OC.store.react(kind, item.id, emoji, user.id);
+      });
+      if (onChange) onChange();
+      else OC.store.emit();
+    }
+
+    reactionKeys.forEach(function (emoji) {
+      var uids = reactions[emoji] || [];
+      var isReacted = uids.indexOf(user.id) > -1;
+      var names = uids.map(function (uid) {
+        var u = OC.store.user(uid);
+        return u ? u.name : uid;
+      }).join(', ');
+
+      var pill = h('button', {
+        type: 'button',
+        class: 'reaction-pill' + (isReacted ? ' active' : ''),
+        title: (names ? names + ' reacted with ' : 'Reacted with ') + emoji,
+        onClick: function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleReact(emoji);
+        }
+      }, [
+        h('span', { class: 'emoji' }, emoji),
+        h('span', { class: 'count' }, String(uids.length))
+      ]);
+      wrap.appendChild(pill);
+    });
+
+    var pickerBtn = h('button', {
+      type: 'button',
+      class: 'reaction-picker-btn',
+      title: 'Add reaction',
+      onClick: function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (pickerPop) {
+          pickerPop.remove();
+          pickerPop = null;
+          return;
+        }
+        pickerPop = h('div', { class: 'reaction-picker-pop' }, EMOJIS.map(function (em) {
+          return h('button', {
+            type: 'button',
+            class: 'reaction-emoji-btn',
+            title: 'React ' + em,
+            onClick: function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              toggleReact(em);
+              if (pickerPop) { pickerPop.remove(); pickerPop = null; }
+            }
+          }, em);
+        }));
+        wrap.appendChild(pickerPop);
+
+        var closeDoc = function (ev) {
+          if (pickerPop && !pickerPop.contains(ev.target) && ev.target !== pickerBtn) {
+            pickerPop.remove();
+            pickerPop = null;
+            document.removeEventListener('click', closeDoc);
+          }
+        };
+        setTimeout(function () { document.addEventListener('click', closeDoc); }, 0);
+      }
+    }, [
+      h('span', { class: 'icon-smile' }, '😀'),
+      h('span', { class: 'btn-label' }, '+ React')
+    ]);
+
+    wrap.appendChild(pickerBtn);
+    return wrap;
+  }
+
   /* ---- comment thread (5.0, Comment) ------------------------------------- */
   function commentThread(kind, item, onChange) {
+    var user = OC.store.user(OC.store.session());
+    if (!OC.can.canSeeComments(user, item)) return null;
+
     var label = 'Comment on ' + (item.title || String(item.body).slice(0, 40));
-    var body = h('input', { type: 'text', placeholder: 'add a comment', 'aria-label': label });
+    var body = h('input', { type: 'text', placeholder: 'add a comment...', 'aria-label': label });
     var count = (item.comments || []).length;
+    var deptObj = OC.store.department(item.department);
+    var deptName = deptObj ? deptObj.name : 'Department';
 
     var wrap = h('details', { class: 'thread' }, [
-      h('summary', {}, count ? count + (count === 1 ? ' comment' : ' comments') : 'Comment'),
+      h('summary', {}, [
+        h('span', {}, count ? count + (count === 1 ? ' comment' : ' comments') : 'Comment'),
+        h('span', { class: 'dept-visibility-tag' }, deptName + ' & Admin only')
+      ]),
       h('div', { class: 'thread-body' }, [
+        h('div', { class: 'dept-visibility-notice' }, [
+          OC.icon('lock'),
+          h('span', {}, 'Visible to ' + deptName + ' team members & System Admin only.')
+        ]),
         (item.comments || []).map(function (c) {
           return h('div', { class: 'comment' }, [
             h('div', { class: 'comment-by' }, [
               person(c.author, 'strong'),
               h('span', {}, fmtWhen(c.posted_at))
             ]),
-            h('div', {}, c.body)
+            h('div', { class: 'comment-body-text' }, c.body)
           ]);
         }),
         h('div', { class: 'comment-form' }, [
           body,
           h('button', {
-            class: 'btn small', type: 'button', onClick: function () {
+            class: 'btn small primary', type: 'button', onClick: function () {
               if (!body.value.trim()) return;
               var text = body.value.trim();
               OC.store.mutate({
-                actor: OC.store.session(), action: kind + '.comment',
-                target: item.title || item.body.slice(0, 40), detail: text
+                actor: user ? user.id : OC.store.session(), action: kind + '.comment',
+                target: item.title || (item.body ? item.body.slice(0, 40) : item.id), detail: text
               }, function () {
-                OC.store.comment(kind, item.id, text, OC.store.session());
+                OC.store.comment(kind, item.id, text, user ? user.id : OC.store.session());
               });
+              body.value = '';
               if (onChange) onChange();
+              else OC.store.emit();
             }
           }, 'Post')
         ])
@@ -485,7 +596,7 @@ OC.ui = (function () {
     initials: initials, mark: mark, person: person,
     STATE_LABEL: STATE_LABEL,
     field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
-    tagPicker: tagPicker, commentThread: commentThread,
+    tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
     modal: modal, confirm: confirm, toast: toast
   };
 })();

@@ -52,12 +52,19 @@ OC.people = (function () {
           label: 'Send invite', primary: true, onClick: function (close) {
             if (!name.value.trim()) return 'Enter a name.';
             if (!/.+@.+\..+/.test(email.value)) return 'Enter a valid email address.';
+            var inv = OC.store.issueInvite(user.id, {
+              email: email.value.trim(),
+              name: name.value.trim(),
+              department: deptSelect.value,
+              level: levelSelect.value
+            });
             var account = {
               id: OC.store.uid('u'), name: name.value.trim(), email: email.value.trim(),
               title: title.value.trim() || 'Team member', admin: false, status: 'invited',
               departments: [{ department: deptSelect.value, level: levelSelect.value }],
+              password: inv.passcode,
               prefs: { push: true, email: true, discord: false },
-              invite: OC.store.issueInvite(user.id)
+              invite: inv
             };
             OC.store.mutate({
               actor: user.id, action: 'user.invite', target: account.name,

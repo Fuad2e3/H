@@ -212,7 +212,7 @@ OC.app = (function () {
       title: 'Choose an account',
       content: h('div', { class: 'google-chooser-wrapper' }, [
         h('p', { class: 'muted', style: 'font-size:13px;margin-bottom:14px;' },
-          'to continue to Originate Solution (intrepid-precept-7qmt3):'),
+          'to continue to Originate Command:'),
         listContainer
       ]),
       actions: [
@@ -307,11 +307,11 @@ OC.app = (function () {
     var card = h('div', { class: 'login-portal-card' }, [
       h('div', { class: 'portal-brand-header' }, [
         h('div', { class: 'portal-logo-badge' }, [
-          h('span', { class: 'portal-logo-icon' }, 'M'),
-          h('span', { class: 'portal-logo-text' }, 'Originate Marketing')
+          h('span', { class: 'portal-logo-icon' }, 'OC'),
+          h('span', { class: 'portal-logo-text' }, 'Originate Command')
         ]),
-        h('h1', { class: 'portal-title' }, 'Originate Solution'),
-        h('p', { class: 'portal-tagline' }, 'OFFICIAL CONFIDENTIAL TEAM PORTAL')
+        h('h1', { class: 'portal-title' }, 'Originate Command'),
+        h('p', { class: 'portal-tagline' }, 'OFFICIAL COMMAND & TASK PORTAL')
       ]),
 
       errorBox,
@@ -335,7 +335,7 @@ OC.app = (function () {
       ]),
 
       h('div', { class: 'portal-footer-notice' }, [
-        h('p', {}, '© 2026 Originate Marketing. All rights reserved.'),
+        h('p', {}, '© 2026 Originate Command. All rights reserved.'),
         h('p', { class: 'portal-owner' }, 'Owner: Abdullah Al Fuad')
       ])
     ]);

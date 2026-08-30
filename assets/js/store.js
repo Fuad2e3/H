@@ -340,7 +340,12 @@ OC.store = (function () {
     issueInvite: function (byUserId) {
       var expires = new Date();
       expires.setHours(expires.getHours() + 72);
-      var passcode = 'OC-' + Math.floor(100000 + Math.random() * 900000);
+      var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+      var rand = '';
+      for (var i = 0; i < 8; i++) {
+        rand += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      var passcode = 'OC-' + rand;
       return {
         token: 'inv-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6),
         passcode: passcode,

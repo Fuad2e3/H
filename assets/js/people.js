@@ -89,6 +89,7 @@ OC.people = (function () {
           departmentName: deptObj ? deptObj.name : 'Development Operations',
           levelName: levelName,
           token: account.invite ? account.invite.token : '',
+          passcode: account.invite ? account.invite.passcode : '',
           appUrl: base
         })
       }).then(function (res) { return res.json(); }).then(function (data) {
@@ -135,11 +136,11 @@ OC.people = (function () {
   function resend(account) {
     var user = me();
     OC.store.mutate({ actor: user.id, action: 'user.invite.resend', target: account.name,
-                      detail: 'new single use link, 72 hour expiry' }, function () {
+                      detail: 'new single use link and 72-hr password' }, function () {
       account.invite = OC.store.issueInvite(user.id);
     });
     dispatchInviteEmail(account, true);
-    OC.ui.toast('A fresh link was issued. The previous one no longer works.');
+    OC.ui.toast('A fresh 72-hour link and passcode were issued.');
   }
 
   function revoke(account) {
@@ -184,6 +185,23 @@ OC.people = (function () {
             }
           }
         }, 'Copy Link'));
+
+        if (account.invite && account.invite.passcode) {
+          actions.push(h('button', {
+            class: 'btn small', type: 'button', onClick: function () {
+              if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(account.invite.passcode).then(function () {
+                  OC.ui.toast('72-Hour Password (' + account.invite.passcode + ') copied to clipboard!');
+                }).catch(function () {
+                  prompt('Copy 72-Hour Password:', account.invite.passcode);
+                });
+              } else {
+                prompt('Copy 72-Hour Password:', account.invite.passcode);
+              }
+            }
+          }, 'Copy Passcode'));
+        }
+
         actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { claim(account); } }, 'Simulate claim'));
       }
       actions.push(h('button', { class: 'btn small', type: 'button', onClick: function () { resend(account); } }, 'Resend'));
@@ -198,9 +216,12 @@ OC.people = (function () {
       h('div', { class: 'row' }, account.departments.map(function (m) {
         return h('span', { class: 'chip custom' }, (OC.store.department(m.department) || {}).name + ' · ' + m.level);
       })),
-      h('p', { class: 'mono muted', style: 'font-size:10.5px;margin-top:8px' },
-        'Token ' + account.invite.token + ' · issued by ' + OC.ui.personName(account.invite.issued_by) +
-        ' · expires ' + OC.ui.fmtDate(account.invite.expires_at)),
+      account.invite && account.invite.passcode ? h('p', { style: 'font-size:12.5px;color:var(--blueprint);margin:6px 0 2px;' }, [
+        '🔑 72-Hour Password: ',
+        h('strong', { class: 'mono', style: 'background:var(--card-bg-alt);padding:2px 6px;border-radius:4px;' }, account.invite.passcode)
+      ]) : null,
+      h('p', { class: 'mono muted', style: 'font-size:10.5px;margin-top:6px' },
+        'Token ' + account.invite.token + ' · expires ' + OC.ui.fmtDate(account.invite.expires_at) + ' (72 hrs)'),
       actions.length ? h('div', { class: 'row', style: 'margin-top:10px' }, actions) : null
     ]);
   }

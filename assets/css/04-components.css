@@ -1179,8 +1179,89 @@ dialog.modal.fallback {
   height: 20px;
 }
 
+.portal-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.portal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+}
+
+.portal-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.portal-field input {
+  height: 42px;
+  font-size: 13.5px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  background: var(--card-bg-alt);
+  color: var(--text);
+  box-sizing: border-box;
+  width: 100%;
+  transition: all var(--t);
+}
+
+.portal-field input:focus {
+  border-color: var(--blueprint);
+  outline: none;
+}
+
+.portal-submit-btn {
+  height: 44px;
+  background: var(--blueprint);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all var(--t);
+  margin-top: 4px;
+}
+
+.portal-submit-btn:hover {
+  background: #1D4ED8;
+  transform: translateY(-1px);
+}
+
+.portal-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 14px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.portal-divider::before, .portal-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
 .portal-footer-notice {
-  margin-top: 24px;
+  margin-top: 20px;
   font-size: 11px;
   color: var(--text-secondary);
   line-height: 1.5;

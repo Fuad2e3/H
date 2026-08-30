@@ -336,12 +336,14 @@ OC.store = (function () {
       emit();
     },
 
-    /* a single use link that expires 72 hours after it is issued (6.1) */
+    /* a single use link and password that expires 72 hours after it is issued (6.1) */
     issueInvite: function (byUserId) {
       var expires = new Date();
       expires.setHours(expires.getHours() + 72);
+      var passcode = 'OC-' + Math.floor(100000 + Math.random() * 900000);
       return {
         token: 'inv-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6),
+        passcode: passcode,
         issued_by: byUserId,
         issued_at: new Date().toISOString(),
         expires_at: expires.toISOString(),

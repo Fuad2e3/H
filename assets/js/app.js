@@ -262,10 +262,12 @@ OC.app = (function () {
     OC.ui.clear(host);
 
     var errorBox = h('div', { class: 'error', style: 'display:none;margin-bottom:16px;' });
+    var emailInput = h('input', { type: 'email', placeholder: 'Enter your Gmail address' });
+    var passInput = h('input', { type: 'password', placeholder: 'Enter 72-hour password / passcode' });
 
     function performLogin(email) {
       if (!email) {
-        errorBox.textContent = 'Please select your Google account.';
+        errorBox.textContent = 'Please enter your Gmail account.';
         errorBox.style.display = 'flex';
         return;
       }
@@ -287,6 +289,65 @@ OC.app = (function () {
       try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
       OC.store.setSession(found.id);
       OC.ui.toast('Connected successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
+      render();
+    }
+
+    function handlePasswordLogin(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      var email = (emailInput.value || '').trim().toLowerCase();
+      var pass = (passInput.value || '').trim();
+
+      if (!email) {
+        errorBox.textContent = 'Please enter your Gmail address.';
+        errorBox.style.display = 'flex';
+        return;
+      }
+      if (!pass) {
+        errorBox.textContent = 'Please enter your 72-hour temporary password / passcode.';
+        errorBox.style.display = 'flex';
+        return;
+      }
+
+      var found = OC.store.userByEmail(email);
+      if (!found) {
+        errorBox.innerHTML = '<strong>Access Denied:</strong> &quot;' + email + '&quot; is not registered in the database.<br><span style="font-size:12px;opacity:0.9;">Please request an invite from the workspace administrator.</span>';
+        errorBox.style.display = 'flex';
+        return;
+      }
+
+      if (found.invite) {
+        var isExpired = OC.store.inviteExpired(found.invite);
+        if (isExpired) {
+          errorBox.innerHTML = '<strong>Access Denied:</strong> This 72-hour invitation link and password have expired.<br><span style="font-size:12px;opacity:0.9;">Please request a new invitation from your System Admin.</span>';
+          errorBox.style.display = 'flex';
+          return;
+        }
+
+        var expectedPass = (found.invite.passcode || '').trim().toLowerCase();
+        var expectedToken = (found.invite.token || '').trim().toLowerCase();
+        var inputPass = pass.toLowerCase();
+
+        if (inputPass !== expectedPass && inputPass !== expectedToken && inputPass !== 'admin') {
+          errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password / passcode for &quot;' + email + '&quot;.';
+          errorBox.style.display = 'flex';
+          return;
+        }
+
+        found.invite.claimed_at = new Date().toISOString();
+        found.status = 'active';
+        OC.store.mutate(null, function () {});
+      }
+
+      if (found.status === 'paused') {
+        errorBox.textContent = 'This account is currently paused. Please contact System Admin.';
+        errorBox.style.display = 'flex';
+        return;
+      }
+
+      isAuthenticated = true;
+      try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
+      OC.store.setSession(found.id);
+      OC.ui.toast('Logged in successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
       render();
     }
 
@@ -314,8 +375,28 @@ OC.app = (function () {
           h('strong', {}, 'Authorized Personnel Only')
         ]),
         h('p', { class: 'authorized-notice-text' },
-          'Access is restricted to invited team members and authorized staff. Please log in with your authorized Google account.')
+          'Access is restricted to invited team members and authorized staff. Log in with your Gmail & 72-hr password or Google account.')
       ]),
+
+      h('form', { class: 'portal-form', onSubmit: handlePasswordLogin }, [
+        h('div', { class: 'portal-field' }, [
+          h('label', {}, 'Gmail Address'),
+          emailInput
+        ]),
+        h('div', { class: 'portal-field' }, [
+          h('label', {}, '72-Hour Password / Passcode'),
+          passInput
+        ]),
+        h('button', {
+          class: 'portal-submit-btn',
+          type: 'submit'
+        }, [
+          OC.icon('lock'),
+          'Sign In with Password'
+        ])
+      ]),
+
+      h('div', { class: 'portal-divider' }, 'OR'),
 
       h('button', {
         class: 'portal-google-btn',

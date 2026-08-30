@@ -319,7 +319,7 @@ OC.app = (function () {
 
       h('div', { class: 'portal-footer-notice' }, [
         h('p', {}, '© 2026 Originate Marketing. All rights reserved.'),
-        h('p', { class: 'portal-owner' }, 'Owner: vaemesbah@gmail.com')
+        h('p', { class: 'portal-owner' }, 'Owner: Abdullah Al Fuad')
       ])
     ]);
 

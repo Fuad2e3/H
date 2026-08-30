@@ -142,25 +142,31 @@ OC.app = (function () {
 
     var emailInput = h('input', {
       type: 'email',
-      placeholder: 'shohag@originate.example',
+      placeholder: 'shohag@originate.example or user@gmail.com',
       autocomplete: 'email',
       required: true,
       autofocus: true
     });
 
-    var errorBox = h('div', { class: 'error', style: 'display:none' });
-    var accounts = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
+    var errorBox = h('div', { class: 'error', style: 'display:none;margin-bottom:12px;' });
+    var adminUser = (OC.store.state.users || []).find(function (u) { return u.admin; });
 
     function performLogin(email) {
       if (!email) {
-        errorBox.textContent = 'Please enter your work email address.';
+        errorBox.textContent = 'Please enter your registered Gmail or work email address.';
         errorBox.style.display = 'flex';
         return;
       }
       var clean = email.trim().toLowerCase();
       var found = OC.store.userByEmail(clean);
       if (!found) {
-        errorBox.textContent = 'No account found with email "' + clean + '". Please check and try again.';
+        errorBox.innerHTML = '<strong>Access Denied:</strong> &quot;' + clean + '&quot; is not registered in the database.<br><span style="font-size:12px;opacity:0.9;">Only database-registered emails can connect. Please contact your System Admin for an invite.</span>';
+        errorBox.style.display = 'flex';
+        return;
+      }
+
+      if (found.status === 'paused') {
+        errorBox.textContent = 'This account is currently paused. Please contact System Admin.';
         errorBox.style.display = 'flex';
         return;
       }
@@ -168,7 +174,7 @@ OC.app = (function () {
       isAuthenticated = true;
       try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) {}
       OC.store.setSession(found.id);
-      OC.ui.toast('Welcome back, ' + found.name + '! (' + OC.can.roleLabel(found) + ')');
+      OC.ui.toast('Connected successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
       render();
     }
 
@@ -180,17 +186,32 @@ OC.app = (function () {
       }
     }, [
       errorBox,
-      OC.ui.field('Work Email Address', emailInput, {
-        hint: 'Enter your registered email address to access your workspace.'
+      OC.ui.field('Connected Gmail / Email Address', emailInput, {
+        hint: 'Connect your Gmail or work email. The system verifies your database record and loads your role permissions.'
       }),
-      h('button', { class: 'btn primary', type: 'submit' }, 'Log In / Continue')
+      h('button', { class: 'btn primary connect-btn', type: 'submit' }, [
+        OC.icon('google'),
+        'Connect with Gmail / Email'
+      ]),
+      adminUser ? h('div', { class: 'admin-quick-connect', style: 'margin-top:14px;text-align:center;' }, [
+        h('p', { class: 'muted', style: 'font-size:11.5px;margin-bottom:6px;' }, 'Database Registered System Admin:'),
+        h('button', {
+          class: 'btn small',
+          type: 'button',
+          style: 'font-size:12px;border-radius:20px;padding:4px 12px;',
+          onClick: function () {
+            emailInput.value = adminUser.email;
+            performLogin(adminUser.email);
+          }
+        }, [OC.icon('check'), ' ' + adminUser.name + ' (' + adminUser.email + ')'])
+      ]) : null
     ]);
 
     var card = h('div', { class: 'login-card' }, [
       h('div', { class: 'login-brand' }, [
         h('div', { class: 'mark' }, 'OC'),
-        h('h1', {}, 'Sign In to Originate Command'),
-        h('p', {}, 'Direct email authentication on local server.')
+        h('h1', {}, 'Connect to Originate Command'),
+        h('p', {}, 'Database-verified Gmail & email authentication.')
       ]),
       form
     ]);

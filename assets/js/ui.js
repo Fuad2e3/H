@@ -252,6 +252,29 @@ OC.ui = (function () {
       }, function () {
         OC.store.react(kind, item.id, emoji, user.id);
       });
+
+      // Targeted notification: Send ONLY to concerned owner/assignee, NOT everyone
+      if (!had) {
+        var targets = [];
+        if (kind === 'todo') {
+          if (item.created_by) targets.push(item.created_by);
+          if (item.assignee_type === 'user' && item.assignee) targets.push(item.assignee);
+          else if (item.assignee_type === 'group' && item.assignee) {
+            var g = OC.store.group(item.assignee);
+            if (g && g.members) targets = targets.concat(g.members);
+          }
+        } else if (kind === 'instruction') {
+          if (item.author) targets.push(item.author);
+        }
+        targets = targets.filter(function (uid, idx, arr) {
+          return uid && uid !== user.id && arr.indexOf(uid) === idx;
+        });
+        if (targets.length) {
+          var itemTitle = kind === 'todo' ? item.title : (item.body ? item.body.slice(0, 35) + '…' : 'instruction');
+          OC.store.notify(targets, user.name + ' reacted ' + emoji + ' on ' + (kind === 'todo' ? 'todo: "' + itemTitle + '"' : 'instruction: "' + itemTitle + '"'), item.id);
+        }
+      }
+
       if (onChange) onChange();
       else OC.store.emit();
     }
@@ -426,6 +449,34 @@ OC.ui = (function () {
               }, function () {
                 OC.store.comment(kind, item.id, text, user ? user.id : OC.store.session());
               });
+
+              // Targeted notification: Send ONLY to concerned owner, assignee, and thread participants
+              var targets = [];
+              if (kind === 'todo') {
+                if (item.created_by) targets.push(item.created_by);
+                if (item.assignee_type === 'user' && item.assignee) targets.push(item.assignee);
+                else if (item.assignee_type === 'group' && item.assignee) {
+                  var g = OC.store.group(item.assignee);
+                  if (g && g.members) targets = targets.concat(g.members);
+                }
+              } else if (kind === 'instruction') {
+                if (item.author) targets.push(item.author);
+              }
+              (item.comments || []).forEach(function (c) {
+                if (c.author) targets.push(c.author);
+              });
+
+              var curUid = user ? user.id : OC.store.session();
+              var curName = user ? user.name : 'Someone';
+              targets = targets.filter(function (uid, idx, arr) {
+                return uid && uid !== curUid && arr.indexOf(uid) === idx;
+              });
+
+              if (targets.length) {
+                var itemTitle = kind === 'todo' ? item.title : (item.body ? item.body.slice(0, 35) + '…' : 'instruction');
+                OC.store.notify(targets, curName + ' commented on ' + (kind === 'todo' ? 'todo: "' + itemTitle + '"' : 'instruction: "' + itemTitle + '"'), item.id);
+              }
+
               body.value = '';
               if (onChange) onChange();
               else OC.store.emit();

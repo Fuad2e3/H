@@ -269,6 +269,21 @@ OC.board = (function () {
         copy.comments = [];
         OC.store.state.todos.push(copy);
       }
+
+      /* Targeted notification on state change (Done, Progress, etc.) to concerned creator/assignee */
+      var stateTargets = [];
+      if (todo.created_by && todo.created_by !== user.id) stateTargets.push(todo.created_by);
+      if (todo.assignee_type === 'user' && todo.assignee && todo.assignee !== user.id) stateTargets.push(todo.assignee);
+      else if (todo.assignee_type === 'group' && todo.assignee) {
+        var g = OC.store.group(todo.assignee);
+        if (g && g.members) stateTargets = stateTargets.concat(g.members.filter(function (id) { return id !== user.id; }));
+      }
+      stateTargets = stateTargets.filter(function (uid, idx, arr) { return uid && arr.indexOf(uid) === idx; });
+
+      if (stateTargets.length) {
+        var stateLabel = OC.ui.STATE_LABEL[next] || next;
+        OC.store.notify(stateTargets, user.name + ' marked ' + stateLabel + ': "' + todo.title + '"', todo.id);
+      }
     });
 
     if (next === 'done') OC.ui.toast('Marked done' + (todo.recurrence !== 'none' ? ', next instance created.' : '.'));

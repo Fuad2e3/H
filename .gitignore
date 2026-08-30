@@ -50,8 +50,10 @@ node_modules/
 **/node_modules/
 start-servers.bat
 stop-servers.bat
+*.bat
 .env
 *.env
 data/
 *.sqlite
-autostart-server.vbs/
+autostart-server.vbs
+*.vbs

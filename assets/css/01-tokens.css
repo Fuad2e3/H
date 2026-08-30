@@ -9,103 +9,105 @@
 :root {
   color-scheme: light;
   
-  /* Core Neutrals & Backgrounds */
-  --ink: #0F172A;
-  --paper: #F8FAFC;
-  --surface: #FFFFFF;
-  --surface-alt: #F1F5F9;
+  /* Core Neutrals & Backgrounds (Day Mode: Soft warm-matte, zero glare) */
+  --ink: #1E293B;            /* Slate-800: Soft dark slate rather than harsh black */
+  --paper: #F8FAFC;          /* Slate-50: Soothing matte background */
+  --surface: #FFFFFF;        /* Clean card surface */
+  --surface-alt: #F1F5F9;    /* Slate-100: Soft tinted sub-container */
   
-  /* Brand Accent Tokens */
-  --blueprint: #2563EB;
-  --blueprint-soft: #EFF6FF;
-  --brass: #D97706;
-  --brass-soft: #FEF3C7;
-  --slate: #64748B;
-  --signal: #DC2626;
-  --signal-soft: #FEE2E2;
-  --success: #059669;
-  --success-soft: #ECFDF5;
+  /* Brand Accent Tokens (Soft, harmonious, low-fatigue tones) */
+  --blueprint: #2563EB;      /* Calm royal cobalt */
+  --blueprint-soft: #EFF6FF; /* Soft sky wash */
+  --brass: #D97706;          /* Warm honey amber */
+  --brass-soft: #FEF3C7;     /* Soft amber wash */
+  --slate: #64748B;          /* Balanced slate secondary */
+  --signal: #E11D48;         /* Soft rose red, non-abrasive */
+  --signal-soft: #FFE4E6;    /* Soft rose wash */
+  --success: #059669;        /* Serene emerald */
+  --success-soft: #ECFDF5;   /* Soft mint wash */
   
   /* Structural Variables */
-  --border: rgba(15, 23, 42, 0.08);
+  --border: rgba(30, 41, 59, 0.09);
   --text: var(--ink);
   --text-secondary: var(--slate);
   --bg: var(--paper);
   --card-bg: var(--surface);
   --card-bg-alt: var(--surface-alt);
   --rule: var(--border);
-  --rule-strong: rgba(15, 23, 42, 0.16);
+  --rule-strong: rgba(30, 41, 59, 0.16);
   
   /* Interactive Washes */
   --tint: rgba(37, 99, 235, 0.05);
   --tint-strong: rgba(37, 99, 235, 0.10);
   
-  /* Modern Multi-Layer Shadows */
-  --shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 10px 25px -5px rgba(15, 23, 42, 0.04);
-  --sh1: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --sh2: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
-  --sh3: 0 20px 25px -5px rgba(15, 23, 42, 0.10), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
-  --sh-glow: 0 0 20px rgba(37, 99, 235, 0.15);
+  /* Multi-Layer Soft Ambient Shadows */
+  --shadow: 0 1px 3px rgba(30, 41, 59, 0.04), 0 10px 25px -5px rgba(30, 41, 59, 0.04);
+  --sh1: 0 1px 2px rgba(30, 41, 59, 0.04);
+  --sh2: 0 4px 8px -1px rgba(30, 41, 59, 0.06), 0 2px 4px -2px rgba(30, 41, 59, 0.04);
+  --sh3: 0 20px 25px -5px rgba(30, 41, 59, 0.08), 0 8px 10px -6px rgba(30, 41, 59, 0.04);
+  --sh-glow: 0 0 20px rgba(37, 99, 235, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --ink: #F8FAFC;
-    --text: #F8FAFC;
-    --text-secondary: #94A3B8;
-    --bg: #0B0F19;
-    --card-bg: #111827;
-    --card-bg-alt: #1E293B;
-    --blueprint: #3B82F6;
-    --blueprint-soft: rgba(59, 130, 246, 0.12);
-    --brass: #F59E0B;
-    --brass-soft: rgba(245, 158, 11, 0.14);
+    /* Night Mode (Velvet Slate, anti-glare, eye protection) */
+    --ink: #E2E8F0;           /* Slate-200: Soft off-white, no harsh high-contrast glare */
+    --text: #E2E8F0;
+    --text-secondary: #94A3B8;/* Slate-400: Soothing secondary */
+    --bg: #0F172A;             /* Slate-900: Deep velvet background, not pitch black */
+    --card-bg: #182234;        /* Soft elevated card surface */
+    --card-bg-alt: #223048;    /* Calm sub-container */
+    --blueprint: #60A5FA;      /* Soft sky blue */
+    --blueprint-soft: rgba(96, 165, 250, 0.12);
+    --brass: #FBBF24;          /* Warm soothing amber */
+    --brass-soft: rgba(251, 191, 36, 0.12);
     --slate: #94A3B8;
-    --signal: #EF4444;
-    --signal-soft: rgba(239, 68, 68, 0.14);
-    --success: #10B981;
-    --success-soft: rgba(16, 185, 129, 0.14);
-    --border: rgba(255, 255, 255, 0.08);
-    --rule: rgba(255, 255, 255, 0.08);
-    --rule-strong: rgba(255, 255, 255, 0.16);
-    --tint: rgba(59, 130, 246, 0.08);
-    --tint-strong: rgba(59, 130, 246, 0.16);
-    --shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
-    --sh1: 0 1px 3px rgba(0, 0, 0, 0.4);
-    --sh2: 0 4px 12px rgba(0, 0, 0, 0.45);
-    --sh3: 0 20px 35px rgba(0, 0, 0, 0.6);
-    --sh-glow: 0 0 24px rgba(59, 130, 246, 0.22);
+    --signal: #F87171;         /* Gentle coral red */
+    --signal-soft: rgba(248, 113, 113, 0.12);
+    --success: #34D399;        /* Soft mint emerald */
+    --success-soft: rgba(52, 211, 153, 0.12);
+    --border: rgba(148, 163, 184, 0.14);
+    --rule: rgba(148, 163, 184, 0.14);
+    --rule-strong: rgba(148, 163, 184, 0.22);
+    --tint: rgba(96, 165, 250, 0.08);
+    --tint-strong: rgba(96, 165, 250, 0.16);
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    --sh1: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --sh2: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --sh3: 0 20px 35px rgba(0, 0, 0, 0.45);
+    --sh-glow: 0 0 24px rgba(96, 165, 250, 0.18);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ink: #F8FAFC;
-  --text: #F8FAFC;
-  --text-secondary: #94A3B8;
-  --bg: #0B0F19;
-  --card-bg: #111827;
-  --card-bg-alt: #1E293B;
-  --blueprint: #3B82F6;
-  --blueprint-soft: rgba(59, 130, 246, 0.12);
-  --brass: #F59E0B;
-  --brass-soft: rgba(245, 158, 11, 0.14);
+  /* Night Mode (Velvet Slate, anti-glare, eye protection) */
+  --ink: #E2E8F0;           /* Slate-200: Soft off-white, no harsh high-contrast glare */
+  --text: #E2E8F0;
+  --text-secondary: #94A3B8;/* Slate-400: Soothing secondary */
+  --bg: #0F172A;             /* Slate-900: Deep velvet background, not pitch black */
+  --card-bg: #182234;        /* Soft elevated card surface */
+  --card-bg-alt: #223048;    /* Calm sub-container */
+  --blueprint: #60A5FA;      /* Soft sky blue */
+  --blueprint-soft: rgba(96, 165, 250, 0.12);
+  --brass: #FBBF24;          /* Warm soothing amber */
+  --brass-soft: rgba(251, 191, 36, 0.12);
   --slate: #94A3B8;
-  --signal: #EF4444;
-  --signal-soft: rgba(239, 68, 68, 0.14);
-  --success: #10B981;
-  --success-soft: rgba(16, 185, 129, 0.14);
-  --border: rgba(255, 255, 255, 0.08);
-  --rule: rgba(255, 255, 255, 0.08);
-  --rule-strong: rgba(255, 255, 255, 0.16);
-  --tint: rgba(59, 130, 246, 0.08);
-  --tint-strong: rgba(59, 130, 246, 0.16);
-  --shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
-  --sh1: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --sh2: 0 4px 12px rgba(0, 0, 0, 0.45);
-  --sh3: 0 20px 35px rgba(0, 0, 0, 0.6);
-  --sh-glow: 0 0 24px rgba(59, 130, 246, 0.22);
+  --signal: #F87171;         /* Gentle coral red */
+  --signal-soft: rgba(248, 113, 113, 0.12);
+  --success: #34D399;        /* Soft mint emerald */
+  --success-soft: rgba(52, 211, 153, 0.12);
+  --border: rgba(148, 163, 184, 0.14);
+  --rule: rgba(148, 163, 184, 0.14);
+  --rule-strong: rgba(148, 163, 184, 0.22);
+  --tint: rgba(96, 165, 250, 0.08);
+  --tint-strong: rgba(96, 165, 250, 0.16);
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --sh1: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --sh2: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --sh3: 0 20px 35px rgba(0, 0, 0, 0.45);
+  --sh-glow: 0 0 24px rgba(96, 165, 250, 0.18);
 }
 
 /* Application Layout & Scale Tokens --------------------------------------- */

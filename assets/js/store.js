@@ -50,7 +50,7 @@ OC.store = (function () {
       { id: 'd-leadgen',  name: 'Lead Generation',         levels: ['head', 'member'] },
       { id: 'd-outreach', name: 'Outreach Operations',     levels: ['head', 'member'] },
       { id: 'd-social',   name: 'Social Media Management', levels: ['head', 'member'] },
-      { id: 'd-web',      name: 'Web Development',         levels: ['head', 'member'] }
+      { id: 'd-web',      name: 'Development Operations',  levels: ['head', 'member'] }
     ];
 
     var users = [

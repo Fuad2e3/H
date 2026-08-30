@@ -1,7 +1,8 @@
 /* =========================================================================
-   app.js — application shell & direct authentication
-   Boots the store, draws the top bar and navigation, routes between views,
-   handles direct email login, invite activation, and re-renders on store changes.
+   app.js — application shell, authentication & routing
+   Boots the store, shows direct email login screen on startup,
+   draws the top bar and navigation, routes between views,
+   handles invite activation, and re-renders on store changes.
    Originate Command · application
    ========================================================================= */
 
@@ -13,6 +14,8 @@ OC.app = (function () {
   function h() { return OC.ui.h.apply(null, arguments); }
 
   var route = 'dashboard';
+  var AUTH_KEY = 'oc-authenticated-user';
+  var isAuthenticated = false;
 
   var ROUTES = [
     { id: 'dashboard', label: 'Dashboard', view: function () { return OC.dashboard; } },
@@ -44,7 +47,7 @@ OC.app = (function () {
   /* ---- browser push (9.1) ------------------------------------------------ */
   var lastSeenNotification = null;
 
-  function pushSupported() { return 'Notification' in window; }
+  function pushSupported() { return typeof window !== 'undefined' && 'Notification' in window; }
 
   function askForPush() {
     if (!pushSupported()) { OC.ui.toast('This browser has no notification support.', true); return; }
@@ -70,7 +73,6 @@ OC.app = (function () {
     } catch (e) {}
   }
 
-  /* the state of the browser push channel, shown where notifications are */
   function pushRow() {
     if (!pushSupported()) {
       return h('div', { class: 'pushrow' }, [OC.icon('alert'),
@@ -134,55 +136,91 @@ OC.app = (function () {
     });
   }
 
-  /* ---- Direct Email Login Modal (No Tunnel Required) -------------------- */
-  function openLoginModal() {
-    var emailInput = h('input', { type: 'email', placeholder: 'name@originate.example', autofocus: true });
-    var accounts = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
-    var quickSelect = OC.ui.select(
-      [{ value: '', label: '-- Or pick an active account --' }].concat(
-        accounts.map(function (u) { return { value: u.id, label: u.name + ' (' + u.email + ')' }; })
-      ),
-      ''
-    );
+  /* ---- Dedicated Initial Login Screen ----------------------------------- */
+  function renderLoginScreen(host) {
+    OC.ui.clear(host);
 
-    OC.ui.modal({
-      title: 'Direct Login',
-      content: h('div', {}, [
-        h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:14px' },
-          'Log in directly with your email address on the local server without needing any external tunnel.'),
-        OC.ui.field('Your Email Address', emailInput, { hint: 'Enter your registered Originate Command email.' }),
-        h('div', { style: 'margin-top:14px' }, [
-          h('label', { class: 'field-label', style: 'font-size:12px;font-weight:600;margin-bottom:4px;display:block' }, 'Quick Switch Account'),
-          quickSelect
-        ])
-      ]),
-      actions: [
-        { label: 'Cancel', onClick: function (close) { close(); } },
-        {
-          label: 'Log in', primary: true, onClick: function (close) {
-            var selectedId = quickSelect.value;
-            if (selectedId) {
-              OC.store.setSession(selectedId);
-              OC.ui.toast('Logged in as ' + (OC.store.user(selectedId) || {}).name);
-              close();
-              return;
-            }
-
-            var email = emailInput.value.trim().toLowerCase();
-            if (!email) return 'Please enter your email or select an account.';
-
-            var found = OC.store.userByEmail(email);
-            if (!found) {
-              return 'No account found for ' + email + '. Check People tab for registered emails.';
-            }
-
-            OC.store.setSession(found.id);
-            OC.ui.toast('Logged in as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
-            close();
-          }
-        }
-      ]
+    var emailInput = h('input', {
+      type: 'email',
+      placeholder: 'shohag@originate.example',
+      autocomplete: 'email',
+      required: true,
+      autofocus: true
     });
+
+    var errorBox = h('div', { class: 'error', style: 'display:none' });
+    var accounts = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
+
+    function performLogin(email) {
+      if (!email) {
+        errorBox.textContent = 'Please enter your work email address.';
+        errorBox.style.display = 'flex';
+        return;
+      }
+      var clean = email.trim().toLowerCase();
+      var found = OC.store.userByEmail(clean);
+      if (!found) {
+        errorBox.textContent = 'No account found with email "' + clean + '". Please check and try again.';
+        errorBox.style.display = 'flex';
+        return;
+      }
+
+      isAuthenticated = true;
+      try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) {}
+      OC.store.setSession(found.id);
+      OC.ui.toast('Welcome back, ' + found.name + '! (' + OC.can.roleLabel(found) + ')');
+      render();
+    }
+
+    var form = h('form', {
+      class: 'login-form',
+      onSubmit: function (e) {
+        e.preventDefault();
+        performLogin(emailInput.value);
+      }
+    }, [
+      errorBox,
+      OC.ui.field('Work Email Address', emailInput, {
+        hint: 'Enter your registered email address to access your workspace.'
+      }),
+      h('button', { class: 'btn primary', type: 'submit' }, 'Log In / Continue')
+    ]);
+
+    var accountsList = h('div', { class: 'login-accounts' }, accounts.map(function (u) {
+      return h('button', {
+        type: 'button',
+        class: 'login-account-btn',
+        onClick: function () {
+          emailInput.value = u.email;
+          performLogin(u.email);
+        }
+      }, [
+        h('span', { class: 'mark-tint tint-blueprint' }, u.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2)),
+        h('span', { class: 'acc-name' }, u.name),
+        h('span', { class: 'acc-email' }, u.email)
+      ]);
+    }));
+
+    var card = h('div', { class: 'login-card' }, [
+      h('div', { class: 'login-brand' }, [
+        h('div', { class: 'mark' }, 'OC'),
+        h('h1', {}, 'Sign In to Originate Command'),
+        h('p', {}, 'Direct email authentication on local server (no external tunnel needed).')
+      ]),
+      form,
+      h('div', { class: 'login-divider' }, 'Or Choose Registered Account'),
+      accountsList
+    ]);
+
+    var screen = h('div', { class: 'login-screen' }, [card]);
+    OC.ui.append(host, screen);
+  }
+
+  function logout() {
+    isAuthenticated = false;
+    try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
+    OC.ui.toast('Logged out successfully.');
+    render();
   }
 
   /* ---- Invite Token Claim Handler (#claim=token) ----------------------- */
@@ -230,6 +268,8 @@ OC.app = (function () {
                 target.status = 'active';
                 target.invite.claimed_at = new Date().toISOString();
               });
+              isAuthenticated = true;
+              try { localStorage.setItem(AUTH_KEY, target.id); } catch (e) {}
               OC.store.setSession(target.id);
               OC.ui.toast('Welcome, ' + target.name + '! Your account is now active.');
               location.hash = '#dashboard';
@@ -253,7 +293,10 @@ OC.app = (function () {
       user.id,
       {
         'aria-label': 'Signed in as',
-        onChange: function (e) { OC.store.setSession(e.target.value); }
+        onChange: function (e) {
+          OC.store.setSession(e.target.value);
+          try { localStorage.setItem(AUTH_KEY, e.target.value); } catch (err) {}
+        }
       }
     );
 
@@ -283,7 +326,12 @@ OC.app = (function () {
         h('span', { class: 'mono muted', style: 'font-size:11px' }, 'Viewing as'),
         switcher
       ]),
-      h('button', { class: 'btn small', type: 'button', onClick: openLoginModal, style: 'font-size:12px;padding:4px 10px' }, 'Login / Email'),
+      h('button', {
+        class: 'btn small',
+        type: 'button',
+        onClick: logout,
+        style: 'font-size:12px;padding:4px 10px'
+      }, [OC.icon('logout'), 'Logout / Switch']),
       h('button', {
         class: 'iconbtn', type: 'button', onClick: openNotifications,
         'aria-label': 'Notifications' + (unread ? ', ' + unread + ' unread' : '')
@@ -305,7 +353,7 @@ OC.app = (function () {
   /* ---- routing ---------------------------------------------------------- */
   function go(id) {
     route = id;
-    if (location.hash.slice(1) !== id) location.hash = id;
+    if (typeof location !== 'undefined' && location.hash.slice(1) !== id) location.hash = id;
     render();
   }
 
@@ -315,7 +363,15 @@ OC.app = (function () {
   }
 
   function render() {
-    var root = document.getElementById('root');
+    var root = typeof document !== 'undefined' ? document.getElementById('root') : null;
+    if (!root) return;
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      renderLoginScreen(root);
+      return;
+    }
+
     OC.ui.clear(root);
     var page = h('main', { class: 'page', id: 'page' });
     OC.ui.append(root, [topbar(), nav(), page]);
@@ -327,7 +383,16 @@ OC.app = (function () {
   function start() {
     OC.store.load();
 
-    var label = document.getElementById('backendLabel');
+    var savedAuth = null;
+    try { savedAuth = localStorage.getItem(AUTH_KEY); } catch (e) {}
+    if (savedAuth && OC.store.user(savedAuth)) {
+      isAuthenticated = true;
+      OC.store.setSession(savedAuth);
+    } else {
+      isAuthenticated = false;
+    }
+
+    var label = typeof document !== 'undefined' ? document.getElementById('backendLabel') : null;
     if (label && OC.backend) {
       var backend = OC.backend.describe();
       label.textContent = backend.label;
@@ -338,21 +403,23 @@ OC.app = (function () {
     if (saved && THEMES.indexOf(saved) > -1) themeIndex = THEMES.indexOf(saved);
     applyTheme(null);
 
-    var hash = location.hash.slice(1);
-    if (hash && hash.indexOf('claim=') === 0) {
-      checkClaimToken();
-    } else if (hash && ROUTES.some(function (r) { return r.id === hash; })) {
-      route = hash;
-    }
-
-    window.addEventListener('hashchange', function () {
-      var id = location.hash.slice(1);
-      if (id && id.indexOf('claim=') === 0) {
+    if (typeof location !== 'undefined') {
+      var hash = location.hash.slice(1);
+      if (hash && hash.indexOf('claim=') === 0) {
         checkClaimToken();
-      } else if (id && ROUTES.some(function (r) { return r.id === id; }) && id !== route) {
-        go(id);
+      } else if (hash && ROUTES.some(function (r) { return r.id === hash; })) {
+        route = hash;
       }
-    });
+
+      window.addEventListener('hashchange', function () {
+        var id = location.hash.slice(1);
+        if (id && id.indexOf('claim=') === 0) {
+          checkClaimToken();
+        } else if (id && ROUTES.some(function (r) { return r.id === id; }) && id !== route) {
+          go(id);
+        }
+      });
+    }
 
     OC.store.onChange(render);
     render();
@@ -361,9 +428,15 @@ OC.app = (function () {
   return {
     start: start,
     go: go,
-    openLogin: openLoginModal,
+    logout: logout,
+    renderLogin: function () {
+      var root = typeof document !== 'undefined' ? document.getElementById('root') : null;
+      if (root) renderLoginScreen(root);
+    },
     reset: function () { OC.store.reset(); }
   };
 })();
 
-document.addEventListener('DOMContentLoaded', OC.app.start);
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', OC.app.start);
+}

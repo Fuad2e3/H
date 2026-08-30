@@ -1,7 +1,7 @@
 /* =========================================================================
    04-components.css — Modern Reusable Interface Pieces (OM SRS 001)
    Chips, segmented controls, stat cards, interactive items, filters,
-   tables, modal dialogs, and toasts.
+   tables, modal dialogs, toasts, and dedicated Login Screen.
    Originate Command · application
    ========================================================================= */
 
@@ -999,5 +999,157 @@ dialog.modal.fallback {
 }
 
 .item .meta .due {
+  margin-left: auto;
+}
+
+/* ---- Login Screen (Initial Direct Screen) -------------------------------- */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s4);
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+.login-screen::after {
+  content: "";
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r3);
+  box-shadow: var(--sh3);
+  padding: 36px 32px;
+  animation: login-in 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes login-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: var(--s5);
+}
+.login-brand .mark {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r2);
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--blueprint), #1D4ED8);
+  color: #FFFFFF;
+  font-family: 'Zilla Slab', serif;
+  font-size: 22px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+  margin-bottom: var(--s3);
+}
+.login-brand h1 {
+  font-size: 23px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.login-brand p {
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.login-form .field {
+  margin: 0;
+}
+.login-form input {
+  height: 42px;
+  font-size: 14px;
+  padding: 0 14px;
+}
+.login-form .btn.primary {
+  height: 42px;
+  font-size: 14.5px;
+  font-weight: 600;
+  width: 100%;
+}
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin: var(--s4) 0 var(--s3);
+  color: var(--text-secondary);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.login-divider::before, .login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+.login-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.login-account-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--card-bg-alt);
+  border: 1px solid var(--rule);
+  border-radius: var(--r1);
+  color: var(--text);
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--t);
+  width: 100%;
+}
+.login-account-btn:hover {
+  background: var(--tint);
+  border-color: var(--blueprint);
+  transform: translateY(-1px);
+}
+.login-account-btn .acc-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+.login-account-btn .acc-email {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
   margin-left: auto;
 }

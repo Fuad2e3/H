@@ -62,11 +62,12 @@ OC.reports = (function () {
   }
 
   function exportAudit(auditLogs) {
-    var rows = [['When', 'Actor', 'Action', 'Target', 'Detail']];
+    var rows = [['When', 'Actor', 'IP Address', 'Action', 'Target', 'Detail']];
     auditLogs.forEach(function (a) {
       rows.push([
         a.at,
         OC.ui.personName(a.actor),
+        a.ip || '127.0.0.1',
         a.action,
         a.target,
         a.detail || ''
@@ -213,6 +214,7 @@ OC.reports = (function () {
           h('thead', {}, h('tr', {}, [
             h('th', { scope: 'col' }, 'When'),
             h('th', { scope: 'col' }, 'Actor'),
+            h('th', { scope: 'col' }, 'IP Address'),
             h('th', { scope: 'col' }, 'Action'),
             h('th', { scope: 'col' }, 'Target'),
             h('th', { scope: 'col' }, 'Detail')
@@ -221,12 +223,13 @@ OC.reports = (function () {
             return h('tr', {}, [
               h('td', { class: 'mono' }, OC.ui.fmtWhen(a.at)),
               h('td', {}, OC.ui.personName(a.actor)),
+              h('td', { class: 'mono' }, a.ip ? h('span', { class: 'chip mono' }, a.ip) : h('span', { class: 'muted' }, '—')),
               h('td', { class: 'mono' }, a.action),
               h('td', {}, a.target),
               h('td', { class: 'muted' }, a.detail || '—')
             ]);
           }) : [
-            h('tr', {}, h('td', { colspan: '5', class: 'muted', style: 'text-align:center; padding:20px;' }, 'No historical log entries recorded.'))
+            h('tr', {}, h('td', { colspan: '6', class: 'muted', style: 'text-align:center; padding:20px;' }, 'No historical log entries recorded.'))
           ])
         ])
       ]),

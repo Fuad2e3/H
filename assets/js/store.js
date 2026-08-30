@@ -62,6 +62,7 @@ OC.store = (function () {
         admin: true,
         departments: [],
         status: 'active',
+        password: 'OC-984210',
         prefs: { push: true, email: true, discord: true },
         invite: null
       },
@@ -73,6 +74,7 @@ OC.store = (function () {
         admin: true,
         departments: [],
         status: 'active',
+        password: 'OC-984210',
         prefs: { push: true, email: true, discord: true },
         invite: null
       },

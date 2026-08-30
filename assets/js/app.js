@@ -266,22 +266,8 @@ OC.app = (function () {
 
   /* ---- chrome ----------------------------------------------------------- */
   function topbar() {
-    var user = OC.store.user(OC.store.session()) || { id: 'u-shohag', name: 'User' };
+    var user = OC.store.user(OC.store.session()) || { id: 'u-shohag', name: 'User', email: 'shohag@originate.example' };
     var unread = myNotifications().filter(function (n) { return !n.read; }).length;
-
-    var switcher = OC.ui.select(
-      (OC.store.state.users || [])
-        .filter(function (u) { return u.status === 'active'; })
-        .map(function (u) { return { value: u.id, label: u.name + ' — ' + OC.can.roleLabel(u) }; }),
-      user.id,
-      {
-        'aria-label': 'Signed in as',
-        onChange: function (e) {
-          OC.store.setSession(e.target.value);
-          try { localStorage.setItem(AUTH_KEY, e.target.value); } catch (err) {}
-        }
-      }
-    );
 
     var THEME_ICONS = ['monitor', 'moon', 'sun'];
     function paintThemeButton(btn) {
@@ -297,6 +283,8 @@ OC.app = (function () {
       writeTheme(THEMES[themeIndex]);
     });
 
+    var userInitials = (user.name || 'User').split(' ').map(function(w){return w[0];}).join('').slice(0,2);
+
     return h('header', { class: 'topbar' }, [
       h('a', { class: 'brand', href: '#dashboard' }, [
         h('span', { class: 'mark' }, 'OC'),
@@ -305,16 +293,19 @@ OC.app = (function () {
           h('span', {}, 'OM SRS 001')
         ])
       ]),
-      h('div', { class: 'who push' }, [
-        h('span', { class: 'mono muted', style: 'font-size:11px' }, 'Viewing as'),
-        switcher
+      h('div', { class: 'who push', style: 'display:flex;align-items:center;gap:10px;' }, [
+        h('span', { class: 'mark-tint tint-blueprint', style: 'width:26px;height:26px;font-size:10.5px;font-weight:700;' }, userInitials),
+        h('div', { style: 'display:flex;flex-direction:column;line-height:1.2;' }, [
+          h('strong', { style: 'font-size:13px;color:var(--ink);font-weight:600;' }, user.name),
+          h('span', { class: 'mono muted', style: 'font-size:11px;' }, user.email + ' (' + OC.can.roleLabel(user) + ')')
+        ])
       ]),
       h('button', {
         class: 'btn small',
         type: 'button',
         onClick: logout,
-        style: 'font-size:12px;padding:4px 10px'
-      }, [OC.icon('logout'), 'Logout / Switch']),
+        style: 'font-size:12px;padding:4px 11px;'
+      }, [OC.icon('logout'), 'Sign out']),
       h('button', {
         class: 'iconbtn', type: 'button', onClick: openNotifications,
         'aria-label': 'Notifications' + (unread ? ', ' + unread + ' unread' : '')

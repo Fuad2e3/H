@@ -45,20 +45,20 @@ OC.store = (function () {
   /* ---- seed (5.0) ------------------------------------------------------ */
   function seed() {
     var departments = [
-      { id: 'd-admin',    name: 'Admin & HR',              levels: ['head', 'lead', 'member'] },
-      { id: 'd-bizops',   name: 'Business Operations',     levels: ['head', 'lead', 'member'] },
-      { id: 'd-leadgen',  name: 'Lead Generation',         levels: ['head', 'lead', 'member'] },
-      { id: 'd-outreach', name: 'Outreach Operations',     levels: ['head', 'lead', 'senior', 'member'] },
-      { id: 'd-social',   name: 'Social Media Management', levels: ['head', 'lead', 'member'] },
-      { id: 'd-web',      name: 'Web Development',         levels: ['head', 'lead', 'member'] }
+      { id: 'd-admin',    name: 'Admin & HR',              levels: ['head', 'member'] },
+      { id: 'd-bizops',   name: 'Business Operations',     levels: ['head', 'member'] },
+      { id: 'd-leadgen',  name: 'Lead Generation',         levels: ['head', 'member'] },
+      { id: 'd-outreach', name: 'Outreach Operations',     levels: ['head', 'member'] },
+      { id: 'd-social',   name: 'Social Media Management', levels: ['head', 'member'] },
+      { id: 'd-web',      name: 'Web Development',         levels: ['head', 'member'] }
     ];
 
     var users = [
       { id: 'u-shohag',  name: 'Shohag Munshe',    title: 'Founder',            admin: true,  departments: [] },
       { id: 'u-imran',   name: 'Imran Sheikh',     title: 'Operations Manager', admin: false, departments: [{ department: 'd-bizops', level: 'head' }, { department: 'd-admin', level: 'head' }] },
       { id: 'u-nadia',   name: 'Nadia Rahman',     title: 'Outreach Director',  admin: false, departments: [{ department: 'd-outreach', level: 'head' }, { department: 'd-bizops', level: 'member' }] },
-      { id: 'u-tanvir',  name: 'Tanvir Hasan',     title: 'Outreach Lead',      admin: false, departments: [{ department: 'd-outreach', level: 'lead' }] },
-      { id: 'u-mim',     name: 'Mim Akter',        title: 'Senior Strategist',  admin: false, departments: [{ department: 'd-outreach', level: 'senior' }] },
+      { id: 'u-tanvir',  name: 'Tanvir Hasan',     title: 'Outreach Specialist', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
+      { id: 'u-mim',     name: 'Mim Akter',        title: 'Senior Strategist',  admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
       { id: 'u-rifat',   name: 'Rifat Chowdhury',  title: 'Outreach Associate', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] },
       { id: 'u-sadia',   name: 'Sadia Islam',      title: 'Lead Gen Head',      admin: false, departments: [{ department: 'd-leadgen', level: 'head' }] },
       { id: 'u-jubayer', name: 'Jubayer Alam',     title: 'Researcher',         admin: false, departments: [{ department: 'd-leadgen', level: 'member' }] },

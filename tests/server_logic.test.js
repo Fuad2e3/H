@@ -50,22 +50,17 @@ const people = seed.users.map(u => ({
   }))
 }));
 
-// Outreach assignee: u-rifat (rank 3 - member), lead: u-tanvir (rank 1), head: u-nadia (rank 0), admin: u-shohag
+// Outreach assignee: u-rifat (member), head: u-nadia (rank 0), admin: u-shohag
 const lateTodo1 = { id: 't-test1', department: 'd-outreach', assignee: 'u-rifat', assignee_type: 'user', due: '2026-08-29', state: 'open' };
 const lateTodo2 = { id: 't-test2', department: 'd-outreach', assignee: 'u-rifat', assignee_type: 'user', due: '2026-08-28', state: 'open' };
-const lateTodo3 = { id: 't-test3', department: 'd-outreach', assignee: 'u-rifat', assignee_type: 'user', due: '2026-08-27', state: 'open' };
 
 const r1 = logic.escalationRecipients(lateTodo1, people, today);
-assert.ok(r1.includes('u-rifat') && r1.includes('u-tanvir'), '1 day late reaches assignee and lead');
-assert.ok(!r1.includes('u-nadia'), '1 day late does not reach head yet');
+assert.ok(r1.includes('u-rifat') && r1.includes('u-nadia'), '1 day late reaches assignee and head');
+assert.ok(!r1.includes('u-shohag'), '1 day late does not reach admin yet');
 
 const r2 = logic.escalationRecipients(lateTodo2, people, today);
-assert.ok(r2.includes('u-nadia'), '2 days late reaches head');
-assert.ok(!r2.includes('u-shohag'), '2 days late does not reach admin yet');
-
-const r3 = logic.escalationRecipients(lateTodo3, people, today);
-assert.ok(r3.includes('u-shohag'), '3 days late reaches admin/leadership');
-console.log('✓ overdue escalation hierarchy verified (lead -> head -> admin)');
+assert.ok(r2.includes('u-shohag'), '2 days late reaches admin/leadership');
+console.log('✓ overdue escalation hierarchy verified (head -> admin)');
 
 // 4. Invites (6.1)
 const inv = logic.issueInvite('u-shohag');

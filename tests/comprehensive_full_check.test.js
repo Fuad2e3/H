@@ -98,14 +98,13 @@ test('Recurrence logic: daily, weekly, monthly, quarterly with end-of-month clam
   assert.strictEqual(next.client, 'c-chaim');
 });
 
-test('Overdue escalation hierarchy (OM SRS 001 9.4: lead -> head -> leadership)', () => {
+test('Overdue escalation hierarchy (OM SRS 001 9.4: head -> leadership)', () => {
   const today = '2026-08-30';
   
   const people = [
     { id: 'u-shohag', admin: true, departments: [] },
     { id: 'u-nadia', admin: false, departments: [{ department: 'd-outreach', rank: 0 }] }, // head
-    { id: 'u-tanvir', admin: false, departments: [{ department: 'd-outreach', rank: 1 }] }, // lead
-    { id: 'u-rifat', admin: false, departments: [{ department: 'd-outreach', rank: 3 }] }  // member
+    { id: 'u-rifat', admin: false, departments: [{ department: 'd-outreach', rank: 1 }] }  // member
   ];
 
   const todo = {
@@ -117,20 +116,15 @@ test('Overdue escalation hierarchy (OM SRS 001 9.4: lead -> head -> leadership)'
     state: 'open'
   };
 
-  // 1 day overdue -> Assignee + Lead (Rifat + Tanvir)
+  // 1 day overdue -> Assignee + Head (Rifat + Nadia)
   todo.due = '2026-08-29';
   let rec = logic.escalationRecipients(todo, people, today);
-  assert.deepStrictEqual(rec, ['u-rifat', 'u-tanvir']);
+  assert.deepStrictEqual(rec, ['u-rifat', 'u-nadia']);
 
-  // 2 days overdue -> Assignee + Lead + Head (Rifat + Tanvir + Nadia)
+  // 2+ days overdue -> Assignee + Head + Admin (Rifat + Nadia + Shohag)
   todo.due = '2026-08-28';
   rec = logic.escalationRecipients(todo, people, today);
-  assert.deepStrictEqual(rec, ['u-rifat', 'u-tanvir', 'u-nadia']);
-
-  // 3+ days overdue -> Assignee + Lead + Head + Admin (Rifat + Tanvir + Nadia + Shohag)
-  todo.due = '2026-08-27';
-  rec = logic.escalationRecipients(todo, people, today);
-  assert.deepStrictEqual(rec, ['u-rifat', 'u-tanvir', 'u-nadia', 'u-shohag']);
+  assert.deepStrictEqual(rec, ['u-rifat', 'u-nadia', 'u-shohag']);
 });
 
 test('Invite Token 72-hour validity and claims calculation', () => {
@@ -252,22 +246,22 @@ test('permissions.js: Role computation, visibility, assignment matrix, and state
   const shohag = OC.store.user('u-shohag'); // Admin
   const imran = OC.store.user('u-imran');   // Head of BizOps & Admin
   const nadia = OC.store.user('u-nadia');   // Head of Outreach
-  const tanvir = OC.store.user('u-tanvir'); // Lead of Outreach
-  const mim = OC.store.user('u-mim');       // Senior of Outreach
+  const tanvir = OC.store.user('u-tanvir'); // Member of Outreach
+  const mim = OC.store.user('u-mim');       // Member of Outreach
   const rifat = OC.store.user('u-rifat');   // Member of Outreach
 
-  // Role labels
+  // Role labels (3-tier model)
   assert.strictEqual(OC.can.roleLabel(shohag), 'System Admin');
   assert.strictEqual(OC.can.roleLabel(nadia), 'Department Head');
-  assert.strictEqual(OC.can.roleLabel(tanvir), 'Team Lead');
-  assert.strictEqual(OC.can.roleLabel(mim), 'Senior');
+  assert.strictEqual(OC.can.roleLabel(tanvir), 'Member');
+  assert.strictEqual(OC.can.roleLabel(mim), 'Member');
   assert.strictEqual(OC.can.roleLabel(rifat), 'Member');
 
-  // Assignment authority (3.2: Admin can assign anyone; Head can assign within dept; Lead can assign within dept; Member cannot assign others)
+  // Assignment authority (3.2: Admin can assign anyone; Head can assign within dept; Member cannot assign others)
   assert.strictEqual(OC.can.assignTo(shohag, rifat.id), true);
   assert.strictEqual(OC.can.assignTo(nadia, rifat.id), true);
-  assert.strictEqual(OC.can.assignTo(tanvir, rifat.id), true);
-  assert.strictEqual(OC.can.assignTo(rifat, tanvir.id), false); // Member cannot assign lead
+  assert.strictEqual(OC.can.assignTo(tanvir, rifat.id), false); // Member cannot assign others
+  assert.strictEqual(OC.can.assignTo(rifat, tanvir.id), false); // Member cannot assign others
 
   // State transitions (Change state allowed for assignee or superiors)
   const todo = OC.store.state.todos[0];

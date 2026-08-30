@@ -53,17 +53,16 @@ ok('reset restores the seed', S.state.todos.length, 14);
 ok('reset clears notifications', S.state.notifications.length, 0);
 
 console.log('=== permissions.js: hierarchy ===');
-ok('levelIn finds a membership', C.levelIn(u('u-tanvir'), 'd-outreach'), 'lead');
+ok('levelIn finds a membership', C.levelIn(u('u-tanvir'), 'd-outreach'), 'member');
 ok('levelIn outside a department', C.levelIn(u('u-tanvir'), 'd-web'), null);
 ok('rank head is 0', C.rank('d-outreach', 'head'), 0);
-ok('custom level ranks between lead and member', C.rank('d-outreach', 'senior'), 2);
+ok('rank member is 1', C.rank('d-outreach', 'member'), 1);
 ok('unknown level ranks last', C.rank('d-outreach', 'nope'), Infinity);
 ok('isHead', C.isHead(u('u-nadia'), 'd-outreach'));
 ok('isHead is department-scoped', C.isHead(u('u-nadia'), 'd-web'), false);
-ok('isLead', C.isLead(u('u-tanvir'), 'd-outreach'));
 ok('inDept', C.inDept(u('u-rifat'), 'd-outreach'));
 ok('headOfAny for a head', C.headOfAny(u('u-piya')));
-ok('headOfAny false for a lead', C.headOfAny(u('u-tanvir')), false);
+ok('headOfAny false for a member', C.headOfAny(u('u-tanvir')), false);
 ok('one person heads two departments', C.departmentsOf(u('u-imran')), ['d-bizops', 'd-admin']);
 ok('inGroup', C.inGroup(u('u-ayesha'), 'g-relaunch'));
 ok('inGroup false for an outsider', C.inGroup(u('u-rifat'), 'g-relaunch'), false);
@@ -71,9 +70,9 @@ ok('inGroup false for an outsider', C.inGroup(u('u-rifat'), 'g-relaunch'), false
 console.log('=== permissions.js: role labels ===');
 ok('admin label', C.roleLabel(u('u-shohag')), 'System Admin');
 ok('head label', C.roleLabel(u('u-nadia')), 'Department Head');
-ok('lead label', C.roleLabel(u('u-tanvir')), 'Team Lead');
-ok('custom level label', C.roleLabel(u('u-mim')), 'Senior');
-ok('member label', C.roleLabel(u('u-rifat')), 'Member');
+ok('member label 1', C.roleLabel(u('u-tanvir')), 'Member');
+ok('member label 2', C.roleLabel(u('u-mim')), 'Member');
+ok('member label 3', C.roleLabel(u('u-rifat')), 'Member');
 ok('highest grant wins across departments', C.roleLabel(u('u-piya')), 'Department Head');
 
 console.log('=== permissions.js: assignment matrix ===');
@@ -81,24 +80,20 @@ const people = ['u-shohag','u-imran','u-nadia','u-tanvir','u-mim','u-rifat','u-s
 // every account may assign to itself, and nobody may assign upward
 people.forEach(id => ok(`${id} may assign to self`, C.assignTo(u(id), id)));
 ok('member cannot assign to a peer', C.assignTo(u('u-rifat'), 'u-mim'), false);
-ok('senior cannot assign to a member', C.assignTo(u('u-mim'), 'u-rifat'), false);
-ok('lead assigns to senior below', C.assignTo(u('u-tanvir'), 'u-mim'));
-ok('lead assigns to member below', C.assignTo(u('u-tanvir'), 'u-rifat'));
-ok('lead cannot assign to its head', C.assignTo(u('u-tanvir'), 'u-nadia'), false);
-ok('lead cannot assign to another lead', C.assignTo(u('u-tanvir'), 'u-sadia'), false);
-ok('head assigns to its lead', C.assignTo(u('u-nadia'), 'u-tanvir'));
+ok('member cannot assign to another member', C.assignTo(u('u-mim'), 'u-rifat'), false);
+ok('head assigns to member below', C.assignTo(u('u-nadia'), 'u-tanvir'));
+ok('head assigns to any member in department', C.assignTo(u('u-nadia'), 'u-rifat'));
 ok('head cannot cross departments', C.assignTo(u('u-nadia'), 'u-ayesha'), false);
 ok('head cannot assign to another head in the same dept', C.assignTo(u('u-imran'), 'u-imran'));
 ok('admin assigns to everyone', C.assignableUsers(u('u-shohag')).length, 11);
 ok('member assignable list is self only', C.assignableUsers(u('u-rifat')).map(x => x.id), ['u-rifat']);
-ok('lead assignable list', C.assignableUsers(u('u-tanvir')).map(x => x.id).sort(), ['u-mim','u-rifat','u-tanvir']);
 ok('head assignable list', C.assignableUsers(u('u-nadia')).map(x => x.id).sort(), ['u-mim','u-nadia','u-rifat','u-tanvir']);
 
 console.log('=== permissions.js: groups ===');
 ok('admin may create a group', C.createGroup(u('u-shohag')));
 ok('head may create a group', C.createGroup(u('u-nadia')));
-ok('lead may not', C.createGroup(u('u-tanvir')), false);
-ok('member may not', C.createGroup(u('u-rifat')), false);
+ok('member may not', C.createGroup(u('u-tanvir')), false);
+ok('member may not create group', C.createGroup(u('u-rifat')), false);
 ok('admin may assign to a group', C.assignToGroup(u('u-shohag'), 'g-relaunch'));
 ok('group member may assign to it', C.assignToGroup(u('u-ayesha'), 'g-relaunch'));
 ok('outsider member may not', C.assignToGroup(u('u-rifat'), 'g-relaunch'), false);
@@ -126,33 +121,32 @@ ok('visibleUsers: member sees own department', C.visibleUsers(u('u-rifat')).map(
 
 console.log('=== permissions.js: state changes ===');
 ok('assignee may change state', C.changeState(u('u-rifat'), t1));
-ok('their lead may change state', C.changeState(u('u-tanvir'), t1));
+ok('their head may change state', C.changeState(u('u-nadia'), t1));
 ok('a peer may not', C.changeState(u('u-mim'), t1), false);
 ok('group member may change a group todo', C.changeState(u('u-ayesha'), t3));
-ok('assignee may not reassign', C.reassign(u('u-rifat'), t1), false);
-ok('lead may reassign', C.reassign(u('u-tanvir'), t1));
+ok('assignee member may not reassign', C.reassign(u('u-rifat'), t1), false);
 ok('head of the todo department may reassign', C.reassign(u('u-nadia'), t1));
 ok('author may archive own instruction', C.archiveInstruction(u('u-shohag'), n1));
 ok('department head may archive', C.archiveInstruction(u('u-nadia'), n1));
 ok('member may not archive', C.archiveInstruction(u('u-rifat'), n1), false);
 ok('manageDepartment: head yes', C.manageDepartment(u('u-nadia'), 'd-outreach'));
-ok('manageDepartment: lead no', C.manageDepartment(u('u-tanvir'), 'd-outreach'), false);
+ok('manageDepartment: member no', C.manageDepartment(u('u-tanvir'), 'd-outreach'), false);
 ok('invite: head yes', C.invite(u('u-nadia')));
-ok('invite: lead no', C.invite(u('u-tanvir')), false);
+ok('invite: member no', C.invite(u('u-tanvir')), false);
 ok('audit: admin only', [C.seeAudit(u('u-shohag')), C.seeAudit(u('u-nadia'))], [true, false]);
 ok('postInstruction is open to everyone', people.every(id => C.postInstruction(u(id))));
 
 console.log('=== permissions.js: escalation (9.4) ===');
 const chain = C.escalationChain(S.todo('t-2'));
 ok('chain order', chain.map(c => c.step),
-   ['Assignee','Team lead, day one','Department head, day two','Leadership, day three']);
+   ['Assignee','Department head, day one','System Admin, day two']);
 ok('chain never removes earlier recipients', chain[0].users, ['u-mim']);
-ok('leadership is the admin tier', chain[3].users, ['u-shohag']);
+ok('leadership is the admin tier', chain[2].users, ['u-shohag']);
 ok('group todo expands to its members', C.escalationChain(t3)[0].users.sort(),
    ['u-ayesha','u-shohag','u-tanvir']);
 ok('not escalated before it is late', C.escalationReached(S.todo('t-2'), 0), 0);
-ok('one day late reaches the lead', C.escalationReached(S.todo('t-2'), 1), 1);
-ok('escalation stops at leadership', C.escalationReached(S.todo('t-2'), 99), 3);
+ok('one day late reaches head', C.escalationReached(S.todo('t-2'), 1), 1);
+ok('escalation reaches system admin', C.escalationReached(S.todo('t-2'), 99), 2);
 
 console.log('\npassed: ' + pass);
 if (fail.length) { console.log('FAILED ' + fail.length + ':'); fail.forEach(f => console.log('  ' + f)); process.exit(1); }
@@ -162,16 +156,13 @@ console.log('\n=== reassign, after the fix ===');
 let p2 = 0, f2 = [];
 function ok2(l, g, w = true) { (JSON.stringify(g) === JSON.stringify(w)) ? p2++ : f2.push(`${l} got=${JSON.stringify(g)}`); }
 ok2('member cannot reassign own work', C.reassign(u('u-rifat'), t1), false);
-ok2('senior cannot reassign', C.reassign(u('u-mim'), S.todo('t-6')), false);
-ok2('lead reassigns work of a member below', C.reassign(u('u-tanvir'), t1));
-ok2('lead reassigns work assigned to itself', C.reassign(u('u-tanvir'), S.todo('t-4')));
+ok2('member cannot reassign', C.reassign(u('u-mim'), S.todo('t-6')), false);
 ok2('head reassigns inside its department', C.reassign(u('u-nadia'), t1));
 ok2('head cannot reassign another department', C.reassign(u('u-nadia'), S.todo('t-8')), false);
 ok2('admin reassigns anything', C.reassign(u('u-shohag'), S.todo('t-8')));
-ok2('group member in a lead role may move group work', C.reassign(u('u-tanvir'), t3));
 ok2('member still changes state on own work', C.changeState(u('u-rifat'), t1));
 ok2('assignsOthers: member false', C.assignsOthers(u('u-rifat')), false);
-ok2('assignsOthers: lead true', C.assignsOthers(u('u-tanvir')));
+ok2('assignsOthers: head true', C.assignsOthers(u('u-nadia')));
 console.log('passed: ' + p2);
 console.log(f2.length ? 'FAILED:\n  ' + f2.join('\n  ') : 'FAILURES: none');
 if (f2.length) process.exit(1);

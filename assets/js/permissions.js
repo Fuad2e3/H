@@ -66,8 +66,7 @@ OC.can = (function () {
       if (!best || r < best.r) best = { r: r, level: m.level };
     });
     if (best.r === 0) return 'Department Head';
-    if (best.r === 1) return 'Team Lead';
-    return best.level.charAt(0).toUpperCase() + best.level.slice(1);
+    return 'Member';
   }
 
   /* ---- visibility ------------------------------------------------------ */
@@ -97,9 +96,8 @@ OC.can = (function () {
       var mine = rank(m.department, m.level);
       var theirs = rankOf(target, m.department);
       if (theirs === Infinity) return false;          /* not in this department */
-      if (mine === 0) return true;                    /* head: anyone below, in department */
-      if (mine === 1) return theirs > 1;              /* lead: the team under them */
-      return false;                                   /* everyone else: nobody */
+      if (mine === 0) return true;                    /* head: anyone in department */
+      return false;                                   /* members cannot assign to others */
     });
   }
 
@@ -203,20 +201,18 @@ OC.can = (function () {
     chain.push({ step: 'Assignee', users: assignees });
 
     var dept = todo.department;
-    var leads = S().state.users.filter(function (u) { return isLead(u, dept); }).map(function (u) { return u.id; });
     var heads = S().state.users.filter(function (u) { return isHead(u, dept); }).map(function (u) { return u.id; });
     var leadership = S().state.users.filter(function (u) { return u.admin; }).map(function (u) { return u.id; });
 
-    if (leads.length) chain.push({ step: 'Team lead, day one', users: leads });
-    if (heads.length) chain.push({ step: 'Department head, day two', users: heads });
-    chain.push({ step: 'Leadership, day three', users: leadership });
+    if (heads.length) chain.push({ step: 'Department head, day one', users: heads });
+    chain.push({ step: 'System Admin, day two', users: leadership });
     return chain;
   }
 
   /* how far an overdue todo has climbed, by whole days late */
   function escalationReached(todo, daysLate) {
     if (daysLate < 1) return 0;
-    return Math.min(daysLate, 3);
+    return Math.min(daysLate, 2);
   }
 
   return {

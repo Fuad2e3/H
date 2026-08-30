@@ -191,35 +191,42 @@
   background: none;
   cursor: pointer;
   padding: 0 11px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 700;
+  color: #64748B !important;
   transition: background var(--t), color var(--t);
+}
+:root[data-theme="dark"] .segmented button,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .segmented button {
+    color: #94A3B8 !important;
+  }
 }
 .segmented button + button {
   border-left: 1px solid var(--rule);
 }
 .segmented button:hover {
   background: var(--tint);
-  color: var(--ink);
+  color: var(--ink) !important;
 }
 .segmented button[aria-pressed="true"] {
-  background: var(--card-bg);
-  color: var(--blueprint);
-  font-weight: 700;
+  background: #FFFFFF !important;
+  color: #1D4ED8 !important;
+  font-weight: 800 !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 :root[data-theme="light"] .segmented button[aria-pressed="true"],
 :root:not([data-theme="dark"]) .segmented button[aria-pressed="true"] {
-  background: #FFFFFF;
-  color: #1D4ED8;
+  background: #FFFFFF !important;
+  color: #1D4ED8 !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
 }
 :root[data-theme="dark"] .segmented button[aria-pressed="true"],
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .segmented button[aria-pressed="true"] {
-    background: #1C2B45;
-    color: #60A5FA;
+    background: #1C2B45 !important;
+    color: #60A5FA !important;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   }
 }
@@ -962,8 +969,9 @@ dialog.modal::backdrop {
   gap: 6px;
   height: var(--ctl-sm);
   padding: 0 13px;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
   font-size: 11px;
+  font-weight: 700;
   background: var(--card-bg);
   color: var(--text-secondary);
   border: 1px solid var(--rule-strong);
@@ -974,31 +982,31 @@ dialog.modal::backdrop {
 }
 :root[data-theme="light"] .toggle-theme,
 :root:not([data-theme="dark"]) .toggle-theme {
-  background: #FFFFFF;
-  color: #475569;
-  border-color: rgba(30, 41, 59, 0.18);
+  background: #FFFFFF !important;
+  color: #1E293B !important;
+  border-color: rgba(30, 41, 59, 0.2) !important;
 }
 :root[data-theme="dark"] .toggle-theme,
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .toggle-theme {
-    background: #16243D;
-    color: #94A3B8;
-    border-color: rgba(148, 163, 184, 0.22);
+    background: #16243D !important;
+    color: #F8FAFC !important;
+    border-color: rgba(148, 163, 184, 0.25) !important;
   }
 }
 .toggle-theme:hover {
-  color: var(--blueprint);
-  border-color: var(--blueprint);
-  background: var(--blueprint-soft);
+  color: var(--blueprint) !important;
+  border-color: var(--blueprint) !important;
+  background: var(--blueprint-soft) !important;
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15);
 }
 :root[data-theme="dark"] .toggle-theme:hover,
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .toggle-theme:hover {
-    background: rgba(59, 130, 246, 0.20);
-    border-color: #3B82F6;
-    color: #93C5FD;
+    background: rgba(59, 130, 246, 0.20) !important;
+    border-color: #3B82F6 !important;
+    color: #93C5FD !important;
     box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
   }
 }
@@ -1141,36 +1149,37 @@ dialog.modal::backdrop {
   background: transparent;
   border: 1px dashed var(--rule-strong);
   border-radius: 9999px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--t);
 }
 :root[data-theme="light"] .reaction-picker-btn,
 :root:not([data-theme="dark"]) .reaction-picker-btn {
-  color: #64748B;
-  border-color: rgba(30, 41, 59, 0.25);
+  color: #475569 !important;
+  border-color: rgba(30, 41, 59, 0.3) !important;
 }
 :root[data-theme="dark"] .reaction-picker-btn,
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .reaction-picker-btn {
-    color: #94A3B8;
-    border-color: rgba(148, 163, 184, 0.30);
+    color: #CBD5E1 !important;
+    border-color: rgba(148, 163, 184, 0.35) !important;
   }
 }
 .reaction-picker-btn:hover {
   background: var(--tint);
-  border-color: var(--blueprint);
-  color: var(--blueprint);
+  border-color: var(--blueprint) !important;
+  color: var(--blueprint) !important;
   border-style: solid;
 }
 :root[data-theme="dark"] .reaction-picker-btn:hover,
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .reaction-picker-btn:hover {
-    background: rgba(59, 130, 246, 0.20);
-    border-color: #3B82F6;
-    color: #93C5FD;
+    background: rgba(59, 130, 246, 0.20) !important;
+    border-color: #3B82F6 !important;
+    color: #93C5FD !important;
   }
 }
 .reaction-picker-pop {
@@ -1827,12 +1836,13 @@ dialog.modal.fallback {
 
 .portal-submit-btn {
   height: 44px;
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
-  color: #FFFFFF;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+  color: #FFFFFF !important;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 700;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 14.5px;
+  font-weight: 700 !important;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1841,12 +1851,14 @@ dialog.modal.fallback {
   transition: all var(--t);
   margin-top: 4px;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .portal-submit-btn:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
+  color: #FFFFFF !important;
 }
 
 .portal-divider {
@@ -1889,14 +1901,24 @@ dialog.modal.fallback {
   height: 18px;
 }
 .admin-quick-connect .btn {
-  background: var(--card-bg-alt);
-  border: 1px dashed var(--blueprint);
-  color: var(--text);
+  background: var(--card-bg-alt) !important;
+  border: 1px dashed var(--blueprint) !important;
+  color: var(--ink, #0F172A) !important;
+  font-weight: 700 !important;
   transition: all var(--t);
 }
+:root[data-theme="dark"] .admin-quick-connect .btn,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .admin-quick-connect .btn {
+    background: #16243D !important;
+    color: #F8FAFC !important;
+    border-color: #3B82F6 !important;
+  }
+}
 .admin-quick-connect .btn:hover {
-  background: var(--tint);
-  border-color: var(--blueprint);
+  background: var(--tint) !important;
+  border-color: var(--blueprint) !important;
+  color: var(--blueprint) !important;
   transform: translateY(-1px);
 }
 .login-divider {

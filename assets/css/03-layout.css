@@ -132,22 +132,22 @@
 }
 :root[data-theme="light"] .iconbtn,
 :root:not([data-theme="dark"]) .iconbtn {
-  background: #FFFFFF;
-  color: #475569;
-  border-color: rgba(30, 41, 59, 0.18);
+  background: #FFFFFF !important;
+  color: #1E293B !important;
+  border-color: rgba(30, 41, 59, 0.2) !important;
 }
 :root[data-theme="dark"] .iconbtn,
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .iconbtn {
-    background: #16243D;
-    color: #94A3B8;
-    border-color: rgba(148, 163, 184, 0.22);
+    background: #16243D !important;
+    color: #F8FAFC !important;
+    border-color: rgba(148, 163, 184, 0.25) !important;
   }
 }
 .iconbtn:hover {
-  color: var(--blueprint);
-  border-color: var(--blueprint);
-  background: var(--blueprint-soft);
+  color: var(--blueprint) !important;
+  border-color: var(--blueprint) !important;
+  background: var(--blueprint-soft) !important;
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15);
 }
@@ -199,9 +199,10 @@
   border: none;
   cursor: pointer;
   padding: 13px 18px 12px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 700;
+  color: #475569;
   border-bottom: 2.5px solid transparent;
   border-radius: 6px 6px 0 0;
   white-space: nowrap;
@@ -209,30 +210,30 @@
 }
 :root[data-theme="light"] .nav button,
 :root:not([data-theme="dark"]) .nav button {
-  color: #64748B;
+  color: #334155 !important;
 }
 :root[data-theme="dark"] .nav button,
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .nav button {
-    color: #94A3B8;
+    color: #CBD5E1 !important;
   }
 }
 .nav button:hover {
-  color: var(--ink);
+  color: var(--ink) !important;
   background: var(--tint);
 }
 .nav button[aria-current="page"] {
-  color: var(--blueprint) !important;
-  font-weight: 700;
-  background: var(--blueprint-soft);
-  border-bottom-color: var(--blueprint);
+  color: #1D4ED8 !important;
+  font-weight: 800;
+  background: #EFF6FF !important;
+  border-bottom-color: #2563EB !important;
 }
 :root[data-theme="dark"] .nav button[aria-current="page"],
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .nav button[aria-current="page"] {
     color: #60A5FA !important;
-    background: rgba(59, 130, 246, 0.18);
-    border-bottom-color: #3B82F6;
+    background: rgba(59, 130, 246, 0.18) !important;
+    border-bottom-color: #3B82F6 !important;
   }
 }
 

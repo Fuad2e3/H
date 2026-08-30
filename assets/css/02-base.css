@@ -309,12 +309,13 @@ select {
   gap: 7px;
   height: var(--ctl);
   padding: 0 16px;
-  background: var(--card-bg);
-  color: var(--text);
-  border: 1px solid var(--rule-strong);
+  background: var(--card-bg, #FFFFFF);
+  color: var(--ink, #0F172A);
+  border: 1px solid var(--rule-strong, rgba(30, 41, 59, 0.18));
   border-radius: var(--r1);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 13.5px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -341,53 +342,54 @@ select {
   background: var(--card-bg);
 }
 
-/* Day Mode Specific Button Enhancements */
-:root[data-theme="light"] .btn,
-:root:not([data-theme="dark"]) .btn {
-  background: #FFFFFF;
-  color: #0F172A;
-  border-color: rgba(30, 41, 59, 0.18);
+/* Standard Button (Non-primary/Non-orange/Non-danger) */
+:root[data-theme="light"] .btn:not(.primary):not(.orange):not(.danger),
+:root:not([data-theme="dark"]) .btn:not(.primary):not(.orange):not(.danger) {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: rgba(30, 41, 59, 0.2) !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
-:root[data-theme="light"] .btn:hover,
-:root:not([data-theme="dark"]) .btn:hover {
-  background: #EFF6FF;
-  border-color: #2563EB;
-  color: #1D4ED8;
+:root[data-theme="light"] .btn:not(.primary):not(.orange):not(.danger):hover,
+:root:not([data-theme="dark"]) .btn:not(.primary):not(.orange):not(.danger):hover {
+  background: #EFF6FF !important;
+  border-color: #2563EB !important;
+  color: #1D4ED8 !important;
   box-shadow: 0 3px 8px rgba(37, 99, 235, 0.16);
 }
 
-/* Night Mode Specific Button Enhancements */
-:root[data-theme="dark"] .btn,
+:root[data-theme="dark"] .btn:not(.primary):not(.orange):not(.danger),
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .btn {
-    background: #16243D;
-    color: #F8FAFC;
-    border-color: rgba(148, 163, 184, 0.22);
+  :root:not([data-theme="light"]) .btn:not(.primary):not(.orange):not(.danger) {
+    background: #16243D !important;
+    color: #F8FAFC !important;
+    border-color: rgba(148, 163, 184, 0.25) !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
   }
-  :root:not([data-theme="light"]) .btn:hover {
-    background: rgba(59, 130, 246, 0.20);
-    border-color: #3B82F6;
-    color: #93C5FD;
+  :root:not([data-theme="light"]) .btn:not(.primary):not(.orange):not(.danger):hover {
+    background: rgba(59, 130, 246, 0.20) !important;
+    border-color: #3B82F6 !important;
+    color: #93C5FD !important;
     box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
   }
 }
 
 /* Primary Action Buttons */
 .btn.primary {
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
-  border-color: #1D4ED8;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+  border-color: #1D4ED8 !important;
   color: #FFFFFF !important;
-  font-weight: 600;
+  font-weight: 700 !important;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 :root[data-theme="dark"] .btn.primary,
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .btn.primary {
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-    border-color: #60A5FA;
+    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+    border-color: #60A5FA !important;
     color: #FFFFFF !important;
+    font-weight: 700 !important;
     box-shadow: 0 3px 12px rgba(59, 130, 246, 0.45);
   }
 }
@@ -395,22 +397,25 @@ select {
   filter: brightness(1.1);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
+  color: #FFFFFF !important;
 }
 
 /* Brand Orange Buttons */
 .btn.orange {
-  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
-  border-color: #EA580C;
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%) !important;
+  border-color: #EA580C !important;
   color: #FFFFFF !important;
-  font-weight: 600;
+  font-weight: 700 !important;
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 :root[data-theme="dark"] .btn.orange,
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .btn.orange {
-    background: linear-gradient(135deg, #FB923C 0%, #EA580C 100%);
-    border-color: #FDBA74;
+    background: linear-gradient(135deg, #FB923C 0%, #EA580C 100%) !important;
+    border-color: #FDBA74 !important;
     color: #FFFFFF !important;
+    font-weight: 700 !important;
     box-shadow: 0 3px 12px rgba(251, 146, 60, 0.45);
   }
 }
@@ -418,27 +423,29 @@ select {
   filter: brightness(1.1);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(249, 115, 22, 0.45);
+  color: #FFFFFF !important;
 }
 
 /* Danger / Destructive Buttons */
 .btn.danger {
-  background: var(--signal-soft);
-  color: var(--signal);
-  border-color: rgba(225, 29, 72, 0.35);
-  font-weight: 600;
+  background: #FFE4E6 !important;
+  color: #E11D48 !important;
+  border-color: rgba(225, 29, 72, 0.35) !important;
+  font-weight: 700 !important;
 }
 :root[data-theme="dark"] .btn.danger,
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .btn.danger {
-    background: rgba(244, 63, 94, 0.16);
-    color: #FB7185;
-    border-color: rgba(251, 113, 133, 0.40);
+    background: rgba(244, 63, 94, 0.18) !important;
+    color: #FB7185 !important;
+    border-color: rgba(251, 113, 133, 0.40) !important;
+    font-weight: 700 !important;
   }
 }
 .btn.danger:hover {
-  background: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%);
+  background: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%) !important;
   color: #FFFFFF !important;
-  border-color: #F43F5E;
+  border-color: #F43F5E !important;
   box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
   transform: translateY(-1px);
 }
@@ -447,6 +454,7 @@ select {
   height: var(--ctl-sm);
   padding: 0 11px;
   font-size: 12px;
+  font-weight: 700;
   border-radius: calc(var(--r1) - 1px);
 }
 .btn.small .icon {
@@ -458,9 +466,10 @@ select {
   border: none;
   background: none;
   padding: 0 2px;
-  color: var(--blueprint);
+  color: var(--blueprint) !important;
   text-decoration: underline;
   font-size: inherit;
+  font-weight: 600;
   box-shadow: none;
 }
 .btn.link:hover {

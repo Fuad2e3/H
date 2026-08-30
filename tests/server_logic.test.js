@@ -13,9 +13,11 @@ console.log('=== dev3 server: logic.js unit tests ===');
 // 1. Seed verification
 const seed = logic.seed();
 assert.strictEqual(seed.departments.length, 6, 'Should have 6 departments');
-assert.strictEqual(seed.users.length, 3, 'Should have System Admins in clean production seed');
-assert.ok(seed.users.every(u => u.admin === true), 'All seed users should be System Admins');
-console.log('✓ clean production seed() entities verified (system admins retained)');
+assert.strictEqual(seed.users.length, 3, 'Should have 3 seed users');
+assert.strictEqual(seed.users[0].admin, true);
+assert.strictEqual(seed.users[1].admin, true);
+assert.strictEqual(seed.users[2].admin, false);
+console.log('✓ clean production seed() entities verified (system admins and dept head)');
 
 // 2. Recurrence tests (6.2)
 assert.strictEqual(logic.nextDue('2026-08-30', 'daily'), '2026-08-31');

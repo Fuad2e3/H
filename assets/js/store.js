@@ -81,7 +81,7 @@ OC.store = (function () {
         name: 'Abdullah Al Fuad',
         email: 'fuadogt@gmail.com',
         title: 'Full Stack Developer',
-        admin: true,
+        admin: false,
         departments: [{ department: 'd-web', level: 'head' }],
         status: 'active',
         password: 'OC-984210',
@@ -252,9 +252,12 @@ OC.store = (function () {
         if (!existing) {
           state.users.push(su);
           modified = true;
-        } else if (existing.name !== su.name || existing.email !== su.email) {
+        } else if (existing.name !== su.name || existing.email !== su.email || existing.admin !== su.admin) {
           existing.name = su.name;
           existing.email = su.email;
+          existing.admin = su.admin;
+          existing.title = su.title;
+          existing.departments = su.departments;
           modified = true;
         }
       });

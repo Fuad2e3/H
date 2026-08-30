@@ -138,25 +138,14 @@ OC.app = (function () {
 
   /* ---- Dedicated Initial Login Screen ----------------------------------- */
   function openGoogleAccountChooser(onSelect) {
-    var knownDeviceAccounts = [
-      { name: 'Abdullah al Fuad', email: 'fuadkalaroa2002@gmail.com', avatar: 'AF', color: '#1E293B' },
-      { name: 'Abdullah al Fuad', email: 'fuadkalaroa2000@gmail.com', avatar: 'AF', color: '#7E22CE' },
-      { name: 'Abdullah Al Fuad', email: 'fuadogt@gmail.com', avatar: 'AF', color: '#0284C7' },
-      { name: 'Development Operations', email: 'devops@originateteam.com', avatar: 'DO', color: '#475569' },
-      { name: 'Shohag Munshe', email: 'shohag@originate.example', avatar: 'SM', color: '#2563EB' }
-    ];
-
-    // Merge any other active users from database store
     var dbUsers = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
-    dbUsers.forEach(function (u) {
-      if (!knownDeviceAccounts.some(function (da) { return da.email.toLowerCase() === u.email.toLowerCase(); })) {
-        knownDeviceAccounts.push({
-          name: u.name,
-          email: u.email,
-          avatar: u.name ? u.name.slice(0, 2).toUpperCase() : 'U',
-          color: '#2563EB'
-        });
-      }
+    var accountsList = dbUsers.map(function (u) {
+      return {
+        name: u.name,
+        email: u.email,
+        avatar: u.name ? u.name.slice(0, 2).toUpperCase() : 'U',
+        color: u.admin ? '#1E293B' : '#2563EB'
+      };
     });
 
     var otherEmailInput = h('input', { type: 'email', autocomplete: 'email' });
@@ -165,7 +154,7 @@ OC.app = (function () {
 
     function refresh(closeModal) {
       OC.ui.clear(listContainer);
-      var items = knownDeviceAccounts.map(function (acc) {
+      var items = accountsList.map(function (acc) {
         return h('div', {
           class: 'google-account-item',
           tabindex: '0',

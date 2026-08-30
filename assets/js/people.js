@@ -66,10 +66,106 @@ OC.people = (function () {
               OC.store.state.users.push(account);
             });
             dispatchInviteEmail(account, false);
-            OC.ui.toast('Invite issued for ' + account.name + '. 72h single-use link created.');
             close();
+            showInviteSuccessModal(account);
           }
         }
+      ]
+    });
+  }
+
+  function getInviteDetails(account) {
+    var base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:7000';
+    var path = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '/';
+    var link = base + path + '#claim=' + (account.invite ? account.invite.token : '');
+    var pass = account.invite ? account.invite.passcode : '';
+    var deptObj = OC.store.department(account.departments && account.departments[0] ? account.departments[0].department : '');
+    var deptName = deptObj ? deptObj.name : 'Operations';
+    var levelName = account.departments && account.departments[0] ? account.departments[0].level : 'Member';
+
+    var fullText = [
+      'Hello ' + account.name + ',',
+      '',
+      'You have been invited to join the Originate Command portal (' + deptName + ' · ' + levelName + ').',
+      '',
+      '📧 Gmail: ' + account.email,
+      '🔑 72-Hour Password: ' + pass,
+      '🔗 72-Hour Invite Link: ' + link,
+      '',
+      '⏳ Security Notice: Both the link and password are valid for 72 hours.',
+      'Upon your first login, this password becomes your permanent password for all future logins.',
+      '',
+      '© Originate Command — Owner: Abdullah Al Fuad'
+    ].join('\n');
+
+    var gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1' +
+      '&to=' + encodeURIComponent(account.email) +
+      '&su=' + encodeURIComponent('Invitation to join Originate Command workspace') +
+      '&body=' + encodeURIComponent(fullText);
+
+    return { link: link, pass: pass, fullText: fullText, gmailUrl: gmailUrl };
+  }
+
+  function showInviteSuccessModal(account) {
+    var h = OC.ui.h;
+    var details = getInviteDetails(account);
+
+    OC.ui.modal({
+      title: '🎉 Invite Created for ' + account.name,
+      content: h('div', { style: 'font-size:13.5px;' }, [
+        h('p', { class: 'muted', style: 'margin-bottom:14px;' },
+          'A 72-hour invite link and unique password have been generated for this account.'),
+        h('div', { class: 'card', style: 'background:var(--card-bg-alt);border:1px solid var(--rule);padding:14px;margin-bottom:16px;' }, [
+          h('p', { style: 'margin:0 0 6px;' }, ['📧 ', h('strong', {}, 'Gmail: '), account.email]),
+          h('p', { style: 'margin:0 0 6px;' }, ['🔑 ', h('strong', {}, '72-Hour Password: '), h('span', { class: 'mono', style: 'color:var(--blueprint);font-weight:700;' }, details.pass)]),
+          h('p', { style: 'margin:0;word-break:break-all;font-size:12px;' }, ['🔗 ', h('strong', {}, 'Link: '), details.link]),
+        ]),
+        h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap;' }, [
+          h('a', {
+            class: 'btn primary',
+            href: details.gmailUrl,
+            target: '_blank',
+            style: 'display:inline-flex;align-items:center;gap:6px;text-decoration:none;'
+          }, [OC.icon('send'), 'Open in Gmail (Auto-Filled)']),
+          h('button', {
+            class: 'btn',
+            type: 'button',
+            onClick: function () {
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(details.fullText).then(function () {
+                  OC.ui.toast('Full invite message copied to clipboard!');
+                });
+              } else {
+                prompt('Copy full message:', details.fullText);
+              }
+            }
+          }, [OC.icon('copy'), 'Copy Full Message']),
+          h('button', {
+            class: 'btn',
+            type: 'button',
+            onClick: function () {
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(details.pass).then(function () {
+                  OC.ui.toast('Password (' + details.pass + ') copied!');
+                });
+              }
+            }
+          }, 'Copy Passcode'),
+          h('button', {
+            class: 'btn',
+            type: 'button',
+            onClick: function () {
+              if (navigator.clipboard) {
+                navigator.clipboard.writeText(details.link).then(function () {
+                  OC.ui.toast('Link copied to clipboard!');
+                });
+              }
+            }
+          }, 'Copy Link')
+        ])
+      ]),
+      actions: [
+        { label: 'Done', primary: true, onClick: function (close) { close(); } }
       ]
     });
   }
@@ -94,9 +190,7 @@ OC.people = (function () {
         })
       }).then(function (res) { return res.json(); }).then(function (data) {
         if (data && data.result && data.result.success) {
-          OC.ui.toast('🚀 Auto-email dispatched to ' + account.email + ' via Resend API!');
-        } else if (data && data.result && data.result.simulated) {
-          OC.ui.toast((isResend ? 'Fresh link issued.' : 'Invite issued.') + ' (Add RESEND_API_KEY in .env for direct inbox auto-delivery)');
+          OC.ui.toast('🚀 Auto-email dispatched to ' + account.email + '!');
         }
       }).catch(function () {});
     }
@@ -140,7 +234,7 @@ OC.people = (function () {
       account.invite = OC.store.issueInvite(user.id);
     });
     dispatchInviteEmail(account, true);
-    OC.ui.toast('A fresh 72-hour link and passcode were issued.');
+    showInviteSuccessModal(account);
   }
 
   function revoke(account) {
@@ -156,9 +250,10 @@ OC.people = (function () {
     OC.ui.confirm('Simulate ' + account.name + ' following their link and completing their profile?', function () {
       OC.store.mutate({ actor: account.id, action: 'user.invite.claim', target: account.name }, function () {
         account.invite.claimed_at = new Date().toISOString();
+        account.password = account.invite.passcode;
         account.status = 'active';
       });
-      OC.ui.toast(account.name + ' is now an active account.');
+      OC.ui.toast(account.name + ' is now an active account with permanent password.');
     });
   }
 
@@ -167,21 +262,37 @@ OC.people = (function () {
     var user = me();
     var expired = OC.store.inviteExpired(account.invite);
     var actions = [];
+    var details = getInviteDetails(account);
+
     if (OC.can.manageInvite(user, account)) {
       if (!expired) {
+        actions.push(h('a', {
+          class: 'btn primary small',
+          href: details.gmailUrl,
+          target: '_blank',
+          style: 'display:inline-flex;align-items:center;gap:4px;text-decoration:none;'
+        }, [OC.icon('send'), 'Open in Gmail']));
+
         actions.push(h('button', {
           class: 'btn small', type: 'button', onClick: function () {
-            var base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:7000';
-            var path = (typeof window !== 'undefined' && window.location && window.location.pathname) ? window.location.pathname : '/';
-            var link = base + path + '#claim=' + account.invite.token;
-            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(link).then(function () {
-                OC.ui.toast('Invite link copied to clipboard!');
-              }).catch(function () {
-                prompt('Copy invite link:', link);
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(details.fullText).then(function () {
+                OC.ui.toast('Full invite message copied to clipboard!');
               });
             } else {
-              prompt('Copy invite link:', link);
+              prompt('Copy full message:', details.fullText);
+            }
+          }
+        }, 'Copy Message'));
+
+        actions.push(h('button', {
+          class: 'btn small', type: 'button', onClick: function () {
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(details.link).then(function () {
+                OC.ui.toast('Invite link copied to clipboard!');
+              });
+            } else {
+              prompt('Copy invite link:', details.link);
             }
           }
         }, 'Copy Link'));
@@ -189,11 +300,9 @@ OC.people = (function () {
         if (account.invite && account.invite.passcode) {
           actions.push(h('button', {
             class: 'btn small', type: 'button', onClick: function () {
-              if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+              if (navigator.clipboard) {
                 navigator.clipboard.writeText(account.invite.passcode).then(function () {
-                  OC.ui.toast('72-Hour Password (' + account.invite.passcode + ') copied to clipboard!');
-                }).catch(function () {
-                  prompt('Copy 72-Hour Password:', account.invite.passcode);
+                  OC.ui.toast('72-Hour Password (' + account.invite.passcode + ') copied!');
                 });
               } else {
                 prompt('Copy 72-Hour Password:', account.invite.passcode);
@@ -222,7 +331,7 @@ OC.people = (function () {
       ]) : null,
       h('p', { class: 'mono muted', style: 'font-size:10.5px;margin-top:6px' },
         'Token ' + account.invite.token + ' · expires ' + OC.ui.fmtDate(account.invite.expires_at) + ' (72 hrs)'),
-      actions.length ? h('div', { class: 'row', style: 'margin-top:10px' }, actions) : null
+      actions.length ? h('div', { class: 'row', style: 'margin-top:10px;gap:6px;flex-wrap:wrap;' }, actions) : null
     ]);
   }
 

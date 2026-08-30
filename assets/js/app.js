@@ -19,10 +19,10 @@ OC.app = (function () {
 
   var ROUTES = [
     { id: 'dashboard', label: 'Dashboard', view: function () { return OC.dashboard; } },
-    { id: 'board',     label: 'Board',     view: function () { return OC.board; } },
-    { id: 'groups',    label: 'Groups',    view: function () { return OC.groups; } },
-    { id: 'reports',   label: 'Reports',   view: function () { return OC.reports; } },
-    { id: 'people',    label: 'People',    view: function () { return OC.people; } }
+    { id: 'board', label: 'Board', view: function () { return OC.board; } },
+    { id: 'groups', label: 'Groups', view: function () { return OC.groups; } },
+    { id: 'reports', label: 'Reports', view: function () { return OC.reports; } },
+    { id: 'people', label: 'People', view: function () { return OC.people; } }
   ];
 
   /* ---- theme ------------------------------------------------------------ */
@@ -35,7 +35,7 @@ OC.app = (function () {
     try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; }
   }
   function writeTheme(v) {
-    try { v ? localStorage.setItem(THEME_KEY, v) : localStorage.removeItem(THEME_KEY); } catch (e) {}
+    try { v ? localStorage.setItem(THEME_KEY, v) : localStorage.removeItem(THEME_KEY); } catch (e) { }
   }
   function applyTheme(button) {
     var t = THEMES[themeIndex];
@@ -70,21 +70,21 @@ OC.app = (function () {
     lastSeenNotification = newest.id;
     try {
       new Notification('Originate Command', { body: newest.text, tag: newest.id });
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function pushRow() {
     if (!pushSupported()) {
       return h('div', { class: 'pushrow' }, [OC.icon('alert'),
-        h('span', {}, 'This browser cannot show system notifications. Email is the fallback channel (9.2).')]);
+      h('span', {}, 'This browser cannot show system notifications. Email is the fallback channel (9.2).')]);
     }
     if (Notification.permission === 'granted') {
       return h('div', { class: 'pushrow on' }, [OC.icon('check'),
-        h('span', {}, 'Browser push is on for this device. Anything assigned to you raises a system notification (9.1).')]);
+      h('span', {}, 'Browser push is on for this device. Anything assigned to you raises a system notification (9.1).')]);
     }
     if (Notification.permission === 'denied') {
       return h('div', { class: 'pushrow' }, [OC.icon('alert'),
-        h('span', {}, 'Browser push is blocked in this browser\'s site settings. Email remains the fallback (9.2).')]);
+      h('span', {}, 'Browser push is blocked in this browser\'s site settings. Email remains the fallback (9.2).')]);
     }
     return h('div', { class: 'pushrow' }, [
       OC.icon('bell'),
@@ -103,16 +103,16 @@ OC.app = (function () {
     var list = myNotifications();
     var content = list.length
       ? h('div', {}, list.slice(0, 30).map(function (n) {
-          return h('div', { class: 'notif' + (n.read ? '' : ' unread') }, [
-            h('span', { class: 'marker' }),
-            h('div', {}, [
-              h('div', { class: 'what' }, n.text),
-              h('div', { class: 'when' }, OC.ui.fmtWhen(n.at))
-            ])
-          ]);
-        }))
+        return h('div', { class: 'notif' + (n.read ? '' : ' unread') }, [
+          h('span', { class: 'marker' }),
+          h('div', {}, [
+            h('div', { class: 'what' }, n.text),
+            h('div', { class: 'when' }, OC.ui.fmtWhen(n.at))
+          ])
+        ]);
+      }))
       : h('div', { class: 'empty' }, [OC.icon('inbox'),
-          'Nothing yet. Assign a todo or post an instruction and the people it reaches are notified here.']);
+        'Nothing yet. Assign a todo or post an instruction and the people it reaches are notified here.']);
 
     OC.ui.modal({
       title: 'Notifications',
@@ -258,19 +258,28 @@ OC.app = (function () {
       }
 
       isAuthenticated = true;
-      try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) {}
+      try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
       OC.store.setSession(found.id);
       OC.ui.toast('Connected successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
       render();
     }
 
+    var googleButtonContainer = h('div', {
+      id: 'googleSignInDiv',
+      style: 'display:flex;justify-content:center;margin-bottom:10px;'
+    });
+
     var cardContent = h('div', { class: 'login-form', style: 'text-align:center;' }, [
       errorBox,
+      googleButtonContainer,
       h('button', {
         class: 'btn primary connect-btn',
         type: 'button',
         style: 'height:48px;font-size:15px;width:100%;',
         onClick: function () {
+          if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            try { google.accounts.id.prompt(); } catch (e) { }
+          }
           openGoogleAccountChooser(function (selectedEmail) {
             performLogin(selectedEmail);
           });
@@ -294,11 +303,41 @@ OC.app = (function () {
 
     var screen = h('div', { class: 'login-screen' }, [card]);
     OC.ui.append(host, screen);
+
+    // Initialize Google Identity Services if script is loaded
+    if (typeof window !== 'undefined') {
+      setTimeout(function () {
+        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+          try {
+            google.accounts.id.initialize({
+              client_id: '812448375809-app.apps.googleusercontent.com',
+              callback: function (response) {
+                if (response && response.credential) {
+                  var data = decodeJwtResponse(response.credential);
+                  if (data && data.email) {
+                    performLogin(data.email);
+                  }
+                }
+              },
+              auto_select: false
+            });
+            google.accounts.id.renderButton(googleButtonContainer, {
+              theme: 'filled_blue',
+              size: 'large',
+              text: 'continue_with',
+              shape: 'rectangular',
+              width: 320
+            });
+            google.accounts.id.prompt();
+          } catch (err) { }
+        }
+      }, 300);
+    }
   }
 
   function logout() {
     isAuthenticated = false;
-    try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
+    try { localStorage.removeItem(AUTH_KEY); } catch (e) { }
     OC.ui.toast('Logged out successfully.');
     render();
   }
@@ -349,7 +388,7 @@ OC.app = (function () {
                 target.invite.claimed_at = new Date().toISOString();
               });
               isAuthenticated = true;
-              try { localStorage.setItem(AUTH_KEY, target.id); } catch (e) {}
+              try { localStorage.setItem(AUTH_KEY, target.id); } catch (e) { }
               OC.store.setSession(target.id);
               OC.ui.toast('Welcome, ' + target.name + '! Your account is now active.');
               location.hash = '#dashboard';
@@ -380,7 +419,7 @@ OC.app = (function () {
       writeTheme(THEMES[themeIndex]);
     });
 
-    var userInitials = (user.name || 'User').split(' ').map(function(w){return w[0];}).join('').slice(0,2);
+    var userInitials = (user.name || 'User').split(' ').map(function (w) { return w[0]; }).join('').slice(0, 2);
 
     return h('header', { class: 'topbar' }, [
       h('a', { class: 'brand', href: '#dashboard' }, [
@@ -455,7 +494,7 @@ OC.app = (function () {
     OC.store.load();
 
     var savedAuth = null;
-    try { savedAuth = localStorage.getItem(AUTH_KEY); } catch (e) {}
+    try { savedAuth = localStorage.getItem(AUTH_KEY); } catch (e) { }
     if (savedAuth && OC.store.user(savedAuth)) {
       isAuthenticated = true;
       OC.store.setSession(savedAuth);

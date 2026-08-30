@@ -219,6 +219,19 @@ OC.app = (function () {
     refresh(closeFn);
   }
 
+  function decodeJwtResponse(token) {
+    try {
+      var base64Url = token.split('.')[1];
+      var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      var jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      return null;
+    }
+  }
+
   function renderLoginScreen(host) {
     OC.ui.clear(host);
 
@@ -251,13 +264,22 @@ OC.app = (function () {
       render();
     }
 
+    var googleButtonContainer = h('div', {
+      id: 'googleSignInDiv',
+      style: 'display:flex;justify-content:center;margin-bottom:10px;'
+    });
+
     var cardContent = h('div', { class: 'login-form', style: 'text-align:center;' }, [
       errorBox,
+      googleButtonContainer,
       h('button', {
         class: 'btn primary connect-btn',
         type: 'button',
         style: 'height:48px;font-size:15px;width:100%;',
         onClick: function () {
+          if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            try { google.accounts.id.prompt(); } catch (e) {}
+          }
           openGoogleAccountChooser(function (selectedEmail) {
             performLogin(selectedEmail);
           });
@@ -281,6 +303,36 @@ OC.app = (function () {
 
     var screen = h('div', { class: 'login-screen' }, [card]);
     OC.ui.append(host, screen);
+
+    // Initialize Google Identity Services if script is loaded
+    if (typeof window !== 'undefined') {
+      setTimeout(function () {
+        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+          try {
+            google.accounts.id.initialize({
+              client_id: '812448375809-app.apps.googleusercontent.com',
+              callback: function (response) {
+                if (response && response.credential) {
+                  var data = decodeJwtResponse(response.credential);
+                  if (data && data.email) {
+                    performLogin(data.email);
+                  }
+                }
+              },
+              auto_select: false
+            });
+            google.accounts.id.renderButton(googleButtonContainer, {
+              theme: 'filled_blue',
+              size: 'large',
+              text: 'continue_with',
+              shape: 'rectangular',
+              width: 320
+            });
+            google.accounts.id.prompt();
+          } catch (err) {}
+        }
+      }, 300);
+    }
   }
 
   function logout() {

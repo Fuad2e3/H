@@ -6,7 +6,8 @@
    Originate Command · application
    ========================================================================= */
 
-:root {
+:root,
+:root[data-theme="light"] {
   color-scheme: light;
   
   /* Core Neutrals & Backgrounds (Day Mode: Vibrant, crisp, luminous) */

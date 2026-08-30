@@ -371,10 +371,31 @@ select {
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
 }
+:root[data-theme="dark"] .btn.orange,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .btn.orange {
+    background: linear-gradient(135deg, #FB923C 0%, #EA580C 100%);
+    box-shadow: 0 2px 10px rgba(251, 146, 60, 0.40);
+  }
+}
 .btn.orange:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(249, 115, 22, 0.45);
+}
+
+.btn.danger {
+  background: var(--signal-soft);
+  color: var(--signal);
+  border-color: rgba(225, 29, 72, 0.35);
+  font-weight: 600;
+}
+.btn.danger:hover {
+  background: var(--signal);
+  color: #FFFFFF;
+  border-color: var(--signal);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
+  transform: translateY(-1px);
 }
 
 .btn.small {

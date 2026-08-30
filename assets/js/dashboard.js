@@ -149,28 +149,8 @@ OC.dashboard = (function () {
             }, f.name);
           }))
         ]);
-      })(),
-
-      h('div', { class: 'grid-2', style: 'margin-top:18px' }, [
-        h('div', { class: 'card' }, [
-          h('h3', {}, 'My clients'),
-          clients.length
-            ? h('div', { class: 'row', style: 'margin-top:8px' }, clients.map(function (c) { return OC.ui.clientChip(c.id); }))
-            : h('p', { class: 'muted' }, 'No client work assigned.')
-        ]),
-        h('div', { class: 'card' }, [
-          h('h3', {}, 'My groups'),
-          groups.length
-            ? h('div', { class: 'stack', style: 'margin-top:8px' }, groups.map(function (g) {
-                return h('div', {}, [
-                  h('span', { class: 'chip group' }, g.name),
-                  h('p', { class: 'muted', style: 'font-size:13px;margin-top:5px' }, g.purpose)
-                ]);
-              }))
-            : h('p', { class: 'muted' }, 'You are not in a group. Groups cut across departments (4.2).')
-        ])
-      ])
-    ]);
+      })()
+    ].filter(Boolean));
   }
 
   return { render: render };

@@ -181,7 +181,7 @@ OC.people = (function () {
     var h = OC.ui.h;
     var user = me();
     var name = h('input', { type: 'text', placeholder: 'for example: Paid Advertising' });
-    var levels = h('input', { type: 'text', value: 'head, lead, member' });
+    var levels = h('input', { type: 'text', value: 'head, member' });
     OC.ui.modal({
       title: 'New department',
       content: h('div', {}, [
@@ -217,7 +217,7 @@ OC.people = (function () {
       title: 'Hierarchy for ' + dept.name,
       content: h('div', {}, [
         OC.ui.field('Levels, highest first', levels, { required: true,
-          hint: 'Order is the authority. Position 1 is the department head, position 2 the team lead; anything below assigns to nobody (3.4).' })
+          hint: 'Order is the authority. Position 1 is the department head; anything below assigns to nobody (3.4).' })
       ]),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },

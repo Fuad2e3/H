@@ -390,7 +390,7 @@ OC.board = (function () {
 
     var assignHint = people.length === 1 && people[0].value === 'user:' + user.id
       ? 'Your role can assign work to yourself only (3.2).'
-      : 'Admin, department heads and team leads only (3.2).';
+      : 'Admin and department heads only (3.2).';
 
     OC.ui.modal({
       title: 'New todo',

@@ -99,6 +99,12 @@ database, and stop it afterwards. Nothing depends on a server you started by
 hand — an earlier version did, and a stale one silently served a deleted
 database, which looked exactly like the application duplicating its writes.
 
+## Windows
+
+`start-servers.bat` creates the database on first run and starts the server;
+`stop-servers.bat` ends whatever is listening on 3000 and leaves the database
+alone. Both are conveniences around `npm run seed` and `npm start`.
+
 ## Deploying
 
 Any machine with Node 22.5 or newer:

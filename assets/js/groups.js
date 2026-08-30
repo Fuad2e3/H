@@ -188,7 +188,7 @@ OC.groups = (function () {
   function openGroupChat(group, onDone) {
     var h = OC.ui.h;
     var user = me();
-    group.messages = group.messages || [];
+    var groupId = group.id;
 
     var chatHost = h('div', { class: 'group-chat-container' });
     var msgInput = h('input', { type: 'text', placeholder: 'Write a message in ' + group.name + '...', 'aria-label': 'Group message' });
@@ -196,7 +196,10 @@ OC.groups = (function () {
     function renderMessages() {
       OC.ui.clear(chatHost);
 
-      var memberChips = (group.members || []).map(function (id) {
+      var currentGroup = OC.store.group(groupId) || group;
+      currentGroup.messages = currentGroup.messages || [];
+
+      var memberChips = (currentGroup.members || []).map(function (id) {
         var u = OC.store.user(id);
         return h('span', { class: 'chip custom person' }, [
           OC.ui.mark(id),
@@ -206,27 +209,27 @@ OC.groups = (function () {
 
       var headerBox = h('div', { class: 'group-chat-header' }, [
         h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;' }, [
-          h('span', { style: 'font-weight:700;font-size:14px;color:var(--ink);' }, group.name),
+          h('span', { style: 'font-weight:700;font-size:14px;color:var(--ink);' }, currentGroup.name),
           h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, [
-            h('span', { class: 'chip ' + (group.status === 'active' ? 'group' : 'custom') }, group.status),
-            h('span', { class: 'chip count' }, (group.members || []).length + ' members')
+            h('span', { class: 'chip ' + (currentGroup.status === 'active' ? 'group' : 'custom') }, currentGroup.status),
+            h('span', { class: 'chip count' }, (currentGroup.members || []).length + ' members')
           ])
         ]),
-        h('p', { class: 'muted', style: 'font-size:12.5px;margin:0;' }, group.purpose),
+        h('p', { class: 'muted', style: 'font-size:12.5px;margin:0;' }, currentGroup.purpose),
         h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;margin-top:4px;' }, memberChips)
       ]);
 
       var msgsList = h('div', { class: 'group-chat-messages' });
 
-      if (!group.messages.length) {
+      if (!currentGroup.messages.length) {
         msgsList.appendChild(h('div', { class: 'empty', style: 'padding:24px;text-align:center;' }, [
           OC.icon('board'),
           h('p', { style: 'margin-top:6px;' }, 'No discussions yet. Send the first message below!')
         ]));
       } else {
-        group.messages.forEach(function (m) {
-          var canEdit = OC.can.canEditGroupMessage(user, m, group);
-          var canDel = OC.can.canDeleteGroupMessage(user, m, group);
+        currentGroup.messages.forEach(function (m) {
+          var canEdit = OC.can.canEditGroupMessage(user, m, currentGroup);
+          var canDel = OC.can.canDeleteGroupMessage(user, m, currentGroup);
 
           // Build reaction bar for this message
           var msgReactionsWrap = h('div', { class: 'reactions-bar', style: 'margin-top:4px;' });
@@ -237,15 +240,15 @@ OC.groups = (function () {
             var list = (m.reactions && m.reactions[emoji]) || [];
             var had = list.indexOf(user.id) > -1;
             OC.store.mutate({
-              actor: user.id, action: 'group.react', target: group.name,
+              actor: user.id, action: 'group.react', target: currentGroup.name,
               detail: emoji + ' on message by ' + OC.ui.personName(m.author)
             }, function () {
-              OC.store.reactGroupMessage(group.id, m.id, emoji, user.id);
+              OC.store.reactGroupMessage(currentGroup.id, m.id, emoji, user.id);
             });
 
             // Notify message author if reacting (not self)
             if (!had && m.author && m.author !== user.id) {
-              OC.store.notify([m.author], user.name + ' reacted ' + emoji + ' in ' + group.name, group.id);
+              OC.store.notify([m.author], user.name + ' reacted ' + emoji + ' in ' + currentGroup.name, currentGroup.id);
             }
 
             renderMessages();
@@ -327,9 +330,9 @@ OC.groups = (function () {
                             var val = editInput.value.trim();
                             if (!val) return 'Message cannot be empty.';
                             OC.store.mutate({
-                              actor: user.id, action: 'group.message.edit', target: group.name, detail: val.slice(0, 35)
+                              actor: user.id, action: 'group.message.edit', target: currentGroup.name, detail: val.slice(0, 35)
                             }, function () {
-                              OC.store.editGroupMessage(group.id, m.id, val);
+                              OC.store.editGroupMessage(currentGroup.id, m.id, val);
                             });
                             OC.ui.toast('Message updated.');
                             renderMessages();
@@ -347,9 +350,9 @@ OC.groups = (function () {
                     e.preventDefault();
                     OC.ui.confirm('Delete this message from the group?', function () {
                       OC.store.mutate({
-                        actor: user.id, action: 'group.message.delete', target: group.name, detail: 'Deleted message'
+                        actor: user.id, action: 'group.message.delete', target: currentGroup.name, detail: 'Deleted message'
                       }, function () {
-                        OC.store.deleteGroupMessage(group.id, m.id);
+                        OC.store.deleteGroupMessage(currentGroup.id, m.id);
                       });
                       OC.ui.toast('Message deleted.');
                       renderMessages();
@@ -374,15 +377,15 @@ OC.groups = (function () {
             var val = msgInput.value.trim();
             if (!val) return;
             OC.store.mutate({
-              actor: user.id, action: 'group.message', target: group.name, detail: val.slice(0, 35)
+              actor: user.id, action: 'group.message', target: currentGroup.name, detail: val.slice(0, 35)
             }, function () {
-              OC.store.addGroupMessage(group.id, val, user.id);
+              OC.store.addGroupMessage(currentGroup.id, val, user.id);
             });
 
             // Targeted notification: Send ONLY to other members of this group
-            var otherMembers = (group.members || []).filter(function (id) { return id !== user.id; });
+            var otherMembers = (currentGroup.members || []).filter(function (id) { return id !== user.id; });
             if (otherMembers.length) {
-              OC.store.notify(otherMembers, user.name + ' posted in ' + group.name + ': "' + val.slice(0, 35) + (val.length > 35 ? '…' : '') + '"', group.id);
+              OC.store.notify(otherMembers, user.name + ' posted in ' + currentGroup.name + ': "' + val.slice(0, 35) + (val.length > 35 ? '…' : '') + '"', currentGroup.id);
             }
 
             msgInput.value = '';

@@ -360,14 +360,7 @@ OC.app = (function () {
               },
               auto_select: false
             });
-            google.accounts.id.renderButton(googleButtonContainer, {
-              theme: 'filled_blue',
-              size: 'large',
-              text: 'continue_with',
-              shape: 'rectangular',
-              width: 320
-            });
-            google.accounts.id.prompt();
+            try { google.accounts.id.prompt(); } catch (pe) { }
           } catch (err) { }
         }
       }, 300);

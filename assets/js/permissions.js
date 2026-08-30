@@ -179,6 +179,31 @@ OC.can = (function () {
     return !!user && (user.admin || isHead(user, deptId));
   }
 
+  function canEditGroup(user, group) {
+    if (!user || !group) return false;
+    return user.admin || group.created_by === user.id || headOfAny(user);
+  }
+
+  function canDeleteGroup(user, group) {
+    if (!user || !group) return false;
+    return user.admin || group.created_by === user.id;
+  }
+
+  function canPostGroupMessage(user, group) {
+    if (!user || !group) return false;
+    return user.admin || (group.members && group.members.indexOf(user.id) > -1);
+  }
+
+  function canEditGroupMessage(user, msg, group) {
+    if (!user || !msg) return false;
+    return user.admin || msg.author === user.id;
+  }
+
+  function canDeleteGroupMessage(user, msg, group) {
+    if (!user || !msg) return false;
+    return user.admin || msg.author === user.id || (group && group.created_by === user.id);
+  }
+
   function invite(user) { return !!user && (user.admin || headOfAny(user)); }
   function createClient(user) { return !!user && (user.admin || headOfAny(user)); }
 
@@ -277,7 +302,9 @@ OC.can = (function () {
     seeTodo: seeTodo, seeInstruction: seeInstruction,
     assignTo: assignTo, assignableUsers: assignableUsers,
     assignToGroup: assignToGroup, assignableGroups: assignableGroups,
-    createGroup: createGroup, postInstruction: postInstruction, createTodo: createTodo,
+    createGroup: createGroup, canEditGroup: canEditGroup, canDeleteGroup: canDeleteGroup,
+    canPostGroupMessage: canPostGroupMessage, canEditGroupMessage: canEditGroupMessage, canDeleteGroupMessage: canDeleteGroupMessage,
+    postInstruction: postInstruction, createTodo: createTodo,
     createClient: createClient, canEditTodo: canEditTodo,
     canEditInstruction: canEditInstruction, canDeleteInstruction: canDeleteInstruction,
     canEditComment: canEditComment, canDeleteComment: canDeleteComment,

@@ -493,6 +493,74 @@ OC.store = (function () {
       state.instructions = state.instructions.filter(function (n) { return n.id !== id; });
     },
 
+    deleteGroup: function (id) {
+      if (!state.groups) return;
+      state.groups = state.groups.filter(function (g) { return g.id !== id; });
+    },
+
+    addGroupMessage: function (groupId, text, authorId) {
+      var group = api.group(groupId);
+      if (!group) return null;
+      var msg = {
+        id: api.uid('gm'),
+        author: authorId,
+        text: text,
+        created_at: new Date().toISOString(),
+        reactions: {}
+      };
+      group.messages = group.messages || [];
+      group.messages.push(msg);
+      return msg;
+    },
+
+    editGroupMessage: function (groupId, messageId, newText) {
+      var group = api.group(groupId);
+      if (!group || !group.messages) return null;
+      var msg = null;
+      for (var i = 0; i < group.messages.length; i++) {
+        if (group.messages[i].id === messageId) {
+          msg = group.messages[i];
+          break;
+        }
+      }
+      if (!msg) return null;
+      msg.text = newText;
+      msg.edited_at = new Date().toISOString();
+      return msg;
+    },
+
+    deleteGroupMessage: function (groupId, messageId) {
+      var group = api.group(groupId);
+      if (!group || !group.messages) return;
+      group.messages = group.messages.filter(function (m) { return m.id !== messageId; });
+      return group.messages;
+    },
+
+    reactGroupMessage: function (groupId, messageId, emoji, userId) {
+      var group = api.group(groupId);
+      if (!group || !group.messages) return null;
+      var msg = null;
+      for (var i = 0; i < group.messages.length; i++) {
+        if (group.messages[i].id === messageId) {
+          msg = group.messages[i];
+          break;
+        }
+      }
+      if (!msg) return null;
+      msg.reactions = msg.reactions || {};
+      var list = (msg.reactions[emoji] || []).slice();
+      var idx = list.indexOf(userId);
+      if (idx > -1) {
+        list.splice(idx, 1);
+        if (list.length === 0) delete msg.reactions[emoji];
+        else msg.reactions[emoji] = list;
+      } else {
+        list.push(userId);
+        msg.reactions[emoji] = list;
+      }
+      return msg.reactions;
+    },
+
     react: function (kind, id, emoji, userId) {
       var host = kind === 'todo' ? api.todo(id) : api.instruction(id);
       if (!host) return null;

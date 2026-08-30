@@ -43,7 +43,7 @@ ok('notify marks unread', S.state.notifications[0].read, false);
 S.notify([], 'ignored');
 ok('notify with nobody is a no-op', S.state.notifications.length, notifBefore + 1);
 ok('notify persisted to storage',
-   JSON.parse(localStorage.getItem('oc-state-v1')).notifications.length, notifBefore + 1);
+   JSON.parse(localStorage.getItem('oc-state-v2')).notifications.length, notifBefore + 1);
 
 S.reset();
 ok('reset restores the clean seed', S.state.todos.length, 0);

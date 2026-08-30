@@ -14,8 +14,8 @@ window.OC = window.OC || {};
 OC.store = (function () {
   'use strict';
 
-  var KEY = 'oc-state-v1';
-  var SESSION_KEY = 'oc-session-v1';
+  var KEY = 'oc-state-v2';
+  var SESSION_KEY = 'oc-session-v2';
   var state = null;
   var listeners = [];
   var sseSource = null;
@@ -208,7 +208,7 @@ OC.store = (function () {
 
   function load() {
     state = read();
-    if (!state || state.version !== 1) {
+    if (!state || state.version !== 1 || (state.departments && state.departments.some(function (d) { return d.name === 'Web Development' || (d.levels && d.levels.length > 2); }))) {
       state = seed();
       write();
     }

@@ -63,6 +63,11 @@
   --grad-danger: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%);
   --grad-success: linear-gradient(135deg, #10B981 0%, #059669 100%);
   --grad-bar: linear-gradient(90deg, #2563EB 0%, #F97316 50%, #8B5CF6 100%);
+
+  /* Typography Tokens */
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {

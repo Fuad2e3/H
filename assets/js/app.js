@@ -222,25 +222,18 @@ OC.app = (function () {
   function renderLoginScreen(host) {
     OC.ui.clear(host);
 
-    var emailInput = h('input', {
-      type: 'email',
-      autocomplete: 'email',
-      required: true,
-      autofocus: true
-    });
-
-    var errorBox = h('div', { class: 'error', style: 'display:none;margin-bottom:12px;' });
+    var errorBox = h('div', { class: 'error', style: 'display:none;margin-bottom:14px;' });
 
     function performLogin(email) {
       if (!email) {
-        errorBox.textContent = 'Please enter your registered Gmail or work email address.';
+        errorBox.textContent = 'Please select your registered Gmail account.';
         errorBox.style.display = 'flex';
         return;
       }
       var clean = email.trim().toLowerCase();
       var found = OC.store.userByEmail(clean);
       if (!found) {
-        errorBox.innerHTML = '<strong>Access Denied:</strong> &quot;' + clean + '&quot; is not registered in the database.<br><span style="font-size:12px;opacity:0.9;">Only database-registered emails can connect. Please contact your System Admin for an invite.</span>';
+        errorBox.innerHTML = '<strong>Access Denied:</strong> &quot;' + clean + '&quot; is not registered in the database.<br><span style="font-size:12px;opacity:0.9;">Only database-registered accounts can connect. Please contact your System Admin.</span>';
         errorBox.style.display = 'flex';
         return;
       }
@@ -258,18 +251,12 @@ OC.app = (function () {
       render();
     }
 
-    var form = h('form', {
-      class: 'login-form',
-      onSubmit: function (e) {
-        e.preventDefault();
-        performLogin(emailInput.value);
-      }
-    }, [
+    var cardContent = h('div', { class: 'login-form', style: 'text-align:center;' }, [
       errorBox,
       h('button', {
         class: 'btn primary connect-btn',
         type: 'button',
-        style: 'height:46px;font-size:15px;',
+        style: 'height:48px;font-size:15px;width:100%;',
         onClick: function () {
           openGoogleAccountChooser(function (selectedEmail) {
             performLogin(selectedEmail);
@@ -279,18 +266,17 @@ OC.app = (function () {
         OC.icon('google'),
         'Connect with Google / Gmail'
       ]),
-      h('div', { class: 'login-divider' }, 'or sign in with email directly'),
-      OC.ui.field('Email Address', emailInput),
-      h('button', { class: 'btn', type: 'submit' }, 'Sign In / Continue')
+      h('p', { class: 'muted', style: 'font-size:12px;margin-top:14px;' },
+        '🔒 Single sign-on with database match verification.')
     ]);
 
     var card = h('div', { class: 'login-card' }, [
       h('div', { class: 'login-brand' }, [
         h('div', { class: 'mark' }, 'OC'),
         h('h1', {}, 'Connect to Originate Command'),
-        h('p', {}, 'Database-verified Gmail & email authentication.')
+        h('p', {}, 'Database-verified Google & Gmail authentication.')
       ]),
-      form
+      cardContent
     ]);
 
     var screen = h('div', { class: 'login-screen' }, [card]);

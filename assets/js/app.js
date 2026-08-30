@@ -391,7 +391,7 @@ OC.app = (function () {
           h('strong', {}, 'Authorized Personnel Only')
         ]),
         h('p', { class: 'authorized-notice-text' },
-          'Access is restricted to invited team members and authorized staff. Log in with your Gmail & password or Google account.')
+          'Access is restricted to invited team members and authorized staff. Log in with your Gmail & password.')
       ]),
 
       h('form', { class: 'portal-form', onSubmit: handlePasswordLogin }, [
@@ -410,17 +410,6 @@ OC.app = (function () {
           OC.icon('lock'),
           'Sign In with Password'
         ])
-      ]),
-
-      h('div', { class: 'portal-divider' }, 'OR'),
-
-      h('button', {
-        class: 'portal-google-btn',
-        type: 'button',
-        onClick: handleGoogleSignIn
-      }, [
-        OC.icon('google'),
-        'Sign in with Google Account'
       ]),
 
       h('div', { class: 'portal-footer-notice' }, [

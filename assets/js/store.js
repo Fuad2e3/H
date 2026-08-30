@@ -296,9 +296,18 @@ OC.store = (function () {
         modified = true;
       }
       if (state && Array.isArray(state.audit)) {
-        state.audit.forEach(function (a) {
-          if (!a.ip) a.ip = '127.0.0.1';
-        });
+        var dedupedAudit = [];
+        for (var ai = 0; ai < state.audit.length; ai++) {
+          var currA = state.audit[ai];
+          if (!currA.ip) currA.ip = '127.0.0.1';
+          var nextA = state.audit[ai + 1];
+          if (nextA && currA.actor === nextA.actor && currA.action === nextA.action && currA.target === nextA.target && currA.detail === nextA.detail && Math.abs(new Date(currA.at).getTime() - new Date(nextA.at).getTime()) < 3000) {
+            modified = true;
+            continue; // skip duplicate adjacent log
+          }
+          dedupedAudit.push(currA);
+        }
+        state.audit = dedupedAudit;
       }
       if (modified) write();
     }
@@ -348,13 +357,23 @@ OC.store = (function () {
     }
     if (entry) {
       var clientIp = entry.ip || currentClientIp || '127.0.0.1';
-      state.audit.unshift({
-        id: 'a-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
-        actor: entry.actor, action: entry.action, target: entry.target,
-        detail: entry.detail || '', ip: clientIp, at: new Date().toISOString()
-      });
-      if (state.audit.length > 500) {
-        state.audit = state.audit.slice(0, 500);
+      state.audit = state.audit || [];
+      var isDup = false;
+      if (state.audit.length > 0) {
+        var top = state.audit[0];
+        if (top.actor === entry.actor && top.action === entry.action && top.target === entry.target && top.detail === (entry.detail || '') && (Date.now() - new Date(top.at).getTime()) < 3000) {
+          isDup = true;
+        }
+      }
+      if (!isDup) {
+        state.audit.unshift({
+          id: 'a-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+          actor: entry.actor, action: entry.action, target: entry.target,
+          detail: entry.detail || '', ip: clientIp, at: new Date().toISOString()
+        });
+        if (state.audit.length > 500) {
+          state.audit = state.audit.slice(0, 500);
+        }
       }
     }
     write();

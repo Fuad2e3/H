@@ -150,7 +150,7 @@ const db = require('../dev3/API/config/db');
 test('Database state initializes and mutates atomically', () => {
   const state = db.getState();
   assert.ok(state.version === 1);
-  assert.strictEqual(state.users.length, 2);
+  assert.strictEqual(state.users.length, 3);
   assert.strictEqual(state.todos.length, 0);
 
   // Test mutation
@@ -313,13 +313,13 @@ test('API: getState & getStats return full workspace data', () => {
   commandController.getState(req, res);
   assert.strictEqual(getStatus(), 200);
   assert.strictEqual(getData().version, 1);
-  assert.strictEqual(getData().users.length, 2);
+  assert.strictEqual(getData().users.length, 3);
 
   const stats = mockReqRes();
   commandController.getStats(stats.req, stats.res);
   assert.strictEqual(stats.getStatus(), 200);
   assert.strictEqual(stats.getData().totalTodos, 0);
-  assert.strictEqual(stats.getData().users, 2);
+  assert.strictEqual(stats.getData().users, 3);
 });
 
 test('API: mutateState processes actions and stamps audit trail', () => {

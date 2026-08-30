@@ -592,7 +592,7 @@ OC.people = (function () {
     var user = me();
     // Only System Admins or the person who issued the invite can see and manage pending invites (6.1)
     var pending = OC.store.state.users.filter(function (u) {
-      return u.status === 'invited' && u.invite && OC.can.manageInvite(user, u);
+      return u.status === 'invited' && u.invite && !u.invite.claimed_at && OC.can.manageInvite(user, u);
     });
     var canEditAny = OC.store.state.users.some(function (u) { return OC.can.editAccount(user, u); });
 

@@ -258,6 +258,22 @@ OC.store = (function () {
           modified = true;
         }
       });
+      // Deduplicate: If an active account exists for an email, purge any duplicate pending invite records
+      var activeEmails = {};
+      state.users.forEach(function (u) {
+        if (u.status === 'active' && u.email) activeEmails[u.email.toLowerCase()] = true;
+      });
+      var deduped = state.users.filter(function (u) {
+        if (u.status === 'invited' && u.email && activeEmails[u.email.toLowerCase()]) {
+          modified = true;
+          return false; // drop duplicate pending invite
+        }
+        return true;
+      });
+      if (deduped.length !== state.users.length) {
+        state.users = deduped;
+        modified = true;
+      }
       if (modified) write();
     }
     syncWithServer();

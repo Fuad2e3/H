@@ -105,6 +105,13 @@ OC.can = (function () {
     return S().state.users.filter(function (u) { return assignTo(user, u.id); });
   }
 
+  function inGroup(user, groupId) {
+    if (!user || !groupId) return false;
+    var g = S().group(groupId);
+    if (!g) return false;
+    return Array.isArray(g.members) && g.members.indexOf(user.id) > -1;
+  }
+
   function assignToGroup(user, groupId) {
     if (!user) return false;
     if (user.admin || headOfAny(user)) return true;
@@ -112,7 +119,7 @@ OC.can = (function () {
   }
 
   function assignableGroups(user) {
-    return S().state.groups.filter(function (g) {
+    return (S().state.groups || []).filter(function (g) {
       return g.status === 'active' && assignToGroup(user, g.id);
     });
   }

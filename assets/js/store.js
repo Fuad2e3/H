@@ -62,7 +62,7 @@ OC.store = (function () {
         admin: true,
         departments: [],
         status: 'active',
-        password: 'OC-984210',
+        password: 'OC-Sm9K8wP4xR',
         prefs: { push: true, email: true, discord: true },
         invite: null
       },
@@ -74,7 +74,7 @@ OC.store = (function () {
         admin: true,
         departments: [],
         status: 'active',
-        password: 'OC-984210',
+        password: 'OC-Fu7X2mN9qL',
         prefs: { push: true, email: true, discord: true },
         invite: null
       },
@@ -86,7 +86,7 @@ OC.store = (function () {
         admin: false,
         departments: [{ department: 'd-web', level: 'head' }],
         status: 'active',
-        password: 'OC-984210',
+        password: 'OC-Og4W8vT5yZ',
         prefs: { push: true, email: true, discord: true },
         invite: null
       }
@@ -375,7 +375,7 @@ OC.store = (function () {
       expires.setHours(expires.getHours() + 72);
       var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
       var rand = '';
-      for (var i = 0; i < 8; i++) {
+      for (var i = 0; i < 10; i++) {
         rand += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       var passcode = 'OC-' + rand;

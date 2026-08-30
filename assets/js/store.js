@@ -146,7 +146,14 @@ OC.store = (function () {
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
     } catch (e) {}
-  }  /* ---- Manual Server API Sync & Auto-Refresh (Every 5s) ---------------- */
+  }
+
+  /* ---- Manual Server API Sync & Auto-Refresh (Every 5s) ---------------- */
+  function isHttp() {
+    if (typeof window === 'undefined' || !window.location) return false;
+    return window.location.protocol === 'http:' || window.location.protocol === 'https:';
+  }
+
   function getApiUrl(endpoint) {
     if (typeof window === 'undefined' || !window.location) return endpoint;
     var host = window.location.hostname;

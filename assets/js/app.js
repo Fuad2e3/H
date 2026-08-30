@@ -186,30 +186,13 @@ OC.app = (function () {
       h('button', { class: 'btn primary', type: 'submit' }, 'Log In / Continue')
     ]);
 
-    var accountsList = h('div', { class: 'login-accounts' }, accounts.map(function (u) {
-      return h('button', {
-        type: 'button',
-        class: 'login-account-btn',
-        onClick: function () {
-          emailInput.value = u.email;
-          performLogin(u.email);
-        }
-      }, [
-        h('span', { class: 'mark-tint tint-blueprint' }, u.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2)),
-        h('span', { class: 'acc-name' }, u.name),
-        h('span', { class: 'acc-email' }, u.email)
-      ]);
-    }));
-
     var card = h('div', { class: 'login-card' }, [
       h('div', { class: 'login-brand' }, [
         h('div', { class: 'mark' }, 'OC'),
         h('h1', {}, 'Sign In to Originate Command'),
-        h('p', {}, 'Direct email authentication on local server (no external tunnel needed).')
+        h('p', {}, 'Direct email authentication on local server.')
       ]),
-      form,
-      h('div', { class: 'login-divider' }, 'Or Choose Registered Account'),
-      accountsList
+      form
     ]);
 
     var screen = h('div', { class: 'login-screen' }, [card]);

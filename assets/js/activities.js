@@ -44,7 +44,7 @@ OC.activities = (function () {
     ]);
 
     /* ---- 2. Quick Action Buttons Bar ---- */
-    var topActions = h('div', { class: 'row', style: 'margin-bottom:16px;gap:10px;flex-wrap:wrap;align-items:center;' }, [
+    var topActions = h('div', { class: 'activities-toolbar', style: 'margin-bottom:18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;' }, [
       canCreateGroup
         ? h('button', {
             class: 'btn primary', type: 'button',
@@ -63,7 +63,7 @@ OC.activities = (function () {
                 OC.people.invite(function () { render(host, rerender); });
               }
             }
-          }, [OC.icon('plus'), 'Invite someone'])
+          }, [OC.icon('plus'), 'Invite member'])
         : null,
       canManageDept
         ? h('button', {
@@ -80,7 +80,7 @@ OC.activities = (function () {
         onClick: function () {
           if (OC.people && OC.people.editPrefs) OC.people.editPrefs();
         }
-      }, [OC.icon('bell'), 'My notification preferences'])
+      }, [OC.icon('bell'), 'Notification preferences'])
     ].filter(Boolean));
 
     /* ---- 3. Sub-navigation tabs ---- */
@@ -95,7 +95,7 @@ OC.activities = (function () {
     }
 
     var subNav = h('div', {
-      class: 'segmented',
+      class: 'segmented activities-tabs',
       role: 'group',
       'aria-label': 'Filter Activities section',
       style: 'margin-bottom:24px;flex-wrap:wrap;'
@@ -114,31 +114,10 @@ OC.activities = (function () {
 
     /* ---- Section A: Groups & Discussions ---- */
     if (activeTab === 'all' || activeTab === 'groups') {
-      var groupsSection = h('div', { class: 'activities-section', id: 'activities-groups-sec', style: 'margin-bottom:32px;' }, [
-        h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;' }, [
-          h('h2', { class: 'section-head', style: 'margin:0;' }, [
-            'Cross-Department Groups & Discussions',
-            h('span', { class: 'chip count' }, allGroups.length + ' total')
-          ]),
-          canCreateGroup
-            ? h('button', {
-                class: 'btn small push', type: 'button',
-                onClick: function () {
-                  if (OC.groups && OC.groups.newGroup) {
-                    OC.groups.newGroup(function () { render(host, rerender); });
-                  }
-                }
-              }, [OC.icon('plus'), 'New group'])
-            : null
-        ]),
-        h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:14px;max-width:80ch;' },
-          'A group spans across departments: custom member lists, assignable identity for task routing, real-time discussions, and member management.'
-        )
-      ]);
-
+      var groupsSection = h('div', { class: 'activities-section', id: 'activities-groups-sec', style: 'margin-bottom:32px;' });
       var groupsHost = h('div', { class: 'groups-sub-host' });
       if (OC.groups && OC.groups.render) {
-        OC.groups.render(groupsHost, function () { render(host, rerender); });
+        OC.groups.render(groupsHost, function () { render(host, rerender); }, true);
       }
       groupsSection.appendChild(groupsHost);
       content.push(groupsSection);

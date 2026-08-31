@@ -426,7 +426,7 @@ OC.groups = (function () {
   }
 
   /* ---- render ----------------------------------------------------------- */
-  function render(host, rerender) {
+  function render(host, rerender, hideHead) {
     var h = OC.ui.h;
     var user = me();
     var canCreate = OC.can.createGroup(user);
@@ -455,38 +455,39 @@ OC.groups = (function () {
     var activeCount = allGroups.filter(function (g) { return g.status === 'active'; }).length;
     var myCount = allGroups.filter(function (g) { return (g.members || []).indexOf(user.id) > -1; }).length;
 
-    OC.ui.clear(host);
-    OC.ui.append(host, [
-      h('div', { class: 'page-head' }, [
-        h('h1', {}, 'Groups & Cross-Department Teams'),
-        h('p', {}, 'Groups cut across the department tree for work that needs people from more than one department. ' +
-          'Includes team discussions, message editing/deletion, and emoji reactions.')
-      ]),
-
-      /* Top Stat Metrics */
-      h('div', { class: 'grid-3', style: 'margin-bottom:var(--s4);' }, [
-        h('div', { class: 'stat' }, [
-          h('span', { class: 'k' }, 'Total Groups'),
-          h('span', { class: 'v' }, String(allGroups.length))
+    var elements = [];
+    if (!hideHead) {
+      elements.push(
+        h('div', { class: 'page-head' }, [
+          h('h1', {}, 'Groups & Cross-Department Teams'),
+          h('p', {}, 'Groups cut across the department tree for work that needs people from more than one department. ' +
+            'Includes team discussions, message editing/deletion, and emoji reactions.')
         ]),
-        h('div', { class: 'stat' }, [
-          h('span', { class: 'k' }, 'Active Groups'),
-          h('span', { class: 'v' }, String(activeCount))
-        ]),
-        h('div', { class: 'stat' }, [
-          h('span', { class: 'k' }, 'My Groups'),
-          h('span', { class: 'v' }, String(myCount))
+        h('div', { class: 'grid-3', style: 'margin-bottom:var(--s4);' }, [
+          h('div', { class: 'stat' }, [
+            h('span', { class: 'k' }, 'Total Groups'),
+            h('span', { class: 'v' }, String(allGroups.length))
+          ]),
+          h('div', { class: 'stat' }, [
+            h('span', { class: 'k' }, 'Active Groups'),
+            h('span', { class: 'v' }, String(activeCount))
+          ]),
+          h('div', { class: 'stat' }, [
+            h('span', { class: 'k' }, 'My Groups'),
+            h('span', { class: 'v' }, String(myCount))
+          ])
         ])
-      ]),
+      );
+    }
 
-      /* Action Bar: Create & Filters */
+    elements.push(
       h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:var(--s4);flex-wrap:wrap;gap:10px;' }, [
         h('div', { class: 'row', style: 'gap:10px;align-items:center;flex:1;min-width:260px;' }, [
           h('input', {
             type: 'search', placeholder: 'Search groups by name, purpose, or member...',
             value: searchQuery,
             style: 'max-width:320px;',
-            onInput: OC.ui.debounce(function (e) { searchQuery = e.target.value; render(host, rerender); }, 120)
+            onInput: OC.ui.debounce(function (e) { searchQuery = e.target.value; render(host, rerender, hideHead); }, 120)
           }),
           h('div', { class: 'segmented', role: 'group', 'aria-label': 'Filter groups' }, [
             ['all', 'All (' + allGroups.length + ')'],
@@ -497,12 +498,12 @@ OC.groups = (function () {
             return h('button', {
               type: 'button',
               'aria-pressed': String(filterStatus === opt[0]),
-              onClick: function () { filterStatus = opt[0]; render(host, rerender); }
+              onClick: function () { filterStatus = opt[0]; render(host, rerender, hideHead); }
             }, opt[1]);
           }))
         ]),
-        canCreate
-          ? h('button', { class: 'btn primary', type: 'button', onClick: function () { newGroup(function () { render(host, rerender); }); } },
+        (canCreate && !hideHead)
+          ? h('button', { class: 'btn primary', type: 'button', onClick: function () { newGroup(function () { render(host, rerender, hideHead); }); } },
               [OC.icon('plus'), 'New group'])
           : null
       ]),
@@ -546,25 +547,25 @@ OC.groups = (function () {
             h('button', {
               class: 'btn small primary', type: 'button',
               title: 'Open Group Chat & Discussions',
-              onClick: function () { openGroupChat(g, function () { render(host, rerender); }); }
+              onClick: function () { openGroupChat(g, function () { render(host, rerender, hideHead); }); }
             }, ['💬 Chat (' + msgCount + ')']),
 
             canEdit ? h('button', {
               class: 'btn small', type: 'button',
               title: 'Edit Group info and members',
-              onClick: function () { editGroup(g, function () { render(host, rerender); }); }
+              onClick: function () { editGroup(g, function () { render(host, rerender, hideHead); }); }
             }, 'Edit') : null,
 
             (g.status === 'active' && canEdit) ? h('button', {
               class: 'btn small', type: 'button',
               title: 'Archive Group',
-              onClick: function () { archive(g, function () { render(host, rerender); }); }
+              onClick: function () { archive(g, function () { render(host, rerender, hideHead); }); }
             }, 'Archive') : null,
 
             canDel ? h('button', {
               class: 'btn small danger', type: 'button',
               title: 'Permanently delete group',
-              onClick: function () { deleteGroupDirect(g, function () { render(host, rerender); }); }
+              onClick: function () { deleteGroupDirect(g, function () { render(host, rerender, hideHead); }); }
             }, 'Delete') : null
           ].filter(Boolean))
         ]);
@@ -575,7 +576,10 @@ OC.groups = (function () {
           h('p', { class: 'muted', style: 'font-size:13px;margin-top:4px;' }, 'Try adjusting your search keywords or filter status.')
         ])
       ])
-    ]);
+    );
+
+    OC.ui.clear(host);
+    OC.ui.append(host, elements);
   }
 
   return {

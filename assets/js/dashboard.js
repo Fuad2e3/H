@@ -134,7 +134,12 @@ OC.dashboard = (function () {
       clientName ? h('span', { class: 'dashboard-client-name' }, clientName) : null,
       h('span', { class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : '') }, t.title),
       overdue ? h('span', { class: 'chip overdue due', style: 'font-size:11px;padding:2px 8px;' }, OC.ui.dueLabel(t.due)) : null,
-      assigneeText ? h('span', { class: 'dashboard-assignee-text' }, assigneeText) : null
+      assigneeUser
+        ? h('span', { class: 'dashboard-assignee-text', style: 'display:inline-flex;align-items:center;gap:6px;' }, [
+            OC.ui.mark(assigneeUser.id),
+            h('span', {}, assigneeText)
+          ])
+        : (assigneeText ? h('span', { class: 'dashboard-assignee-text' }, assigneeText) : null)
     ].filter(Boolean));
   }
 

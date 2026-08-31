@@ -173,7 +173,7 @@ OC.reports = (function () {
           ])),
           h('tbody', {}, rows.length ? rows.map(function (r) {
             return h('tr', {}, [
-              h('th', { scope: 'row' }, r.person.name),
+              h('th', { scope: 'row' }, OC.ui.person(r.person.id)),
               h('td', {}, OC.can.roleLabel(r.person)),
               h('td', { class: 'mono tabular' }, String(r.total)),
               h('td', { class: 'mono tabular' }, String(r.done)),
@@ -240,7 +240,7 @@ OC.reports = (function () {
           h('tbody', {}, audit.length ? audit.map(function (a) {
             return h('tr', {}, [
               h('td', { class: 'mono' }, OC.ui.fmtWhen(a.at)),
-              h('td', {}, OC.ui.personName(a.actor)),
+              h('td', {}, OC.ui.person(a.actor)),
               h('td', { class: 'mono' }, a.ip ? h('span', { class: 'chip mono' }, a.ip) : h('span', { class: 'muted' }, '—')),
               h('td', { class: 'mono' }, a.action),
               h('td', {}, a.target),

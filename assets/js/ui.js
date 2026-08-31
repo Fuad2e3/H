@@ -157,21 +157,27 @@ OC.ui = (function () {
     var cleanId = (typeof userId === 'string' && userId.indexOf('user:') === 0) ? userId.slice(5) : userId;
     var user = OC.store.user(cleanId);
     var name = user ? user.name : 'Unknown';
-    if (user && user.avatar) {
-      return h('span', {
-        class: 'mark-tint mark-avatar' + (extraClass ? ' ' + extraClass : ''),
-        title: name, 'aria-hidden': 'true'
-      }, [
-        h('img', {
-          src: user.avatar,
-          alt: name,
-          class: 'mark-avatar-img'
-        })
-      ]);
-    }
     var hash = 0;
     for (var i = 0; i < String(cleanId).length; i++) hash = (hash * 31 + String(cleanId).charCodeAt(i)) | 0;
     var tint = MARK_TINTS[Math.abs(hash) % MARK_TINTS.length];
+
+    if (user && user.avatar) {
+      var img = h('img', {
+        src: user.avatar,
+        alt: name,
+        class: 'mark-avatar-img'
+      });
+      var markEl = h('span', {
+        class: 'mark-tint mark-avatar' + (extraClass ? ' ' + extraClass : ''),
+        title: name, 'aria-hidden': 'true'
+      }, [img]);
+      img.onerror = function () {
+        markEl.className = 'mark-tint tint-' + tint + (extraClass ? ' ' + extraClass : '');
+        markEl.textContent = initials(name);
+      };
+      return markEl;
+    }
+
     return h('span', {
       class: 'mark-tint tint-' + tint + (extraClass ? ' ' + extraClass : ''),
       title: name, 'aria-hidden': 'true'
@@ -1156,11 +1162,17 @@ OC.ui = (function () {
   function photoUploader(currentAvatar, defaultName, onChange) {
     var avatarVal = currentAvatar || '';
     var preview = h('div', { class: 'photo-uploader-preview' });
+    var urlInput;
 
     function renderPreview() {
       clear(preview);
       if (avatarVal) {
-        preview.appendChild(h('img', { src: avatarVal, alt: defaultName || 'Avatar' }));
+        var img = h('img', { src: avatarVal, alt: defaultName || 'Avatar' });
+        img.onerror = function () {
+          clear(preview);
+          preview.textContent = initials(defaultName || 'User');
+        };
+        preview.appendChild(img);
       } else {
         preview.textContent = initials(defaultName || 'User');
       }
@@ -1200,6 +1212,7 @@ OC.ui = (function () {
             var ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, w, hDim);
             avatarVal = canvas.toDataURL('image/jpeg', 0.88);
+            if (urlInput) urlInput.value = '';
             renderPreview();
             if (onChange) onChange(avatarVal);
           };
@@ -1220,23 +1233,29 @@ OC.ui = (function () {
       type: 'button',
       onClick: function () {
         avatarVal = '';
+        if (urlInput) urlInput.value = '';
+        if (fileInput) fileInput.value = '';
         renderPreview();
         if (onChange) onChange('');
       }
     }, 'Remove photo');
 
-    var urlInput = h('input', {
+    urlInput = h('input', {
       type: 'url',
       placeholder: 'Or paste image/Gravatar URL...',
       value: (avatarVal && avatarVal.indexOf('data:') !== 0) ? avatarVal : '',
       style: 'font-size:12px;width:100%;margin-top:4px;',
+      onInput: function (e) {
+        var v = e.target.value.trim();
+        avatarVal = v;
+        renderPreview();
+        if (onChange) onChange(avatarVal);
+      },
       onChange: function (e) {
         var v = e.target.value.trim();
-        if (v) {
-          avatarVal = v;
-          renderPreview();
-          if (onChange) onChange(avatarVal);
-        }
+        avatarVal = v;
+        renderPreview();
+        if (onChange) onChange(avatarVal);
       }
     });
 
@@ -1255,6 +1274,7 @@ OC.ui = (function () {
       getValue: function () { return avatarVal; },
       setValue: function (val) {
         avatarVal = val || '';
+        if (urlInput) urlInput.value = (avatarVal && avatarVal.indexOf('data:') !== 0) ? avatarVal : '';
         renderPreview();
       }
     };

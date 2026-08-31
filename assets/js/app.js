@@ -581,6 +581,12 @@ OC.app = (function () {
               target: newName,
               detail: 'Updated profile details & avatar photo'
             }, function () {
+              var targetUser = OC.store.user(user.id);
+              if (targetUser) {
+                targetUser.name = newName;
+                targetUser.title = newTitle;
+                targetUser.avatar = newAvatar;
+              }
               user.name = newName;
               user.title = newTitle;
               user.avatar = newAvatar;

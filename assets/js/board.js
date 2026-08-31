@@ -347,10 +347,17 @@ OC.board = (function () {
         (Array.isArray(todo.assignees) && todo.assignees.length > 1)
           ? h('span', { class: 'multi-assignees-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center;' },
               todo.assignees.map(function (uid) {
-                var u = OC.store.user(uid);
-                if (u) return OC.ui.person(uid);
-                var g = OC.store.group(uid);
-                if (g) return h('span', { class: 'chip group' }, g.name);
+                if (typeof uid === 'string') {
+                  if (uid.indexOf('group:') === 0) {
+                    var g = OC.store.group(uid.slice(6));
+                    return h('span', { class: 'chip group' }, g ? g.name : uid.slice(6));
+                  }
+                  if (uid.indexOf('user:') === 0) {
+                    return OC.ui.person(uid.slice(5));
+                  }
+                }
+                var g2 = OC.store.group(uid);
+                if (g2) return h('span', { class: 'chip group' }, g2.name);
                 return OC.ui.person(uid);
               })
             )
@@ -684,8 +691,16 @@ OC.board = (function () {
     var buckets = {};
     todos.forEach(function (t) {
       var key;
-      if (grouping === 'client') key = (OC.store.client(t.client) || {}).name || 'No client';
-      else if (grouping === 'department') key = (OC.store.department(t.department) || {}).name || 'No department';
+      if (grouping === 'client') {
+        var cid = t.client || (Array.isArray(t.clients) && t.clients.length ? t.clients[0] : '');
+        var c = OC.store.client(cid);
+        key = c ? c.name : 'No client';
+      }
+      else if (grouping === 'department') {
+        var did = t.department || (Array.isArray(t.departments) && t.departments.length ? t.departments[0] : '');
+        var d = OC.store.department(did);
+        key = d ? d.name : 'No department';
+      }
       else key = OC.ui.assigneeName(t);
       (buckets[key] = buckets[key] || []).push(t);
     });

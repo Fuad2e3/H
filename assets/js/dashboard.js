@@ -104,10 +104,14 @@ OC.dashboard = (function () {
                     return h('article', { class: 'item is-' + t.state + (late ? ' is-overdue' : '') }, [
                       h('div', { class: 'title' }, t.title),
                       h('div', { class: 'meta' }, [
-                        OC.ui.deptChip(t.department),
+                        (Array.isArray(t.departments) && t.departments.length > 1)
+                          ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, t.departments.map(OC.ui.deptChip))
+                          : OC.ui.deptChip(t.department),
                         OC.ui.stateChip(t.state),
                         h('span', { class: late ? 'chip overdue' : '' }, OC.ui.dueLabel(t.due)),
-                        t.assignee_type === 'group' ? h('span', { class: 'chip group' }, OC.ui.assigneeName(t)) : null
+                        (Array.isArray(t.assignees) && t.assignees.length > 1)
+                          ? h('span', { class: 'chip group' }, OC.ui.assigneeName(t))
+                          : (t.assignee_type === 'group' ? h('span', { class: 'chip group' }, OC.ui.assigneeName(t)) : null)
                       ]),
                       OC.ui.reactionsBar('todo', t)
                     ]);
@@ -132,7 +136,15 @@ OC.dashboard = (function () {
                     isUnread ? h('span', { class: 'chip overdue' }, 'unread') : null
                   ]),
                   h('div', { class: 'body' }, n.body),
-                  h('div', { class: 'tags' }, [OC.ui.clientChip(n.client), OC.ui.deptChip(n.department), n.tags.map(OC.ui.tagChip)]),
+                  h('div', { class: 'tags' }, [
+                    (Array.isArray(n.clients) && n.clients.length > 1)
+                      ? h('span', { class: 'multi-clients-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, n.clients.map(OC.ui.clientChip))
+                      : OC.ui.clientChip(n.client),
+                    (Array.isArray(n.departments) && n.departments.length > 1)
+                      ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, n.departments.map(OC.ui.deptChip))
+                      : OC.ui.deptChip(n.department),
+                    n.tags.map(OC.ui.tagChip)
+                  ]),
                   OC.ui.reactionsBar('instruction', n),
                   isUnread ? h('div', { class: 'actions' }, [
                     h('button', {

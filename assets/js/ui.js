@@ -140,10 +140,11 @@ OC.ui = (function () {
   }
 
   function mark(userId, extraClass) {
-    var user = OC.store.user(userId);
+    var cleanId = (typeof userId === 'string' && userId.indexOf('user:') === 0) ? userId.slice(5) : userId;
+    var user = OC.store.user(cleanId);
     var name = user ? user.name : 'Unknown';
     var hash = 0;
-    for (var i = 0; i < String(userId).length; i++) hash = (hash * 31 + String(userId).charCodeAt(i)) | 0;
+    for (var i = 0; i < String(cleanId).length; i++) hash = (hash * 31 + String(cleanId).charCodeAt(i)) | 0;
     var tint = MARK_TINTS[Math.abs(hash) % MARK_TINTS.length];
     return h('span', {
       class: 'mark-tint tint-' + tint + (extraClass ? ' ' + extraClass : ''),
@@ -153,20 +154,33 @@ OC.ui = (function () {
 
   /* a person, shown as mark plus name */
   function person(userId, extraClass) {
+    var cleanId = (typeof userId === 'string' && userId.indexOf('user:') === 0) ? userId.slice(5) : userId;
     return h('span', { class: 'person' + (extraClass ? ' ' + extraClass : '') }, [
-      mark(userId), h('span', {}, personName(userId))
+      mark(cleanId), h('span', {}, personName(cleanId))
     ]);
   }
 
   function personName(id) {
-    var u = OC.store.user(id);
+    if (!id) return 'Unknown';
+    var cleanId = (typeof id === 'string' && id.indexOf('user:') === 0) ? id.slice(5) : id;
+    var u = OC.store.user(cleanId);
     return u ? u.name : 'Unknown';
   }
 
   function assigneeName(item) {
     if (!item) return 'Unassigned';
-    if (Array.isArray(item.assignees) && item.assignees.length > 1) {
+    if (Array.isArray(item.assignees) && item.assignees.length > 0) {
       return item.assignees.map(function (id) {
+        if (typeof id === 'string') {
+          if (id.indexOf('user:') === 0) {
+            var rawU = OC.store.user(id.slice(5));
+            return rawU ? rawU.name : id.slice(5);
+          }
+          if (id.indexOf('group:') === 0) {
+            var rawG = OC.store.group(id.slice(6));
+            return rawG ? rawG.name : id.slice(6);
+          }
+        }
         var u = OC.store.user(id);
         if (u) return u.name;
         var g = OC.store.group(id);

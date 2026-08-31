@@ -46,10 +46,16 @@ OC.reports = (function () {
     var rows = [['Title', 'Client', 'Department', 'Assignee', 'State', 'Due', 'Overdue days', 'Recurrence', 'Created by']];
     todos.forEach(function (t) {
       var late = OC.ui.daysLate(t.due);
+      var clientNames = (Array.isArray(t.clients) && t.clients.length)
+        ? t.clients.map(function (cid) { return (OC.store.client(cid) || {}).name || cid; }).join(', ')
+        : ((OC.store.client(t.client) || {}).name || '');
+      var deptNames = (Array.isArray(t.departments) && t.departments.length)
+        ? t.departments.map(function (did) { return (OC.store.department(did) || {}).name || did; }).join(', ')
+        : ((OC.store.department(t.department) || {}).name || '');
       rows.push([
         t.title,
-        (OC.store.client(t.client) || {}).name,
-        (OC.store.department(t.department) || {}).name,
+        clientNames,
+        deptNames,
         OC.ui.assigneeName(t),
         OC.ui.STATE_LABEL[t.state],
         t.due,
@@ -90,9 +96,12 @@ OC.reports = (function () {
     /* a client counts as complete when it has work and none of it is outstanding */
     var byClient = {};
     todos.forEach(function (t) {
-      var c = (byClient[t.client] = byClient[t.client] || { total: 0, done: 0 });
-      c.total++;
-      if (t.state === 'done') c.done++;
+      var clientList = (Array.isArray(t.clients) && t.clients.length) ? t.clients : (t.client ? [t.client] : []);
+      clientList.forEach(function (cid) {
+        var c = (byClient[cid] = byClient[cid] || { total: 0, done: 0 });
+        c.total++;
+        if (t.state === 'done') c.done++;
+      });
     });
     var clientsComplete = Object.keys(byClient).filter(function (id) {
       return byClient[id].total > 0 && byClient[id].done === byClient[id].total;
@@ -102,8 +111,17 @@ OC.reports = (function () {
     var people = OC.can.visibleUsers(user);
     var rows = people.map(function (p) {
       var theirs = todos.filter(function (t) {
-        if (t.assignee_type === 'user') return t.assignee === p.id;
-        return OC.can.inGroup(p, t.assignee);
+        if (t.assignee_type === 'user' && t.assignee === p.id) return true;
+        if (t.assignee_type === 'group' && OC.can.inGroup(p, t.assignee)) return true;
+        if (Array.isArray(t.assignees) && t.assignees.some(function (aid) {
+          if (aid === p.id) return true;
+          if (typeof aid === 'string') {
+            if (aid.indexOf('user:') === 0 && aid.slice(5) === p.id) return true;
+            if (aid.indexOf('group:') === 0 && OC.can.inGroup(p, aid.slice(6))) return true;
+          }
+          return OC.can.inGroup(p, aid);
+        })) return true;
+        return false;
       });
       return {
         person: p,

@@ -795,10 +795,6 @@ OC.ui = (function () {
       if (val && chosen.indexOf(val) === -1) chosen.push(val);
     });
 
-    if (!chosen.length && allowedDepts.length) {
-      chosen.push(allowedDepts[0].id);
-    }
-
     var root = h('div', { class: 'multi-picker dept-multi-picker' });
     var chipsWrap = h('div', { class: 'multi-picker-chips' });
     var searchInput = h('input', { type: 'search', placeholder: 'Search departments...', 'aria-label': 'Filter departments' });
@@ -916,10 +912,6 @@ OC.ui = (function () {
       }
       if (chosen.indexOf(str) === -1) chosen.push(str);
     });
-
-    if (!chosen.length && currentUser) {
-      chosen.push('user:' + currentUser.id);
-    }
 
     var root = h('div', { class: 'assignee-picker' });
     var chipsWrap = h('div', { class: 'assignee-selected-chips' });

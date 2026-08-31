@@ -560,7 +560,7 @@ OC.board = (function () {
 
     var initialAssignees = (preset.assignees && preset.assignees.length)
       ? preset.assignees
-      : (preset.assignee ? [(preset.assignee_type || 'user') + ':' + preset.assignee] : ['user:' + user.id]);
+      : (preset.assignee ? [(preset.assignee_type || 'user') + ':' + preset.assignee] : []);
     var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
 
     var due = h('input', { type: 'date', value: preset.due || OC.ui.today() });

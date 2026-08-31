@@ -1158,10 +1158,57 @@ OC.ui = (function () {
     };
   }
 
+  /* ---- ultra-compact 5KB avatar compressor ------------------------------- */
+  function compressAvatarImage(img) {
+    if (!img || !img.width || !img.height) return '';
+    // 96x96 is 2x retina sharpness for 28-54px avatars and compresses to ~2-4KB
+    var targetDim = 96;
+    var canvas = document.createElement('canvas');
+    canvas.width = targetDim;
+    canvas.height = targetDim;
+    var ctx = canvas.getContext('2d');
+
+    // Square center-crop (cover)
+    var sw = img.width;
+    var sh = img.height;
+    var sx = 0;
+    var sy = 0;
+    var sDim = Math.min(sw, sh);
+    if (sw > sh) {
+      sx = Math.round((sw - sh) / 2);
+    } else if (sh > sw) {
+      sy = Math.round((sh - sw) / 2);
+    }
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, sx, sy, sDim, sDim, 0, 0, targetDim, targetDim);
+
+    // Compress to WebP or JPEG <= 6.5KB string
+    var maxStringLen = 7000;
+    var qualities = [0.82, 0.72, 0.60, 0.48, 0.38];
+    var bestResult = '';
+
+    for (var i = 0; i < qualities.length; i++) {
+      var q = qualities[i];
+      var res = canvas.toDataURL('image/webp', q);
+      if (res && res.indexOf('data:image/webp') === 0) {
+        bestResult = res;
+        if (res.length <= maxStringLen) break;
+      } else {
+        res = canvas.toDataURL('image/jpeg', q);
+        bestResult = res;
+        if (res.length <= maxStringLen) break;
+      }
+    }
+    return bestResult || canvas.toDataURL('image/jpeg', 0.55);
+  }
+
   /* ---- photo uploader component ----------------------------------------- */
   function photoUploader(currentAvatar, defaultName, onChange) {
     var avatarVal = currentAvatar || '';
     var preview = h('div', { class: 'photo-uploader-preview' });
+    var sizeBadge = h('span', { class: 'chip count', style: 'font-size:11px;padding:2px 8px;font-weight:600;display:none;' });
     var urlInput;
 
     function renderPreview() {
@@ -1171,10 +1218,15 @@ OC.ui = (function () {
         img.onerror = function () {
           clear(preview);
           preview.textContent = initials(defaultName || 'User');
+          sizeBadge.style.display = 'none';
         };
         preview.appendChild(img);
+        var approxKb = Math.round(((avatarVal.length * 0.75) / 1024) * 10) / 10;
+        sizeBadge.textContent = '⚡ ' + approxKb + ' KB (optimized)';
+        sizeBadge.style.display = 'inline-flex';
       } else {
         preview.textContent = initials(defaultName || 'User');
+        sizeBadge.style.display = 'none';
       }
     }
     renderPreview();
@@ -1186,32 +1238,15 @@ OC.ui = (function () {
       onChange: function (e) {
         var file = e.target.files && e.target.files[0];
         if (!file) return;
-        if (file.size > 5 * 1024 * 1024) {
-          toast('Image must be under 5MB.', true);
+        if (file.size > 10 * 1024 * 1024) {
+          toast('Image must be under 10MB.', true);
           return;
         }
         var reader = new FileReader();
         reader.onload = function (evt) {
           var img = new Image();
           img.onload = function () {
-            var maxDim = 256;
-            var w = img.width;
-            var hDim = img.height;
-            if (w > maxDim || hDim > maxDim) {
-              if (w > hDim) {
-                hDim = Math.round((hDim * maxDim) / w);
-                w = maxDim;
-              } else {
-                w = Math.round((w * maxDim) / hDim);
-                hDim = maxDim;
-              }
-            }
-            var canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = hDim;
-            var ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, w, hDim);
-            avatarVal = canvas.toDataURL('image/jpeg', 0.88);
+            avatarVal = compressAvatarImage(img);
             if (urlInput) urlInput.value = '';
             renderPreview();
             if (onChange) onChange(avatarVal);
@@ -1240,32 +1275,55 @@ OC.ui = (function () {
       }
     }, 'Remove photo');
 
+    function handleUrlInput(v) {
+      v = (v || '').trim();
+      if (!v) {
+        avatarVal = '';
+        renderPreview();
+        if (onChange) onChange('');
+        return;
+      }
+      if (v.indexOf('data:') === 0 || v.indexOf('http') === 0) {
+        var testImg = new Image();
+        testImg.crossOrigin = 'Anonymous';
+        testImg.onload = function () {
+          try {
+            avatarVal = compressAvatarImage(testImg);
+          } catch (_) {
+            avatarVal = v;
+          }
+          renderPreview();
+          if (onChange) onChange(avatarVal);
+        };
+        testImg.onerror = function () {
+          avatarVal = v;
+          renderPreview();
+          if (onChange) onChange(avatarVal);
+        };
+        testImg.src = v;
+      } else {
+        avatarVal = v;
+        renderPreview();
+        if (onChange) onChange(avatarVal);
+      }
+    }
+
     urlInput = h('input', {
       type: 'url',
       placeholder: 'Or paste image/Gravatar URL...',
       value: (avatarVal && avatarVal.indexOf('data:') !== 0) ? avatarVal : '',
       style: 'font-size:12px;width:100%;margin-top:4px;',
-      onInput: function (e) {
-        var v = e.target.value.trim();
-        avatarVal = v;
-        renderPreview();
-        if (onChange) onChange(avatarVal);
-      },
-      onChange: function (e) {
-        var v = e.target.value.trim();
-        avatarVal = v;
-        renderPreview();
-        if (onChange) onChange(avatarVal);
-      }
+      onInput: function (e) { handleUrlInput(e.target.value); },
+      onChange: function (e) { handleUrlInput(e.target.value); }
     });
 
     var node = h('div', { class: 'photo-uploader' }, [
       preview,
       fileInput,
       h('div', { class: 'photo-uploader-controls' }, [
-        h('div', { class: 'photo-uploader-actions' }, [chooseBtn, removeBtn]),
+        h('div', { class: 'photo-uploader-actions' }, [chooseBtn, removeBtn, sizeBadge]),
         urlInput,
-        h('span', { class: 'muted', style: 'font-size:11px;' }, 'JPG, PNG, WebP or direct image link. Auto-optimized.')
+        h('span', { class: 'muted', style: 'font-size:11px;' }, 'Auto-compressed to ~3-5KB for instant database & network performance.')
       ])
     ]);
 

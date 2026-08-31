@@ -16,6 +16,7 @@ OC.dashboard = (function () {
   var showUpcoming = true;
 
   function allMyTodos(user) {
+    if (!user || !OC.store.state.todos) return [];
     return OC.store.state.todos.filter(function (t) {
       if (t.archived || t.state === 'done') return false;
       // Check single-assignee fields
@@ -134,7 +135,7 @@ OC.dashboard = (function () {
     }, [
       checkbox,
       channelBadge,
-      clientName ? h('span', { class: 'dashboard-client-name' }, clientName) : null,
+      clientCode ? h('span', { class: 'dashboard-client-name' }, clientCode) : null,
       h('span', { class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : '') }, t.title),
       overdue ? h('span', { class: 'chip overdue due', style: 'font-size:11px;padding:2px 8px;' }, OC.ui.dueLabel(t.due)) : null,
       assigneeUser
@@ -250,7 +251,8 @@ OC.dashboard = (function () {
       ]),
 
       (function () {
-        var pinned = OC.store.state.saved_filters.filter(function (f) { return f.owner === user.id; });
+        var filters = OC.store.state.saved_filters || [];
+        var pinned = filters.filter(function (f) { return f.owner === user.id; });
         if (!pinned.length) return null;
         return h('div', { class: 'card', style: 'margin-top:18px' }, [
           h('h3', {}, 'Pinned filters'),

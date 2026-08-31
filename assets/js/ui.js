@@ -291,6 +291,17 @@ OC.ui = (function () {
         var targets = [];
         if (kind === 'todo') {
           if (item.created_by) targets.push(item.created_by);
+          if (Array.isArray(item.assignees)) {
+            item.assignees.forEach(function (aid) {
+              if (aid.indexOf('user:') === 0) targets.push(aid.slice(5));
+              else if (aid.indexOf('group:') === 0) {
+                var g = OC.store.group(aid.slice(6));
+                if (g && g.members) targets = targets.concat(g.members);
+              } else {
+                targets.push(aid);
+              }
+            });
+          }
           if (item.assignee_type === 'user' && item.assignee) targets.push(item.assignee);
           else if (item.assignee_type === 'group' && item.assignee) {
             var g = OC.store.group(item.assignee);
@@ -304,7 +315,7 @@ OC.ui = (function () {
         });
         if (targets.length) {
           var itemTitle = kind === 'todo' ? item.title : (item.body ? item.body.slice(0, 35) + '…' : 'instruction');
-          OC.store.notify(targets, user.name + ' reacted ' + emoji + ' on ' + (kind === 'todo' ? 'todo: "' + itemTitle + '"' : 'instruction: "' + itemTitle + '"'), item.id);
+          OC.store.notify(targets, user.name + ' reacted ' + emoji + ' on ' + (kind === 'todo' ? 'task: "' + itemTitle + '"' : 'instruction: "' + itemTitle + '"'), item.id);
         }
       }
 
@@ -487,6 +498,17 @@ OC.ui = (function () {
               var targets = [];
               if (kind === 'todo') {
                 if (item.created_by) targets.push(item.created_by);
+                if (Array.isArray(item.assignees)) {
+                  item.assignees.forEach(function (aid) {
+                    if (aid.indexOf('user:') === 0) targets.push(aid.slice(5));
+                    else if (aid.indexOf('group:') === 0) {
+                      var g = OC.store.group(aid.slice(6));
+                      if (g && g.members) targets = targets.concat(g.members);
+                    } else {
+                      targets.push(aid);
+                    }
+                  });
+                }
                 if (item.assignee_type === 'user' && item.assignee) targets.push(item.assignee);
                 else if (item.assignee_type === 'group' && item.assignee) {
                   var g = OC.store.group(item.assignee);
@@ -507,7 +529,7 @@ OC.ui = (function () {
 
               if (targets.length) {
                 var itemTitle = kind === 'todo' ? item.title : (item.body ? item.body.slice(0, 35) + '…' : 'instruction');
-                OC.store.notify(targets, curName + ' commented on ' + (kind === 'todo' ? 'todo: "' + itemTitle + '"' : 'instruction: "' + itemTitle + '"'), item.id);
+                OC.store.notify(targets, curName + ' commented on ' + (kind === 'todo' ? 'task: "' + itemTitle + '"' : 'instruction: "' + itemTitle + '"'), item.id);
               }
 
               body.value = '';

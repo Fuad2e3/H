@@ -625,16 +625,30 @@ OC.board = (function () {
               OC.store.state.todos.push(todo);
             });
 
-            var targets = [];
+            var directAssigneeTargets = [];
             assignees.forEach(function (aid, idx) {
               var tType = assigneeTypes[idx] || 'user';
-              if (tType === 'user') targets.push(aid);
+              if (tType === 'user') directAssigneeTargets.push(aid);
               else {
                 var g = OC.store.group(aid);
-                if (g && g.members) targets = targets.concat(g.members);
+                if (g && g.members) directAssigneeTargets = directAssigneeTargets.concat(g.members);
               }
             });
-            OC.store.notify(targets.filter(function (id) { return id !== user.id; }), user.name + ' assigned you: ' + todo.title, todo.id);
+            directAssigneeTargets = directAssigneeTargets.filter(function (id, idx, arr) {
+              return id && id !== user.id && arr.indexOf(id) === idx;
+            });
+
+            if (directAssigneeTargets.length) {
+              OC.store.notify(directAssigneeTargets, user.name + ' assigned you a task: ' + todo.title, todo.id);
+            }
+
+            var otherDeptAudience = OC.store.state.users.filter(function (u) {
+              return u.id !== user.id && directAssigneeTargets.indexOf(u.id) === -1 && OC.can.seeTodo(u, todo);
+            }).map(function (u) { return u.id; });
+
+            if (otherDeptAudience.length) {
+              OC.store.notify(otherDeptAudience, user.name + ' created a new task: ' + todo.title, todo.id);
+            }
             if (onCreated) onCreated(todo);
             OC.ui.toast('Todo created.');
             close();
@@ -883,7 +897,14 @@ OC.board = (function () {
             var audience = OC.store.state.users.filter(function (u) {
               return u.id !== user.id && OC.can.seeInstruction(u, note);
             }).map(function (u) { return u.id; });
-            OC.store.notify(audience, user.name + ' posted an instruction for ' + (OC.store.client(note.client) || {}).name, note.id);
+            var clientNames = (note.clients || [note.client]).map(function (cid) {
+              var c = OC.store.client(cid);
+              return c ? c.name : cid;
+            }).filter(Boolean).join(', ');
+            var label = clientNames || 'your department';
+            if (audience.length) {
+              OC.store.notify(audience, user.name + ' posted an instruction (' + label + '): ' + (note.body.length > 50 ? note.body.slice(0, 50) + '…' : note.body), note.id);
+            }
             OC.ui.toast('Instruction posted to ' + audience.length + ' people.');
             close();
           }

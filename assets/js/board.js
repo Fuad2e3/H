@@ -588,7 +588,7 @@ OC.board = (function () {
   }
 
   /* ---- new todo ---------------------------------------------------------- */
-  function newTodo(preset) {
+  function newTodo(preset, onCreated) {
     preset = preset || {};
     var user = me();
     var title = h('input', { type: 'text', placeholder: 'What needs doing?' });
@@ -697,7 +697,7 @@ OC.board = (function () {
             if (otherDeptAudience.length) {
               OC.store.notify(otherDeptAudience, user.name + ' created a new task: ' + todo.title, todo.id);
             }
-            if (onCreated) onCreated(todo);
+            if (typeof onCreated === 'function') onCreated(todo);
             OC.ui.toast('Todo created.');
             close();
           }

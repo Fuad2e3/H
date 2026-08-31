@@ -209,6 +209,35 @@ test('Multi-department visibility: only members of targeted departments can see 
   assert.strictEqual(OC.can.seeInstruction(admin, note), true);
 });
 
+test('Group visibility & messaging: only assigned group members and admin can view, post, and react', () => {
+  const secretGroup = {
+    id: 'g-secret',
+    name: 'Special Task Force',
+    purpose: 'Confidential project',
+    members: ['u-outreach-member', 'u-web-member'],
+    created_by: 'u-outreach-member',
+    status: 'active',
+    messages: []
+  };
+
+  // Members can see, post, and react
+  assert.strictEqual(OC.can.seeGroup(outreachMember, secretGroup), true);
+  assert.strictEqual(OC.can.canPostGroupMessage(outreachMember, secretGroup), true);
+  assert.strictEqual(OC.can.canReactGroupMessage(outreachMember, secretGroup), true);
+
+  assert.strictEqual(OC.can.seeGroup(webMember, secretGroup), true);
+  assert.strictEqual(OC.can.canPostGroupMessage(webMember, secretGroup), true);
+
+  // System Admin can see and manage
+  assert.strictEqual(OC.can.seeGroup(admin, secretGroup), true);
+  assert.strictEqual(OC.can.canPostGroupMessage(admin, secretGroup), true);
+
+  // Non-member (Leadgen Member) CANNOT see, post, or react
+  assert.strictEqual(OC.can.seeGroup(leadgenMember, secretGroup), false, 'Non-member must NOT see group');
+  assert.strictEqual(OC.can.canPostGroupMessage(leadgenMember, secretGroup), false, 'Non-member must NOT post messages');
+  assert.strictEqual(OC.can.canReactGroupMessage(leadgenMember, secretGroup), false, 'Non-member must NOT react');
+});
+
 // -------------------------------------------------------------------------
 // 4. Notification Engine Verification
 // -------------------------------------------------------------------------

@@ -190,6 +190,11 @@ OC.groups = (function () {
     var user = me();
     var groupId = group.id;
 
+    if (!OC.can.seeGroup(user, group)) {
+      OC.ui.toast('Access restricted: Only assigned group members can view this group.', true);
+      return;
+    }
+
     var chatHost = h('div', { class: 'group-chat-container' });
     var msgInput = h('input', { type: 'text', placeholder: 'Write a message in ' + group.name + '...', 'aria-label': 'Group message' });
 
@@ -237,6 +242,10 @@ OC.groups = (function () {
           var pickerPop = null;
 
           function toggleMsgReact(emoji) {
+            if (!OC.can.canReactGroupMessage(user, currentGroup)) {
+              OC.ui.toast('Access restricted: Only assigned group members can react.', true);
+              return;
+            }
             var list = (m.reactions && m.reactions[emoji]) || [];
             var had = list.indexOf(user.id) > -1;
             OC.store.mutate({
@@ -374,6 +383,10 @@ OC.groups = (function () {
         msgInput,
         h('button', {
           class: 'btn small primary', type: 'button', onClick: function () {
+            if (!OC.can.canPostGroupMessage(user, currentGroup)) {
+              OC.ui.toast('Access restricted: Only assigned group members can post messages.', true);
+              return;
+            }
             var val = msgInput.value.trim();
             if (!val) return;
             OC.store.mutate({
@@ -417,7 +430,9 @@ OC.groups = (function () {
     var h = OC.ui.h;
     var user = me();
     var canCreate = OC.can.createGroup(user);
-    var allGroups = OC.store.state.groups || [];
+    var allGroups = (OC.store.state.groups || []).filter(function (g) {
+      return OC.can.seeGroup(user, g);
+    });
 
     // Filter groups
     var visible = allGroups.filter(function (g) {

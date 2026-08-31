@@ -218,6 +218,22 @@ OC.can = (function () {
     return !!user && (user.admin || isHead(user, deptId));
   }
 
+  /* Groups: Visible and accessible STRICTLY to assigned members and System Admin */
+  function seeGroup(user, group) {
+    if (!user || !group) return false;
+    if (user.admin) return true;
+    return Array.isArray(group.members) && group.members.indexOf(user.id) > -1;
+  }
+
+  function canPostGroupMessage(user, group) {
+    if (!user || !group) return false;
+    return user.admin || (group.members && group.members.indexOf(user.id) > -1);
+  }
+
+  function canReactGroupMessage(user, group) {
+    return seeGroup(user, group);
+  }
+
   function canEditGroup(user, group) {
     if (!user || !group) return false;
     return user.admin || group.created_by === user.id || headOfAny(user);
@@ -226,11 +242,6 @@ OC.can = (function () {
   function canDeleteGroup(user, group) {
     if (!user || !group) return false;
     return user.admin || group.created_by === user.id;
-  }
-
-  function canPostGroupMessage(user, group) {
-    if (!user || !group) return false;
-    return user.admin || (group.members && group.members.indexOf(user.id) > -1);
   }
 
   function canEditGroupMessage(user, msg, group) {
@@ -366,11 +377,12 @@ OC.can = (function () {
     levelIn: levelIn, rank: rank, rankOf: rankOf,
     isHead: isHead, isLead: isLead, inDept: inDept, inGroup: inGroup,
     headOfAny: headOfAny, departmentsOf: departmentsOf, roleLabel: roleLabel,
-    seeTodo: seeTodo, seeInstruction: seeInstruction,
+    seeTodo: seeTodo, seeInstruction: seeInstruction, seeGroup: seeGroup,
     assignTo: assignTo, assignableUsers: assignableUsers,
     assignToGroup: assignToGroup, assignableGroups: assignableGroups,
     createGroup: createGroup, canEditGroup: canEditGroup, canDeleteGroup: canDeleteGroup,
     canPostGroupMessage: canPostGroupMessage, canEditGroupMessage: canEditGroupMessage, canDeleteGroupMessage: canDeleteGroupMessage,
+    canReactGroupMessage: canReactGroupMessage,
     postInstruction: postInstruction, createTodo: createTodo,
     createClient: createClient, canEditTodo: canEditTodo,
     canEditInstruction: canEditInstruction, canDeleteInstruction: canDeleteInstruction,

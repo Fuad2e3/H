@@ -95,7 +95,7 @@ OC.clients = (function () {
     OC.ui.clear(host);
     OC.ui.append(host, [
       h('div', { class: 'page-head' }, [
-        h('h1', {}, 'Clients'),
+        h('h1', {}, 'Clients Portal'),
         h('p', {}, 'Manage official client accounts, Client IDs, ticker codes, primary contacts, and assigned task workloads across all departments.')
       ]),
 

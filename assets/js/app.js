@@ -20,8 +20,8 @@ OC.app = (function () {
   var ROUTES = [
     { id: 'dashboard', label: 'Dashboard', view: function () { return OC.dashboard; } },
     { id: 'board', label: 'Board', view: function () { return OC.board; } },
-    { id: 'clients', label: 'Clients', view: function () { return OC.clients; } },
-    { id: 'activities', label: 'Activities', view: function () { return OC.activities || OC.groups || OC.people; } }
+    { id: 'clients', label: 'Clients Portal', view: function () { return OC.clients; } },
+    { id: 'activities', label: 'Management', view: function () { return OC.activities || OC.groups || OC.people; } }
   ];
 
   /* ---- theme ------------------------------------------------------------ */
@@ -589,10 +589,11 @@ OC.app = (function () {
               user.name = newName;
               user.title = newTitle;
               user.avatar = newAvatar;
+
+              OC.ui.toast('Profile photo & details updated.');
+              render();
+              close();
             });
-            OC.ui.toast('Profile photo & details updated.');
-            render();
-            close();
           }
         }
       ]
@@ -640,7 +641,10 @@ OC.app = (function () {
             ])
           : h('span', { class: 'mark-tint tint-blueprint', style: 'width:28px;height:28px;font-size:11px;font-weight:700;' }, userInitials),
         h('div', { style: 'display:flex;flex-direction:column;line-height:1.2;' }, [
-          h('strong', { style: 'font-size:13px;color:var(--ink);font-weight:600;' }, user.name),
+          h('div', { style: 'display:flex;align-items:center;gap:6px;' }, [
+            h('strong', { style: 'font-size:13px;color:var(--ink);font-weight:600;' }, user.name),
+            user.title ? h('span', { class: 'chip role', style: 'font-size:10.5px;padding:1px 5px;' }, user.title) : null
+          ]),
           h('span', { class: 'mono muted', style: 'font-size:11px;' }, user.email + ' (' + OC.can.roleLabel(user) + ')')
         ])
       ]),

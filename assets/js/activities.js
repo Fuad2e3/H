@@ -39,7 +39,7 @@ OC.activities = (function () {
 
     /* ---- 1. Page Header ---- */
     var pageHead = h('div', { class: 'page-head' }, [
-      h('h1', {}, 'Activities'),
+      h('h1', {}, 'Management'),
       h('p', {}, 'Centralized team collaboration & organization hub: cross-department groups, live discussions, departments, member accounts, and pending invites.')
     ]);
 
@@ -58,7 +58,7 @@ OC.activities = (function () {
     var subNav = h('div', {
       class: 'segmented activities-tabs',
       role: 'group',
-      'aria-label': 'Filter Activities section',
+      'aria-label': 'Filter Management section',
       style: 'margin-bottom:24px;flex-wrap:wrap;'
     }, tabs.map(function (opt) {
       return h('button', {

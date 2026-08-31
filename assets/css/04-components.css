@@ -239,59 +239,45 @@
 .segmented {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--rule-strong);
+  gap: 4px;
+  padding: 4px;
+  background: var(--segmented-bg, #111B2E);
+  border: 1px solid var(--segmented-border, rgba(148, 163, 184, 0.20));
   border-radius: 10px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-:root:not([data-theme="dark"]) .segmented {
-  background: #F1F5F9;
-  border-color: #E2E8F0;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(8px);
 }
 .segmented button {
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
-  padding: 5px 13px;
-  height: 29px;
+  padding: 6px 14px;
+  height: 32px;
   border-radius: 7px;
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--segmented-btn-color, #94A3B8);
   user-select: none;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 .segmented button + button {
   border-left: none;
 }
 .segmented button:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--ink);
-}
-:root:not([data-theme="dark"]) .segmented button:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: #0F172A;
+  background: var(--segmented-btn-hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--segmented-btn-hover-color, #F8FAFC);
 }
 .segmented button:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 .segmented button[aria-pressed="true"] {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.2) 100%) !important;
-  color: #93C5FD !important;
-  border: 1px solid rgba(96, 165, 250, 0.4) !important;
+  background: var(--segmented-active-bg, linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)) !important;
+  color: var(--segmented-active-color, #FFFFFF) !important;
+  border: 1px solid var(--segmented-active-border, rgba(147, 197, 253, 0.35)) !important;
   font-weight: 700 !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-}
-:root:not([data-theme="dark"]) .segmented button[aria-pressed="true"] {
-  background: #FFFFFF !important;
-  color: #1D4ED8 !important;
-  border: 1px solid #CBD5E1 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--segmented-active-shadow, 0 2px 8px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)) !important;
 }
 
 /* ---- cards -------------------------------------------------------------- */

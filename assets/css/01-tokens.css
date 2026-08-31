@@ -58,6 +58,17 @@
   --input-bg: #FFFFFF;
   --input-text: #0F172A;
   --input-border: rgba(30, 41, 59, 0.20);
+
+  /* Segmented Controls & Modern Pill Tabs */
+  --segmented-bg: #F1F5F9;
+  --segmented-border: #E2E8F0;
+  --segmented-btn-color: #64748B;
+  --segmented-btn-hover-bg: rgba(15, 23, 42, 0.05);
+  --segmented-btn-hover-color: #0F172A;
+  --segmented-active-bg: #FFFFFF;
+  --segmented-active-color: #1D4ED8;
+  --segmented-active-border: #CBD5E1;
+  --segmented-active-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
   
   /* Interactive Washes */
   --tint: rgba(37, 99, 235, 0.05);
@@ -133,6 +144,17 @@
     --input-text: #F8FAFC;
     --input-border: rgba(148, 163, 184, 0.25);
 
+    /* Segmented Controls & Modern Pill Tabs */
+    --segmented-bg: #111B2E;
+    --segmented-border: rgba(148, 163, 184, 0.20);
+    --segmented-btn-color: #94A3B8;
+    --segmented-btn-hover-bg: rgba(255, 255, 255, 0.06);
+    --segmented-btn-hover-color: #F8FAFC;
+    --segmented-active-bg: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+    --segmented-active-color: #FFFFFF;
+    --segmented-active-border: rgba(147, 197, 253, 0.35);
+    --segmented-active-shadow: 0 2px 8px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+
     --tint: rgba(59, 130, 246, 0.10);
     --tint-strong: rgba(59, 130, 246, 0.18);
     --shadow: 0 8px 30px rgba(0, 0, 0, 0.50);
@@ -196,6 +218,17 @@
   --input-bg: #16243D;
   --input-text: #F8FAFC;
   --input-border: rgba(148, 163, 184, 0.25);
+
+  /* Segmented Controls & Modern Pill Tabs */
+  --segmented-bg: #111B2E;
+  --segmented-border: rgba(148, 163, 184, 0.20);
+  --segmented-btn-color: #94A3B8;
+  --segmented-btn-hover-bg: rgba(255, 255, 255, 0.06);
+  --segmented-btn-hover-color: #F8FAFC;
+  --segmented-active-bg: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  --segmented-active-color: #FFFFFF;
+  --segmented-active-border: rgba(147, 197, 253, 0.35);
+  --segmented-active-shadow: 0 2px 8px rgba(37, 99, 235, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25);
 
   --tint: rgba(59, 130, 246, 0.10);
   --tint-strong: rgba(59, 130, 246, 0.18);

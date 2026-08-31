@@ -15,6 +15,8 @@
   --paper: #F1F5F9;          /* Luminous soft background */
   --surface: #FFFFFF;        /* Pure card surface */
   --surface-alt: #F8FAFC;    /* Slate-50: Crisp sub-container */
+  --topbar-bg: rgba(255, 255, 255, 0.92);
+  --modal-overlay: rgba(15, 23, 42, 0.60);
   
   /* Brand Accent Tokens (Vibrant, high-energy executive colors) */
   --brand-orange: #F97316;   /* Energetic Originate Orange */
@@ -44,6 +46,18 @@
   --card-bg-alt: var(--surface-alt);
   --rule: var(--border);
   --rule-strong: rgba(30, 41, 59, 0.14);
+
+  /* Buttons & Controls */
+  --btn-bg: #FFFFFF;
+  --btn-text: #1E293B;
+  --btn-border: rgba(30, 41, 59, 0.20);
+  --btn-hover-bg: #EFF6FF;
+  --btn-hover-text: #1D4ED8;
+  --btn-hover-border: #2563EB;
+
+  --input-bg: #FFFFFF;
+  --input-text: #0F172A;
+  --input-border: rgba(30, 41, 59, 0.20);
   
   /* Interactive Washes */
   --tint: rgba(37, 99, 235, 0.05);
@@ -75,11 +89,17 @@
     color-scheme: dark;
     /* Night Mode (Deep Midnight Navy with Vibrant Jewel Accents) */
     --ink: #F8FAFC;           /* Slate-50: Bright crisp text */
+    --paper: #090E1A;         /* Deepest midnight obsidian background */
+    --surface: #111B2E;        /* Elevated obsidian navy card surface */
+    --surface-alt: #16243D;    /* Distinct sub-container surface */
+    --topbar-bg: rgba(17, 27, 46, 0.94);
+    --modal-overlay: rgba(0, 0, 0, 0.75);
+
     --text: #F8FAFC;
     --text-secondary: #94A3B8;/* Slate-400: Clear readable secondary */
-    --bg: #090E1A;             /* Deepest midnight obsidian background */
-    --card-bg: #111B2E;        /* Elevated obsidian navy card surface */
-    --card-bg-alt: #16243D;    /* Distinct sub-container surface */
+    --bg: #090E1A;
+    --card-bg: #111B2E;
+    --card-bg-alt: #16243D;
     --brand-orange: #FB923C;
     --brand-orange-soft: rgba(251, 146, 60, 0.15);
     --blueprint: #3B82F6;      /* Electric sapphire blue */
@@ -100,6 +120,19 @@
     --border: rgba(148, 163, 184, 0.10);
     --rule: rgba(148, 163, 184, 0.10);
     --rule-strong: rgba(148, 163, 184, 0.20);
+
+    /* Buttons & Controls */
+    --btn-bg: #16243D;
+    --btn-text: #F8FAFC;
+    --btn-border: rgba(148, 163, 184, 0.25);
+    --btn-hover-bg: rgba(59, 130, 246, 0.20);
+    --btn-hover-text: #93C5FD;
+    --btn-hover-border: #3B82F6;
+
+    --input-bg: #16243D;
+    --input-text: #F8FAFC;
+    --input-border: rgba(148, 163, 184, 0.25);
+
     --tint: rgba(59, 130, 246, 0.10);
     --tint-strong: rgba(59, 130, 246, 0.18);
     --shadow: 0 8px 30px rgba(0, 0, 0, 0.50);
@@ -120,11 +153,17 @@
   color-scheme: dark;
   /* Night Mode (Deep Midnight Navy with Vibrant Jewel Accents) */
   --ink: #F8FAFC;           /* Slate-50: Bright crisp text */
+  --paper: #090E1A;         /* Deepest midnight obsidian background */
+  --surface: #111B2E;        /* Elevated obsidian navy card surface */
+  --surface-alt: #16243D;    /* Distinct sub-container surface */
+  --topbar-bg: rgba(17, 27, 46, 0.94);
+  --modal-overlay: rgba(0, 0, 0, 0.75);
+
   --text: #F8FAFC;
   --text-secondary: #94A3B8;/* Slate-400: Clear readable secondary */
-  --bg: #090E1A;             /* Deepest midnight obsidian background */
-  --card-bg: #111B2E;        /* Elevated obsidian navy card surface */
-  --card-bg-alt: #16243D;    /* Distinct sub-container surface */
+  --bg: #090E1A;
+  --card-bg: #111B2E;
+  --card-bg-alt: #16243D;
   --brand-orange: #FB923C;
   --brand-orange-soft: rgba(251, 146, 60, 0.15);
   --blueprint: #3B82F6;      /* Electric sapphire blue */
@@ -145,6 +184,19 @@
   --border: rgba(148, 163, 184, 0.10);
   --rule: rgba(148, 163, 184, 0.10);
   --rule-strong: rgba(148, 163, 184, 0.20);
+
+  /* Buttons & Controls */
+  --btn-bg: #16243D;
+  --btn-text: #F8FAFC;
+  --btn-border: rgba(148, 163, 184, 0.25);
+  --btn-hover-bg: rgba(59, 130, 246, 0.20);
+  --btn-hover-text: #93C5FD;
+  --btn-hover-border: #3B82F6;
+
+  --input-bg: #16243D;
+  --input-text: #F8FAFC;
+  --input-border: rgba(148, 163, 184, 0.25);
+
   --tint: rgba(59, 130, 246, 0.10);
   --tint-strong: rgba(59, 130, 246, 0.18);
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.50);

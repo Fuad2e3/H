@@ -194,41 +194,21 @@
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 12px;
   font-weight: 700;
-  color: #64748B !important;
+  color: var(--text-secondary);
   transition: background var(--t), color var(--t);
-}
-:root[data-theme="dark"] .segmented button,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .segmented button {
-    color: #94A3B8 !important;
-  }
 }
 .segmented button + button {
   border-left: 1px solid var(--rule);
 }
 .segmented button:hover {
   background: var(--tint);
-  color: var(--ink) !important;
+  color: var(--ink);
 }
 .segmented button[aria-pressed="true"] {
-  background: #FFFFFF !important;
-  color: #1D4ED8 !important;
+  background: var(--card-bg) !important;
+  color: var(--blueprint) !important;
   font-weight: 800 !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-:root[data-theme="light"] .segmented button[aria-pressed="true"],
-:root:not([data-theme="dark"]) .segmented button[aria-pressed="true"] {
-  background: #FFFFFF !important;
-  color: #1D4ED8 !important;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
-}
-:root[data-theme="dark"] .segmented button[aria-pressed="true"],
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .segmented button[aria-pressed="true"] {
-    background: #1C2B45 !important;
-    color: #60A5FA !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-  }
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 /* ---- cards -------------------------------------------------------------- */
@@ -392,7 +372,10 @@
 
 /* Dark Mode Stat Overrides */
 :root[data-theme="dark"] .grid-3 > .stat:nth-child(1),
-:root[data-theme="dark"] .grid-2 > .stat:nth-child(1),
+:root[data-theme="dark"] .grid-2 > .stat:nth-child(1) {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.14) 0%, rgba(37, 99, 235, 0.20) 100%);
+  border-color: rgba(56, 189, 248, 0.25);
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .grid-3 > .stat:nth-child(1),
   :root:not([data-theme="light"]) .grid-2 > .stat:nth-child(1) {
@@ -404,7 +387,10 @@
 :root[data-theme="dark"] .grid-3 > .stat:nth-child(1) .v { color: #38BDF8; }
 
 :root[data-theme="dark"] .grid-3 > .stat:nth-child(2),
-:root[data-theme="dark"] .grid-2 > .stat:nth-child(2),
+:root[data-theme="dark"] .grid-2 > .stat:nth-child(2) {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.14) 0%, rgba(139, 92, 246, 0.20) 100%);
+  border-color: rgba(129, 140, 248, 0.25);
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .grid-3 > .stat:nth-child(2),
   :root:not([data-theme="light"]) .grid-2 > .stat:nth-child(2) {
@@ -416,7 +402,10 @@
 :root[data-theme="dark"] .grid-3 > .stat:nth-child(2) .v { color: #818CF8; }
 
 :root[data-theme="dark"] .grid-3 > .stat:nth-child(3),
-:root[data-theme="dark"] .grid-2 > .stat:nth-child(3),
+:root[data-theme="dark"] .grid-2 > .stat:nth-child(3) {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(249, 115, 22, 0.20) 100%);
+  border-color: rgba(251, 191, 36, 0.25);
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .grid-3 > .stat:nth-child(3),
   :root:not([data-theme="light"]) .grid-2 > .stat:nth-child(3) {
@@ -428,7 +417,10 @@
 :root[data-theme="dark"] .grid-3 > .stat:nth-child(3) .v { color: #FBBF24; }
 
 :root[data-theme="dark"] .grid-3 > .stat:nth-child(4),
-:root[data-theme="dark"] .grid-2 > .stat:nth-child(4),
+:root[data-theme="dark"] .grid-2 > .stat:nth-child(4) {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(5, 150, 105, 0.20) 100%);
+  border-color: rgba(52, 211, 153, 0.25);
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .grid-3 > .stat:nth-child(4),
   :root:not([data-theme="light"]) .grid-2 > .stat:nth-child(4) {
@@ -441,7 +433,10 @@
 
 :root[data-theme="dark"] .stat.alert,
 :root[data-theme="dark"] .grid-3 > .stat.alert,
-:root[data-theme="dark"] .grid-3 > .stat:nth-child(5),
+:root[data-theme="dark"] .grid-3 > .stat:nth-child(5) {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.16) 0%, rgba(225, 29, 72, 0.24) 100%);
+  border-color: rgba(251, 113, 133, 0.35);
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .stat.alert,
   :root:not([data-theme="light"]) .grid-3 > .stat.alert,
@@ -972,43 +967,21 @@ dialog.modal::backdrop {
   font-family: var(--font-mono, 'JetBrains Mono', monospace);
   font-size: 11px;
   font-weight: 700;
-  background: var(--card-bg);
-  color: var(--text-secondary);
-  border: 1px solid var(--rule-strong);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 1px solid var(--btn-border);
   border-radius: var(--r-pill);
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   transition: color var(--t), border-color var(--t), background var(--t), transform var(--t), box-shadow var(--t);
 }
-:root[data-theme="light"] .toggle-theme,
-:root:not([data-theme="dark"]) .toggle-theme {
-  background: #FFFFFF !important;
-  color: #1E293B !important;
-  border-color: rgba(30, 41, 59, 0.2) !important;
-}
-:root[data-theme="dark"] .toggle-theme,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .toggle-theme {
-    background: #16243D !important;
-    color: #F8FAFC !important;
-    border-color: rgba(148, 163, 184, 0.25) !important;
-  }
-}
 .toggle-theme:hover {
-  color: var(--blueprint) !important;
-  border-color: var(--blueprint) !important;
-  background: var(--blueprint-soft) !important;
+  color: var(--btn-hover-text);
+  border-color: var(--btn-hover-border);
+  background: var(--btn-hover-bg);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15);
-}
-:root[data-theme="dark"] .toggle-theme:hover,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .toggle-theme:hover {
-    background: rgba(59, 130, 246, 0.20) !important;
-    border-color: #3B82F6 !important;
-    color: #93C5FD !important;
-    box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
-  }
 }
 .toggle-theme .icon {
   width: 13px;
@@ -1249,31 +1222,16 @@ dialog.modal::backdrop {
 }
 :root[data-theme="light"] .reaction-pill,
 :root:not([data-theme="dark"]) .reaction-pill {
-  background: #FFFFFF;
-  color: #1E293B;
-  border-color: rgba(30, 41, 59, 0.18);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-:root[data-theme="dark"] .reaction-pill,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .reaction-pill {
-    background: #16243D;
-    color: #F8FAFC;
-    border-color: rgba(148, 163, 184, 0.22);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-  }
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 1px solid var(--btn-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .reaction-pill:hover {
-  background: var(--tint);
-  border-color: var(--blueprint);
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+  color: var(--btn-hover-text);
   transform: translateY(-1px);
-}
-:root[data-theme="dark"] .reaction-pill:hover,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .reaction-pill:hover {
-    background: rgba(59, 130, 246, 0.20);
-    border-color: #3B82F6;
-  }
 }
 .reaction-pill.active {
   background: var(--blueprint-soft);
@@ -1281,15 +1239,6 @@ dialog.modal::backdrop {
   color: var(--blueprint);
   font-weight: 700;
   box-shadow: 0 1px 6px rgba(37, 99, 235, 0.2);
-}
-:root[data-theme="dark"] .reaction-pill.active,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .reaction-pill.active {
-    background: rgba(59, 130, 246, 0.25);
-    border-color: #60A5FA;
-    color: #93C5FD;
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
-  }
 }
 .reaction-pill .emoji {
   font-size: 13px;
@@ -1316,31 +1265,11 @@ dialog.modal::backdrop {
   cursor: pointer;
   transition: all var(--t);
 }
-:root[data-theme="light"] .reaction-picker-btn,
-:root:not([data-theme="dark"]) .reaction-picker-btn {
-  color: #475569 !important;
-  border-color: rgba(30, 41, 59, 0.3) !important;
-}
-:root[data-theme="dark"] .reaction-picker-btn,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .reaction-picker-btn {
-    color: #CBD5E1 !important;
-    border-color: rgba(148, 163, 184, 0.35) !important;
-  }
-}
 .reaction-picker-btn:hover {
   background: var(--tint);
   border-color: var(--blueprint) !important;
   color: var(--blueprint) !important;
   border-style: solid;
-}
-:root[data-theme="dark"] .reaction-picker-btn:hover,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .reaction-picker-btn:hover {
-    background: rgba(59, 130, 246, 0.20) !important;
-    border-color: #3B82F6 !important;
-    color: #93C5FD !important;
-  }
 }
 .reaction-picker-pop {
   display: flex;
@@ -1350,20 +1279,12 @@ dialog.modal::backdrop {
   background: var(--card-bg);
   border: 1.5px solid var(--blueprint);
   border-radius: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 10px rgba(37, 99, 235, 0.2);
+  box-shadow: var(--shadow);
   position: absolute;
   left: 0;
   top: 32px;
   z-index: 50;
   animation: popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-}
-:root[data-theme="dark"] .reaction-picker-pop,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .reaction-picker-pop {
-    background: #111B2E;
-    border-color: #3B82F6;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 14px rgba(59, 130, 246, 0.3);
-  }
 }
 .reaction-emoji-btn {
   background: transparent;
@@ -2063,17 +1984,9 @@ dialog.modal.fallback {
 .admin-quick-connect .btn {
   background: var(--card-bg-alt) !important;
   border: 1px dashed var(--blueprint) !important;
-  color: var(--ink, #0F172A) !important;
+  color: var(--ink) !important;
   font-weight: 700 !important;
   transition: all var(--t);
-}
-:root[data-theme="dark"] .admin-quick-connect .btn,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .admin-quick-connect .btn {
-    background: #16243D !important;
-    color: #F8FAFC !important;
-    border-color: #3B82F6 !important;
-  }
 }
 .admin-quick-connect .btn:hover {
   background: var(--tint) !important;

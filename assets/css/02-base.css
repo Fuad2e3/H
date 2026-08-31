@@ -45,7 +45,15 @@ body::before {
   opacity: 0.85;
 }
 
-:root[data-theme="dark"] body::before,
+:root[data-theme="dark"] body::before {
+  background-image:
+    radial-gradient(circle at 10% 15%, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 90% 10%, rgba(251, 146, 60, 0.10) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(139, 92, 246, 0.09) 0%, transparent 55%),
+    linear-gradient(var(--rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  opacity: 0.95;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) body::before {
     background-image:
@@ -343,55 +351,27 @@ select {
 }
 
 /* Standard Button (Non-primary/Non-orange/Non-danger) */
-:root[data-theme="light"] .btn:not(.primary):not(.orange):not(.danger),
-:root:not([data-theme="dark"]) .btn:not(.primary):not(.orange):not(.danger) {
-  background: #FFFFFF !important;
-  color: #0F172A !important;
-  border-color: rgba(30, 41, 59, 0.2) !important;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+.btn:not(.primary):not(.orange):not(.danger) {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
-:root[data-theme="light"] .btn:not(.primary):not(.orange):not(.danger):hover,
-:root:not([data-theme="dark"]) .btn:not(.primary):not(.orange):not(.danger):hover {
-  background: #EFF6FF !important;
-  border-color: #2563EB !important;
-  color: #1D4ED8 !important;
+.btn:not(.primary):not(.orange):not(.danger):hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+  color: var(--btn-hover-text);
   box-shadow: 0 3px 8px rgba(37, 99, 235, 0.16);
-}
-
-:root[data-theme="dark"] .btn:not(.primary):not(.orange):not(.danger),
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .btn:not(.primary):not(.orange):not(.danger) {
-    background: #16243D !important;
-    color: #F8FAFC !important;
-    border-color: rgba(148, 163, 184, 0.25) !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-  }
-  :root:not([data-theme="light"]) .btn:not(.primary):not(.orange):not(.danger):hover {
-    background: rgba(59, 130, 246, 0.20) !important;
-    border-color: #3B82F6 !important;
-    color: #93C5FD !important;
-    box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
-  }
 }
 
 /* Primary Action Buttons */
 .btn.primary {
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
-  border-color: #1D4ED8 !important;
+  background: var(--grad-primary) !important;
+  border-color: var(--blueprint) !important;
   color: #FFFFFF !important;
   font-weight: 700 !important;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-}
-:root[data-theme="dark"] .btn.primary,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .btn.primary {
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
-    border-color: #60A5FA !important;
-    color: #FFFFFF !important;
-    font-weight: 700 !important;
-    box-shadow: 0 3px 12px rgba(59, 130, 246, 0.45);
-  }
 }
 .btn.primary:hover {
   filter: brightness(1.1);
@@ -402,22 +382,12 @@ select {
 
 /* Brand Orange Buttons */
 .btn.orange {
-  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%) !important;
-  border-color: #EA580C !important;
+  background: var(--grad-orange) !important;
+  border-color: var(--brand-orange) !important;
   color: #FFFFFF !important;
   font-weight: 700 !important;
   box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-}
-:root[data-theme="dark"] .btn.orange,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .btn.orange {
-    background: linear-gradient(135deg, #FB923C 0%, #EA580C 100%) !important;
-    border-color: #FDBA74 !important;
-    color: #FFFFFF !important;
-    font-weight: 700 !important;
-    box-shadow: 0 3px 12px rgba(251, 146, 60, 0.45);
-  }
 }
 .btn.orange:hover {
   filter: brightness(1.1);
@@ -428,24 +398,15 @@ select {
 
 /* Danger / Destructive Buttons */
 .btn.danger {
-  background: #FFE4E6 !important;
-  color: #E11D48 !important;
-  border-color: rgba(225, 29, 72, 0.35) !important;
+  background: var(--signal-soft) !important;
+  color: var(--signal) !important;
+  border-color: var(--signal) !important;
   font-weight: 700 !important;
 }
-:root[data-theme="dark"] .btn.danger,
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .btn.danger {
-    background: rgba(244, 63, 94, 0.18) !important;
-    color: #FB7185 !important;
-    border-color: rgba(251, 113, 133, 0.40) !important;
-    font-weight: 700 !important;
-  }
-}
 .btn.danger:hover {
-  background: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%) !important;
+  background: var(--grad-danger) !important;
   color: #FFFFFF !important;
-  border-color: #F43F5E !important;
+  border-color: var(--signal) !important;
   box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
   transform: translateY(-1px);
 }

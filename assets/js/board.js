@@ -340,32 +340,38 @@ OC.board = (function () {
     return h('article', { class: cls }, [
       h('div', { class: 'title' }, todo.title),
       h('div', { class: 'meta' }, [
-        (Array.isArray(todo.clients) && todo.clients.length > 1)
-          ? h('span', { class: 'multi-clients-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, todo.clients.map(OC.ui.clientChip))
-          : OC.ui.clientChip(todo.client),
-        (Array.isArray(todo.departments) && todo.departments.length > 1)
-          ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, todo.departments.map(OC.ui.deptChip))
-          : OC.ui.deptChip(todo.department),
-        (Array.isArray(todo.assignees) && todo.assignees.length > 1)
-          ? h('span', { class: 'multi-assignees-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center;' },
-              todo.assignees.map(function (uid) {
-                if (typeof uid === 'string') {
-                  if (uid.indexOf('group:') === 0) {
-                    var g = OC.store.group(uid.slice(6));
-                    return h('span', { class: 'chip group' }, g ? g.name : uid.slice(6));
-                  }
-                  if (uid.indexOf('user:') === 0) {
-                    return OC.ui.person(uid.slice(5));
-                  }
-                }
-                var g2 = OC.store.group(uid);
-                if (g2) return h('span', { class: 'chip group' }, g2.name);
-                return OC.ui.person(uid);
-              })
-            )
-          : (todo.assignee_type === 'group'
-              ? h('span', { class: 'chip group' }, OC.ui.assigneeName(todo))
-              : OC.ui.person(todo.assignee)),
+        ((Array.isArray(todo.clients) && todo.clients.length > 1) || todo.client) && grouping !== 'client'
+          ? ((Array.isArray(todo.clients) && todo.clients.length > 1)
+              ? h('span', { class: 'multi-clients-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, todo.clients.map(OC.ui.clientChip))
+              : OC.ui.clientChip(todo.client))
+          : null,
+        ((Array.isArray(todo.departments) && todo.departments.length > 1) || todo.department) && grouping !== 'department'
+          ? ((Array.isArray(todo.departments) && todo.departments.length > 1)
+              ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, todo.departments.map(OC.ui.deptChip))
+              : OC.ui.deptChip(todo.department))
+          : null,
+        grouping !== 'person'
+          ? ((Array.isArray(todo.assignees) && todo.assignees.length > 1)
+              ? h('span', { class: 'multi-assignees-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center;' },
+                  todo.assignees.map(function (uid) {
+                    if (typeof uid === 'string') {
+                      if (uid.indexOf('group:') === 0) {
+                        var g = OC.store.group(uid.slice(6));
+                        return h('span', { class: 'chip group' }, g ? g.name : uid.slice(6));
+                      }
+                      if (uid.indexOf('user:') === 0) {
+                        return OC.ui.person(uid.slice(5));
+                      }
+                    }
+                    var g2 = OC.store.group(uid);
+                    if (g2) return h('span', { class: 'chip group' }, g2.name);
+                    return OC.ui.person(uid);
+                  })
+                )
+              : (todo.assignee_type === 'group'
+                  ? h('span', { class: 'chip group' }, OC.ui.assigneeName(todo))
+                  : OC.ui.person(todo.assignee)))
+          : null,
         todo.recurrence !== 'none' ? h('span', { class: 'chip recurring' }, todo.recurrence) : null,
         todo.archived ? h('span', { class: 'chip custom' }, 'archived') : null,
         h('span', { class: overdue ? 'chip overdue due' : 'due' }, OC.ui.dueLabel(todo.due))
@@ -728,15 +734,16 @@ OC.board = (function () {
       var key;
       if (grouping === 'client') {
         var cid = t.client || (Array.isArray(t.clients) && t.clients.length ? t.clients[0] : '');
-        var c = OC.store.client(cid);
-        key = c ? c.name : 'No client';
+        key = OC.ui.clientLabel(cid);
       }
       else if (grouping === 'department') {
         var did = t.department || (Array.isArray(t.departments) && t.departments.length ? t.departments[0] : '');
         var d = OC.store.department(did);
         key = d ? d.name : 'No department';
       }
-      else key = OC.ui.assigneeName(t);
+      else {
+        key = OC.ui.assigneeName(t);
+      }
       (buckets[key] = buckets[key] || []).push(t);
     });
     return Object.keys(buckets).sort().map(function (k) { return { key: k, items: buckets[k] }; });

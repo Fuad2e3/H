@@ -73,10 +73,18 @@ OC.can = (function () {
   function seeTodo(user, todo) {
     if (!user || !todo) return false;
     if (user.admin) return true;
+    if (todo.created_by === user.id) return true;
     if (todo.assignee_type === 'user' && (todo.assignee === user.id || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1))) return true;
     if (todo.assignee_type === 'group' && inGroup(user, todo.assignee)) return true;
-    if (Array.isArray(todo.assignees) && todo.assignees.some(function (id) { return inGroup(user, id); })) return true;
-    if (inDept(user, todo.department)) return true;
+    if (Array.isArray(todo.assignees) && todo.assignees.some(function (aid) {
+      if (aid === user.id) return true;
+      if (typeof aid === 'string') {
+        if (aid.indexOf('user:') === 0 && aid.slice(5) === user.id) return true;
+        if (aid.indexOf('group:') === 0 && inGroup(user, aid.slice(6))) return true;
+      }
+      return inGroup(user, aid);
+    })) return true;
+    if (todo.department && inDept(user, todo.department)) return true;
     if (Array.isArray(todo.departments) && todo.departments.some(function (d) { return inDept(user, d); })) return true;
     return false;
   }
@@ -85,7 +93,7 @@ OC.can = (function () {
     if (!user || !note) return false;
     if (user.admin) return true;
     if (note.author === user.id) return true;
-    if (inDept(user, note.department)) return true;
+    if (note.department && inDept(user, note.department)) return true;
     if (Array.isArray(note.departments) && note.departments.some(function (d) { return inDept(user, d); })) return true;
     return false;
   }
@@ -137,9 +145,19 @@ OC.can = (function () {
   function changeState(user, todo) {
     if (!user || !todo) return false;
     if (user.admin) return true;
+    if (todo.created_by === user.id) return true;
+    if (isHead(user, todo.department)) return true;
+    if (Array.isArray(todo.departments) && todo.departments.some(function (d) { return isHead(user, d); })) return true;
     if (todo.assignee_type === 'user' && (todo.assignee === user.id || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1))) return true;
     if (todo.assignee_type === 'group' && inGroup(user, todo.assignee)) return true;
-    if (Array.isArray(todo.assignees) && todo.assignees.some(function (id) { return inGroup(user, id); })) return true;
+    if (Array.isArray(todo.assignees) && todo.assignees.some(function (aid) {
+      if (aid === user.id) return true;
+      if (typeof aid === 'string') {
+        if (aid.indexOf('user:') === 0 && aid.slice(5) === user.id) return true;
+        if (aid.indexOf('group:') === 0 && inGroup(user, aid.slice(6))) return true;
+      }
+      return inGroup(user, aid);
+    })) return true;
     return todo.assignee_type === 'user' && assignTo(user, todo.assignee);
   }
 
@@ -157,6 +175,7 @@ OC.can = (function () {
     if (user.admin) return true;
     if (!assignsOthers(user)) return false;              /* members and seniors: never */
     if (isHead(user, todo.department)) return true;
+    if (Array.isArray(todo.departments) && todo.departments.some(function (d) { return isHead(user, d); })) return true;
     if (todo.assignee_type === 'user') {
       return todo.assignee === user.id || assignTo(user, todo.assignee);
     }
@@ -165,17 +184,19 @@ OC.can = (function () {
 
   function archiveInstruction(user, note) {
     if (!user || !note) return false;
-    return user.admin || note.author === user.id || isHead(user, note.department);
+    if (user.admin) return true;
+    if (note.author === user.id) return true;
+    if (isHead(user, note.department)) return true;
+    if (Array.isArray(note.departments) && note.departments.some(function (d) { return isHead(user, d); })) return true;
+    return false;
   }
 
   function canEditInstruction(user, note) {
-    if (!user || !note) return false;
-    return user.admin || note.author === user.id || isHead(user, note.department);
+    return archiveInstruction(user, note);
   }
 
   function canDeleteInstruction(user, note) {
-    if (!user || !note) return false;
-    return user.admin || note.author === user.id || isHead(user, note.department);
+    return archiveInstruction(user, note);
   }
 
   function canEditComment(user, comment, item) {
@@ -253,20 +274,30 @@ OC.can = (function () {
   function canEditTodo(user, todo) {
     if (!user || !todo) return false;
     if (user.admin) return true;
-    if (isHead(user, todo.department)) return true;
     if (todo.created_by === user.id) return true;
+    if (isHead(user, todo.department)) return true;
+    if (Array.isArray(todo.departments) && todo.departments.some(function (d) { return isHead(user, d); })) return true;
     if (todo.assignee_type === 'user' && (todo.assignee === user.id || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1))) return true;
     if (todo.assignee_type === 'group' && inGroup(user, todo.assignee)) return true;
+    if (Array.isArray(todo.assignees) && todo.assignees.some(function (aid) {
+      if (aid === user.id) return true;
+      if (typeof aid === 'string') {
+        if (aid.indexOf('user:') === 0 && aid.slice(5) === user.id) return true;
+        if (aid.indexOf('group:') === 0 && inGroup(user, aid.slice(6))) return true;
+      }
+      return inGroup(user, aid);
+    })) return true;
     return false;
   }
 
-  /* Comments are visible strictly to members of that department and System Admin */
+  /* Comments are visible strictly to authorized viewers of the item and System Admin */
   function canSeeComments(user, item) {
     if (!user || !item) return false;
     if (user.admin) return true;
-    if (inDept(user, item.department)) return true;
-    if (Array.isArray(item.departments) && item.departments.some(function (d) { return inDept(user, d); })) return true;
-    return false;
+    if (item.due !== undefined || item.state !== undefined) {
+      return seeTodo(user, item);
+    }
+    return seeInstruction(user, item);
   }
 
   function commentOnTodo(user, todo) { return canSeeComments(user, todo); }

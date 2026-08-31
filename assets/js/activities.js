@@ -43,47 +43,7 @@ OC.activities = (function () {
       h('p', {}, 'Centralized team collaboration & organization hub: cross-department groups, live discussions, departments, member accounts, and pending invites.')
     ]);
 
-    /* ---- 2. Quick Action Buttons Bar ---- */
-    var topActions = h('div', { class: 'activities-toolbar', style: 'margin-bottom:18px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;' }, [
-      canCreateGroup
-        ? h('button', {
-            class: 'btn primary', type: 'button',
-            onClick: function () {
-              if (OC.groups && OC.groups.newGroup) {
-                OC.groups.newGroup(function () { render(host, rerender); });
-              }
-            }
-          }, [OC.icon('plus'), 'New group'])
-        : null,
-      canInvite
-        ? h('button', {
-            class: 'btn', type: 'button',
-            onClick: function () {
-              if (OC.people && OC.people.invite) {
-                OC.people.invite(function () { render(host, rerender); });
-              }
-            }
-          }, [OC.icon('plus'), 'Invite member'])
-        : null,
-      canManageDept
-        ? h('button', {
-            class: 'btn', type: 'button',
-            onClick: function () {
-              if (OC.people && OC.people.newDepartment) {
-                OC.people.newDepartment(function () { render(host, rerender); });
-              }
-            }
-          }, [OC.icon('plus'), 'New department'])
-        : null,
-      h('button', {
-        class: 'btn', type: 'button',
-        onClick: function () {
-          if (OC.people && OC.people.editPrefs) OC.people.editPrefs();
-        }
-      }, [OC.icon('bell'), 'Notification preferences'])
-    ].filter(Boolean));
-
-    /* ---- 3. Sub-navigation tabs ---- */
+    /* ---- 2. Sub-navigation tabs ---- */
     var tabs = [
       ['all', 'All Overview'],
       ['groups', 'Groups & Discussions (' + allGroups.length + ')'],
@@ -111,7 +71,7 @@ OC.activities = (function () {
       }, opt[1]);
     }));
 
-    var content = [pageHead, topActions, subNav];
+    var content = [pageHead, subNav];
 
     /* ---- Section A: Groups & Discussions ---- */
     if (activeTab === 'all' || activeTab === 'groups') {
@@ -192,21 +152,29 @@ OC.activities = (function () {
     /* ---- Section B: Team Accounts Directory ---- */
     if (activeTab === 'all' || activeTab === 'accounts') {
       var accountsSection = h('div', { class: 'activities-section', style: 'margin-bottom:32px;' }, [
-        h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;' }, [
+        h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;gap:8px;' }, [
           h('h2', { class: 'section-head', style: 'margin:0;' }, [
             'Team Accounts Directory',
             h('span', { class: 'chip count' }, users.length + ' accounts')
           ]),
-          canInvite
-            ? h('button', {
-                class: 'btn small push', type: 'button',
-                onClick: function () {
-                  if (OC.people && OC.people.invite) {
-                    OC.people.invite(function () { render(host, rerender); });
+          h('div', { class: 'row push', style: 'gap:8px;' }, [
+            canInvite
+              ? h('button', {
+                  class: 'btn small primary', type: 'button',
+                  onClick: function () {
+                    if (OC.people && OC.people.invite) {
+                      OC.people.invite(function () { render(host, rerender); });
+                    }
                   }
-                }
-              }, [OC.icon('plus'), 'Invite member'])
-            : null
+                }, [OC.icon('plus'), 'Invite member'])
+              : null,
+            h('button', {
+              class: 'btn small', type: 'button',
+              onClick: function () {
+                if (OC.people && OC.people.editPrefs) OC.people.editPrefs();
+              }
+            }, [OC.icon('bell'), 'Notification preferences'])
+          ].filter(Boolean))
         ]),
         h('div', { class: 'tablewrap' }, [
           h('table', {}, [

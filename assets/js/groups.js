@@ -502,7 +502,7 @@ OC.groups = (function () {
             }, opt[1]);
           }))
         ]),
-        (canCreate && !hideHead)
+        canCreate
           ? h('button', { class: 'btn primary', type: 'button', onClick: function () { newGroup(function () { render(host, rerender, hideHead); }); } },
               [OC.icon('plus'), 'New group'])
           : null

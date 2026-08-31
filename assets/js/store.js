@@ -62,7 +62,7 @@ OC.store = (function () {
         admin: true,
         departments: [],
         status: 'active',
-        password: 'OC-Sm9K8wP4xR',
+        password: null,
         prefs: { push: true, email: true, discord: true },
         invite: null
       },
@@ -74,7 +74,7 @@ OC.store = (function () {
         admin: true,
         departments: [],
         status: 'active',
-        password: 'OC-Fu7X2mN9qL',
+        password: null,
         prefs: { push: true, email: true, discord: true },
         invite: null
       },
@@ -86,7 +86,7 @@ OC.store = (function () {
         admin: false,
         departments: [{ department: 'd-web', level: 'head' }],
         status: 'active',
-        password: 'OC-Og4W8vT5yZ',
+        password: null,
         prefs: { push: true, email: true, discord: true },
         invite: null
       }

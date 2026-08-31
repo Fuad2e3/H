@@ -13,7 +13,9 @@ OC.dashboard = (function () {
 
   function me() { return OC.store.user(OC.store.session()); }
 
-  function myTodos(user) {
+  var showUpcoming = false;
+
+  function allMyTodos(user) {
     return OC.store.state.todos.filter(function (t) {
       if (t.archived || t.state === 'done') return false;
       // Check legacy single-assignee fields
@@ -32,6 +34,15 @@ OC.dashboard = (function () {
     }).sort(function (a, b) { return (a.due || '').localeCompare(b.due || ''); });
   }
 
+  function myTodos(user) {
+    var all = allMyTodos(user);
+    if (showUpcoming) return all;
+    // Show only Due Today & Overdue tasks by default (hide future/tomorrow tasks until their due date arrives)
+    return all.filter(function (t) {
+      return !t.due || OC.ui.daysLate(t.due) >= 0;
+    });
+  }
+
   function myInstructions(user) {
     return OC.store.state.instructions
       .filter(function (n) { return !n.archived && OC.can.seeInstruction(user, n); })
@@ -46,14 +57,16 @@ OC.dashboard = (function () {
   function render(host, rerender) {
     var h = OC.ui.h;
     var user = me();
+    var allTodos = allMyTodos(user);
     var todos = myTodos(user);
     var notes = myInstructions(user);
     var unread = notes.filter(function (n) { return n.read_by.indexOf(user.id) === -1; });
-    var overdue = todos.filter(function (t) { return OC.ui.daysLate(t.due) > 0; });
+    var overdue = allTodos.filter(function (t) { return OC.ui.daysLate(t.due) > 0; });
+    var upcoming = allTodos.filter(function (t) { return OC.ui.daysLate(t.due) < 0; });
     var groups = OC.store.state.groups.filter(function (g) { return g.status === 'active' && g.members.indexOf(user.id) > -1; });
 
     var clientIds = {};
-    todos.forEach(function (t) {
+    allTodos.forEach(function (t) {
       if (t.client) clientIds[t.client] = true;
       if (Array.isArray(t.clients)) t.clients.forEach(function (cid) { if (cid) clientIds[cid] = true; });
     });
@@ -83,7 +96,7 @@ OC.dashboard = (function () {
       ]),
 
       h('div', { class: 'grid-3', style: 'margin-bottom:20px' }, [
-        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Open todos'), h('div', { class: 'v tabular' }, String(todos.length))]),
+        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Open today & overdue'), h('div', { class: 'v tabular' }, String(todos.length))]),
         h('div', { class: 'stat' + (overdue.length ? ' alert' : '') }, [
           h('span', { class: 'k' }, 'Overdue'), h('div', { class: 'v tabular' }, String(overdue.length))]),
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Unread instructions'), h('div', { class: 'v tabular' }, String(unread.length))]),
@@ -94,7 +107,16 @@ OC.dashboard = (function () {
         h('section', { class: 'panel' }, [
           h('div', { class: 'panel-head' }, [
             h('h2', {}, 'My todos'),
-            h('span', { class: 'sub' }, 'by client, oldest due first')
+            h('span', { class: 'sub' }, showUpcoming ? 'showing all open tasks' : 'due today & overdue first'),
+            upcoming.length ? h('button', {
+              class: 'btn small',
+              type: 'button',
+              style: 'margin-left:auto;',
+              onClick: function () {
+                showUpcoming = !showUpcoming;
+                rerender();
+              }
+            }, showUpcoming ? 'Show Today & Overdue only' : 'Show Upcoming (' + upcoming.length + ')') : null
           ]),
           h('div', { class: 'panel-body' }, todos.length
             ? Object.keys(byClient).sort().map(function (name) {

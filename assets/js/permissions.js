@@ -74,8 +74,8 @@ OC.can = (function () {
     if (!user || !todo) return false;
     if (user.admin) return true;
     if (todo.created_by === user.id) return true;
-    if (todo.assignee_type === 'user' && (todo.assignee === user.id || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1))) return true;
-    if (todo.assignee_type === 'group' && inGroup(user, todo.assignee)) return true;
+    if (todo.assignee === user.id || (todo.assignee_type === 'user' && todo.assignee === user.id) || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1)) return true;
+    if (inGroup(user, todo.assignee) || (todo.assignee_type === 'group' && inGroup(user, todo.assignee))) return true;
     if (Array.isArray(todo.assignees) && todo.assignees.some(function (aid) {
       if (aid === user.id) return true;
       if (typeof aid === 'string') {
@@ -293,8 +293,8 @@ OC.can = (function () {
     if (todo.created_by === user.id) return true;
     if (isHead(user, todo.department)) return true;
     if (Array.isArray(todo.departments) && todo.departments.some(function (d) { return isHead(user, d); })) return true;
-    if (todo.assignee_type === 'user' && (todo.assignee === user.id || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1))) return true;
-    if (todo.assignee_type === 'group' && inGroup(user, todo.assignee)) return true;
+    if (todo.assignee === user.id || (todo.assignee_type === 'user' && todo.assignee === user.id) || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1)) return true;
+    if (inGroup(user, todo.assignee) || (todo.assignee_type === 'group' && inGroup(user, todo.assignee))) return true;
     if (Array.isArray(todo.assignees) && todo.assignees.some(function (aid) {
       if (aid === user.id) return true;
       if (typeof aid === 'string') {

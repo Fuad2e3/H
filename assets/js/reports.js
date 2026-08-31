@@ -111,8 +111,8 @@ OC.reports = (function () {
     var people = OC.can.visibleUsers(user);
     var rows = people.map(function (p) {
       var theirs = todos.filter(function (t) {
-        if (t.assignee_type === 'user' && t.assignee === p.id) return true;
-        if (t.assignee_type === 'group' && OC.can.inGroup(p, t.assignee)) return true;
+        if (t.assignee === p.id || (t.assignee_type === 'user' && t.assignee === p.id)) return true;
+        if (OC.can.inGroup(p, t.assignee) || (t.assignee_type === 'group' && OC.can.inGroup(p, t.assignee))) return true;
         if (Array.isArray(t.assignees) && t.assignees.some(function (aid) {
           if (aid === p.id) return true;
           if (typeof aid === 'string') {

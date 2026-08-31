@@ -34,6 +34,7 @@ function test(title, fn) {
 // -------------------------------------------------------------------------
 console.log('--- [1/5] Checking Javascript Files Syntax ---');
 const jsFiles = [
+  'assets/js/activities.js',
   'assets/js/app.js',
   'assets/js/board.js',
   'assets/js/clients.js',

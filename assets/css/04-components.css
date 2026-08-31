@@ -175,6 +175,64 @@
 .mark-tint.tint-slate {
   background: linear-gradient(135deg, #64748B, #475569);
 }
+.mark-tint.mark-avatar {
+  background: transparent;
+  padding: 0;
+  overflow: hidden;
+}
+.mark-tint.mark-avatar img,
+.mark-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
+/* ---- Photo Uploader Component ---- */
+.photo-uploader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r2);
+}
+.photo-uploader-preview {
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 17px;
+  overflow: hidden;
+  box-shadow: var(--sh1);
+}
+.photo-uploader-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.photo-uploader-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.photo-uploader-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
 /* ---- segmented control -------------------------------------------------- */
 .segmented {
@@ -575,6 +633,165 @@
   margin-top: 6px;
   padding-top: 8px;
   border-top: 1px dashed var(--rule);
+}
+
+/* ---- Dashboard Modern Todo Row (Horizontal Strip) ---------------------- */
+.dashboard-todo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r2);
+  padding: 10px 16px;
+  margin-bottom: 8px;
+  box-shadow: var(--sh1);
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+  cursor: pointer;
+}
+
+.dashboard-todo-row:hover {
+  border-color: var(--blueprint);
+  transform: translateY(-1px);
+  box-shadow: var(--sh2);
+}
+
+.dashboard-todo-row.is-done {
+  opacity: 0.7;
+  background: rgba(16, 185, 129, 0.03);
+}
+
+.dashboard-todo-row.is-overdue {
+  border-color: rgba(225, 29, 72, 0.35);
+  background: linear-gradient(90deg, rgba(225, 29, 72, 0.04) 0%, var(--card-bg) 100%);
+}
+
+.todo-check-btn {
+  width: 19px;
+  height: 19px;
+  min-width: 19px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border, #94a3b8);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+
+:root[data-theme="dark"] .todo-check-btn {
+  border-color: #475569;
+}
+
+.todo-check-btn:hover {
+  border-color: var(--accent, #3b82f6);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.todo-check-btn.checked {
+  background: #10B981;
+  border-color: #10B981;
+  color: #ffffff;
+}
+
+.todo-check-btn .check-icon {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.5;
+  stroke: #ffffff;
+}
+
+.channel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.channel-badge .channel-icon,
+.channel-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Warm Coral / Orange for Email / Cold Outreach */
+.badge-email {
+  background: rgba(251, 146, 60, 0.12);
+  color: #ea580c;
+  border: 1px solid rgba(251, 146, 60, 0.3);
+}
+:root[data-theme="dark"] .badge-email {
+  background: rgba(251, 146, 60, 0.16);
+  color: #fb923c;
+  border-color: rgba(251, 146, 60, 0.35);
+}
+
+/* Social Blue for LinkedIn / Social */
+.badge-linkedin {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0284c7;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+:root[data-theme="dark"] .badge-linkedin {
+  background: rgba(14, 165, 233, 0.16);
+  color: #38bdf8;
+  border-color: rgba(14, 165, 233, 0.35);
+}
+
+/* Tech / Web / Operations */
+.badge-web {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+:root[data-theme="dark"] .badge-web {
+  background: rgba(99, 102, 241, 0.16);
+  color: #818cf8;
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.badge-default {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+}
+
+.dashboard-client-name {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.dashboard-todo-title {
+  font-size: 13.5px;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-todo-title.strikethrough {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+.dashboard-assignee-text {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  padding-left: 8px;
 }
 
 /* ---- instruction item --------------------------------------------------- */

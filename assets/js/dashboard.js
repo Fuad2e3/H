@@ -18,9 +18,9 @@ OC.dashboard = (function () {
   function allMyTodos(user) {
     return OC.store.state.todos.filter(function (t) {
       if (t.archived || t.state === 'done') return false;
-      // Check legacy single-assignee fields
-      if (t.assignee_type === 'user' && (t.assignee === user.id)) return true;
-      if (t.assignee_type === 'group' && OC.can.inGroup(user, t.assignee)) return true;
+      // Check single-assignee fields
+      if (t.assignee === user.id || (t.assignee_type === 'user' && t.assignee === user.id)) return true;
+      if (OC.can.inGroup(user, t.assignee) || (t.assignee_type === 'group' && OC.can.inGroup(user, t.assignee))) return true;
       // Check multi-assignee array (handles raw ids, user:uid, group:gid prefixes)
       if (Array.isArray(t.assignees) && t.assignees.some(function (aid) {
         if (aid === user.id) return true;
@@ -54,6 +54,90 @@ OC.dashboard = (function () {
       });
   }
 
+  function dashboardTodoRow(t, user, rerender) {
+    var h = OC.ui.h;
+    var isDone = t.state === 'done';
+    var late = OC.ui.daysLate(t.due) > 0;
+    var overdue = !isDone && late;
+
+    // Determine channel / department badge info
+    var dept = OC.store.department(t.department || (Array.isArray(t.departments) ? t.departments[0] : ''));
+    var deptName = dept ? dept.name : '';
+    var tag = (t.tags && t.tags.length) ? ((OC.store.tag(t.tags[0]) || {}).label || t.tags[0]) : '';
+
+    var badgeLabel = tag || deptName || 'General';
+    var badgeIcon = 'mail';
+    var badgeStyleClass = 'badge-channel';
+
+    var lowerBadge = badgeLabel.toLowerCase();
+    if (lowerBadge.indexOf('linkedin') > -1) {
+      badgeIcon = 'linkedin';
+      badgeStyleClass = 'badge-linkedin';
+    } else if (lowerBadge.indexOf('mail') > -1 || lowerBadge.indexOf('email') > -1 || lowerBadge.indexOf('outreach') > -1) {
+      badgeIcon = 'mail';
+      badgeStyleClass = 'badge-email';
+    } else if (lowerBadge.indexOf('web') > -1 || lowerBadge.indexOf('dev') > -1) {
+      badgeIcon = 'monitor';
+      badgeStyleClass = 'badge-web';
+    } else {
+      badgeIcon = 'inbox';
+      badgeStyleClass = 'badge-default';
+    }
+
+    // Client name
+    var clientObj = OC.store.client(t.client || (Array.isArray(t.clients) ? t.clients[0] : ''));
+    var clientName = clientObj ? (clientObj.name || clientObj.id) : '';
+
+    // Assignee / Creator name on right side
+    var assigneeUser = OC.store.user(t.assignee || (Array.isArray(t.assignees) ? t.assignees[0] : ''));
+    var assigneeText = assigneeUser ? (assigneeUser.name + (assigneeUser.title ? ' ' + assigneeUser.title : '')) : (t.assignee || '');
+    if (!assigneeText && t.created_by) {
+      var creator = OC.store.user(t.created_by);
+      assigneeText = creator ? (creator.name + (creator.title ? ' ' + creator.title : '')) : t.created_by;
+    }
+
+    var checkbox = h('button', {
+      type: 'button',
+      class: 'todo-check-btn' + (isDone ? ' checked' : ''),
+      'aria-label': isDone ? 'Mark as incomplete' : 'Mark as completed',
+      onClick: function (e) {
+        e.stopPropagation();
+        var nextState = isDone ? 'open' : 'done';
+        OC.store.mutate({
+          actor: user.id, action: 'todo.state', target: t.title, detail: nextState
+        }, function () {
+          t.state = nextState;
+        });
+        OC.ui.toast(nextState === 'done' ? 'Task completed.' : 'Task reopened.');
+        rerender();
+      }
+    }, [
+      isDone ? (OC.icon ? OC.icon('check', 'check-icon') : '✓') : null
+    ]);
+
+    var channelBadge = h('span', { class: 'channel-badge ' + badgeStyleClass }, [
+      (OC.icon && badgeIcon) ? OC.icon(badgeIcon, 'channel-icon') : null,
+      h('span', {}, badgeLabel)
+    ]);
+
+    return h('article', {
+      class: 'dashboard-todo-row' + (isDone ? ' is-done' : '') + (overdue ? ' is-overdue' : ''),
+      'data-id': t.id,
+      onClick: function () {
+        if (OC.board && OC.board.editTodo && OC.can && OC.can.canEditTodo && OC.can.canEditTodo(user, t)) {
+          OC.board.editTodo(t);
+        }
+      }
+    }, [
+      checkbox,
+      channelBadge,
+      clientName ? h('span', { class: 'dashboard-client-name' }, clientName) : null,
+      h('span', { class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : '') }, t.title),
+      overdue ? h('span', { class: 'chip overdue due', style: 'font-size:11px;padding:2px 8px;' }, OC.ui.dueLabel(t.due)) : null,
+      assigneeText ? h('span', { class: 'dashboard-assignee-text' }, assigneeText) : null
+    ].filter(Boolean));
+  }
+
   function render(host, rerender) {
     var h = OC.ui.h;
     var user = me();
@@ -78,14 +162,6 @@ OC.dashboard = (function () {
     });
     var clients = Object.keys(clientIds).map(OC.store.client).filter(Boolean);
 
-    /* todos grouped by client, oldest due first */
-    var byClient = {};
-    todos.forEach(function (t) {
-      var cid = t.client || (Array.isArray(t.clients) && t.clients.length ? t.clients[0] : '');
-      var name = (OC.store.client(cid) || {}).name || 'No client';
-      (byClient[name] = byClient[name] || []).push(t);
-    });
-
     OC.ui.clear(host);
     OC.ui.append(host, [
       h('div', { class: 'page-head' }, [
@@ -95,8 +171,8 @@ OC.dashboard = (function () {
           : 'leadership tier, every department'))
       ]),
 
-      h('div', { class: 'grid-3', style: 'margin-bottom:20px' }, [
-        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Open today & overdue'), h('div', { class: 'v tabular' }, String(todos.length))]),
+      h('div', { class: 'stats' }, [
+        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'My open todos'), h('div', { class: 'v tabular' }, String(allTodos.length))]),
         h('div', { class: 'stat' + (overdue.length ? ' alert' : '') }, [
           h('span', { class: 'k' }, 'Overdue'), h('div', { class: 'v tabular' }, String(overdue.length))]),
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Unread instructions'), h('div', { class: 'v tabular' }, String(unread.length))]),
@@ -118,42 +194,9 @@ OC.dashboard = (function () {
               }
             }, showUpcoming ? 'Show Today & Overdue only' : 'Show Upcoming (' + upcoming.length + ')') : null
           ]),
-          h('div', { class: 'panel-body' }, todos.length
-            ? Object.keys(byClient).sort().map(function (name) {
-                return h('div', { class: 'stack' }, [
-                  h('div', { class: 'group-head' }, [name, h('span', { class: 'n push' }, byClient[name].length)]),
-                  byClient[name].map(function (t) {
-                    var late = OC.ui.daysLate(t.due) > 0;
-                    var overdue = t.state !== 'done' && late > 0;
-                    var actions = [];
-                    if (OC.board && OC.board.stateSelect) {
-                      actions.push(OC.board.stateSelect(t));
-                    } else {
-                      actions.push(OC.ui.stateChip(t.state));
-                    }
-
-                    return h('article', { class: 'item is-' + t.state + (overdue ? ' is-overdue' : '') }, [
-                      h('div', { class: 'title' }, t.title),
-                      t.description ? h('div', { class: 'desc', style: 'margin:4px 0 8px;font-size:13px;color:var(--text-secondary);' }, t.description) : null,
-                      h('div', { class: 'meta' }, [
-                        (Array.isArray(t.clients) && t.clients.length > 1)
-                          ? h('span', { class: 'multi-clients-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, t.clients.map(OC.ui.clientChip))
-                          : OC.ui.clientChip(t.client),
-                        (Array.isArray(t.departments) && t.departments.length > 1)
-                          ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, t.departments.map(OC.ui.deptChip))
-                          : OC.ui.deptChip(t.department),
-                        h('span', { class: overdue ? 'chip overdue' : '' }, OC.ui.dueLabel(t.due)),
-                        (Array.isArray(t.assignees) && t.assignees.length > 1)
-                          ? h('span', { class: 'chip group' }, OC.ui.assigneeName(t))
-                          : (t.assignee_type === 'group' ? h('span', { class: 'chip group' }, OC.ui.assigneeName(t)) : null)
-                      ]),
-                      t.blocked_reason
-                        ? h('div', { class: 'blocked-note' }, [OC.icon('alert'), h('span', {}, 'Blocked: ' + t.blocked_reason)])
-                        : null,
-                      h('div', { class: 'actions', style: 'display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap;' }, actions)
-                    ]);
-                  })
-                ]);
+          h('div', { class: 'panel-body', style: 'padding:12px;' }, todos.length
+            ? todos.map(function (t) {
+                return dashboardTodoRow(t, user, rerender);
               })
             : h('div', { class: 'empty' }, [OC.icon('check'), 'Nothing assigned to you right now.']))
         ]),

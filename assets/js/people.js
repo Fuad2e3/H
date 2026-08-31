@@ -583,6 +583,8 @@ OC.people = (function () {
       { value: 'paused', label: 'Paused' }
     ], account.status || 'active');
 
+    var uploader = OC.ui.photoUploader(account.avatar, account.name);
+
     var actions = [
       { label: 'Cancel', onClick: function (close) { close(); } },
       {
@@ -596,6 +598,7 @@ OC.people = (function () {
           }, function () {
             account.name = name.value.trim();
             account.email = email.value.trim();
+            account.avatar = uploader.getValue();
             account.title = title.value.trim() || 'Team Member';
             if (user.admin) {
               account.admin = isAdmin.checked;
@@ -628,6 +631,7 @@ OC.people = (function () {
     }
 
     var fields = [
+      OC.ui.field('Profile photo', uploader.node, { hint: 'Custom profile picture or photo URL.' }),
       OC.ui.field('Full name', name, { required: true }),
       OC.ui.field('Email address', email, { required: true }),
       OC.ui.field('Job title', title),
@@ -698,7 +702,9 @@ OC.people = (function () {
           : null
       ]),
       OC.store.state.clients.length ? h('div', { class: 'grid-2', style: 'margin:12px 0 22px' }, OC.store.state.clients.map(function (c) {
-        var clientTodos = OC.store.state.todos.filter(function (t) { return t.client === c.id; });
+        var clientTodos = OC.store.state.todos.filter(function (t) {
+          return !t.archived && t.state !== 'done' && (t.client === c.id || (Array.isArray(t.clients) && t.clients.indexOf(c.id) > -1));
+        });
         var displayTitle = OC.ui.clientLabel ? OC.ui.clientLabel(c) : c.name;
         return h('div', { class: 'card' }, [
           h('div', { class: 'row' }, [
@@ -799,6 +805,7 @@ OC.people = (function () {
   return {
     render: render,
     invite: invite,
+    newDepartment: newDepartment,
     editPrefs: editPrefs,
     editDepartment: editDepartment,
     editClient: editClient,

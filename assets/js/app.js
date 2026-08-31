@@ -20,9 +20,8 @@ OC.app = (function () {
   var ROUTES = [
     { id: 'dashboard', label: 'Dashboard', view: function () { return OC.dashboard; } },
     { id: 'board', label: 'Board', view: function () { return OC.board; } },
-    { id: 'groups', label: 'Groups', view: function () { return OC.groups; } },
+    { id: 'activities', label: 'Activities', view: function () { return OC.activities || OC.groups || OC.people; } },
     { id: 'reports', label: 'Reports', view: function () { return OC.reports; } },
-    { id: 'people', label: 'People', view: function () { return OC.people; } },
     { id: 'clients', label: 'Clients', view: function () { return OC.clients; } }
   ];
 
@@ -550,6 +549,51 @@ OC.app = (function () {
     }
   }
 
+  /* ---- profile settings modal with photo upload ------------------------ */
+  function openProfileModal() {
+    var user = OC.store.user(OC.store.session());
+    if (!user) return;
+
+    var nameInput = h('input', { type: 'text', value: user.name });
+    var titleInput = h('input', { type: 'text', value: user.title || '' });
+    var uploader = OC.ui.photoUploader(user.avatar, user.name);
+
+    OC.ui.modal({
+      title: 'My Profile & Avatar Photo',
+      content: h('div', {}, [
+        OC.ui.field('Profile photo', uploader.node, { hint: 'Upload a custom photo from your device or paste an image URL.' }),
+        OC.ui.field('Full name', nameInput, { required: true }),
+        OC.ui.field('Job title', titleInput, { hint: 'Displayed next to your name across the workspace.' }),
+        OC.ui.field('Email address', h('input', { type: 'email', value: user.email, disabled: true }), { hint: 'Assigned login email.' })
+      ]),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } },
+        {
+          label: 'Save profile', primary: true, onClick: function (close) {
+            var newName = nameInput.value.trim();
+            if (!newName) return 'Name cannot be empty.';
+            var newAvatar = uploader.getValue();
+            var newTitle = titleInput.value.trim();
+
+            OC.store.mutate({
+              actor: user.id,
+              action: 'user.update_profile',
+              target: newName,
+              detail: 'Updated profile details & avatar photo'
+            }, function () {
+              user.name = newName;
+              user.title = newTitle;
+              user.avatar = newAvatar;
+            });
+            OC.ui.toast('Profile photo & details updated.');
+            render();
+            close();
+          }
+        }
+      ]
+    });
+  }
+
   /* ---- chrome ----------------------------------------------------------- */
   function topbar() {
     var user = OC.store.user(OC.store.session()) || { id: 'u-shohag', name: 'User', email: 'sm@originatemarketing.com' };
@@ -579,8 +623,17 @@ OC.app = (function () {
           h('span', {}, 'OM SRS 001')
         ])
       ]),
-      h('div', { class: 'who push', style: 'display:flex;align-items:center;gap:10px;' }, [
-        h('span', { class: 'mark-tint tint-blueprint', style: 'width:26px;height:26px;font-size:10.5px;font-weight:700;' }, userInitials),
+      h('div', {
+        class: 'who push',
+        style: 'display:flex;align-items:center;gap:10px;cursor:pointer;',
+        title: 'Click to edit profile & photo',
+        onClick: openProfileModal
+      }, [
+        user.avatar
+          ? h('span', { class: 'mark-tint mark-avatar', style: 'width:28px;height:28px;overflow:hidden;border-radius:6px;display:inline-block;' }, [
+              h('img', { src: user.avatar, alt: user.name, style: 'width:100%;height:100%;object-fit:cover;display:block;' })
+            ])
+          : h('span', { class: 'mark-tint tint-blueprint', style: 'width:28px;height:28px;font-size:11px;font-weight:700;' }, userInitials),
         h('div', { style: 'display:flex;flex-direction:column;line-height:1.2;' }, [
           h('strong', { style: 'font-size:13px;color:var(--ink);font-weight:600;' }, user.name),
           h('span', { class: 'mono muted', style: 'font-size:11px;' }, user.email + ' (' + OC.can.roleLabel(user) + ')')
@@ -618,6 +671,7 @@ OC.app = (function () {
   }
 
   function currentView() {
+    if (route === 'groups' || route === 'people') return (OC.activities || OC.groups || OC.people);
     for (var i = 0; i < ROUTES.length; i++) if (ROUTES[i].id === route) return ROUTES[i].view();
     return OC.dashboard;
   }
@@ -667,6 +721,8 @@ OC.app = (function () {
       var hash = location.hash.slice(1);
       if (hash && hash.indexOf('claim=') === 0) {
         checkClaimToken();
+      } else if (hash === 'groups' || hash === 'people') {
+        route = 'activities';
       } else if (hash && ROUTES.some(function (r) { return r.id === hash; })) {
         route = hash;
       }
@@ -675,6 +731,8 @@ OC.app = (function () {
         var id = location.hash.slice(1);
         if (id && id.indexOf('claim=') === 0) {
           checkClaimToken();
+        } else if ((id === 'groups' || id === 'people') && route !== 'activities') {
+          go('activities');
         } else if (id && ROUTES.some(function (r) { return r.id === id; }) && id !== route) {
           go(id);
         }

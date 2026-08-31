@@ -116,7 +116,9 @@ OC.clients = (function () {
         h('div', { class: 'card stat-card' }, [
           h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Active Client Tasks'),
           h('div', { class: 'v tabular', style: 'font-size:22px;font-weight:700;' }, String(
-            OC.store.state.todos.filter(function (t) { return !t.archived && t.state !== 'done'; }).length
+            OC.store.state.todos.filter(function (t) {
+              return !t.archived && t.state !== 'done' && (t.client || (Array.isArray(t.clients) && t.clients.length));
+            }).length
           ))
         ])
       ]),

@@ -157,6 +157,18 @@ OC.ui = (function () {
     var cleanId = (typeof userId === 'string' && userId.indexOf('user:') === 0) ? userId.slice(5) : userId;
     var user = OC.store.user(cleanId);
     var name = user ? user.name : 'Unknown';
+    if (user && user.avatar) {
+      return h('span', {
+        class: 'mark-tint mark-avatar' + (extraClass ? ' ' + extraClass : ''),
+        title: name, 'aria-hidden': 'true'
+      }, [
+        h('img', {
+          src: user.avatar,
+          alt: name,
+          class: 'mark-avatar-img'
+        })
+      ]);
+    }
     var hash = 0;
     for (var i = 0; i < String(cleanId).length; i++) hash = (hash * 31 + String(cleanId).charCodeAt(i)) | 0;
     var tint = MARK_TINTS[Math.abs(hash) % MARK_TINTS.length];
@@ -1140,6 +1152,114 @@ OC.ui = (function () {
     };
   }
 
+  /* ---- photo uploader component ----------------------------------------- */
+  function photoUploader(currentAvatar, defaultName, onChange) {
+    var avatarVal = currentAvatar || '';
+    var preview = h('div', { class: 'photo-uploader-preview' });
+
+    function renderPreview() {
+      clear(preview);
+      if (avatarVal) {
+        preview.appendChild(h('img', { src: avatarVal, alt: defaultName || 'Avatar' }));
+      } else {
+        preview.textContent = initials(defaultName || 'User');
+      }
+    }
+    renderPreview();
+
+    var fileInput = h('input', {
+      type: 'file',
+      accept: 'image/png, image/jpeg, image/webp, image/gif',
+      style: 'display:none;',
+      onChange: function (e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+          toast('Image must be under 5MB.', true);
+          return;
+        }
+        var reader = new FileReader();
+        reader.onload = function (evt) {
+          var img = new Image();
+          img.onload = function () {
+            var maxDim = 256;
+            var w = img.width;
+            var hDim = img.height;
+            if (w > maxDim || hDim > maxDim) {
+              if (w > hDim) {
+                hDim = Math.round((hDim * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / hDim);
+                hDim = maxDim;
+              }
+            }
+            var canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = hDim;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, hDim);
+            avatarVal = canvas.toDataURL('image/jpeg', 0.88);
+            renderPreview();
+            if (onChange) onChange(avatarVal);
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    var chooseBtn = h('button', {
+      class: 'btn small primary',
+      type: 'button',
+      onClick: function () { fileInput.click(); }
+    }, [OC.icon('plus'), 'Upload photo']);
+
+    var removeBtn = h('button', {
+      class: 'btn small',
+      type: 'button',
+      onClick: function () {
+        avatarVal = '';
+        renderPreview();
+        if (onChange) onChange('');
+      }
+    }, 'Remove photo');
+
+    var urlInput = h('input', {
+      type: 'url',
+      placeholder: 'Or paste image/Gravatar URL...',
+      value: (avatarVal && avatarVal.indexOf('data:') !== 0) ? avatarVal : '',
+      style: 'font-size:12px;width:100%;margin-top:4px;',
+      onChange: function (e) {
+        var v = e.target.value.trim();
+        if (v) {
+          avatarVal = v;
+          renderPreview();
+          if (onChange) onChange(avatarVal);
+        }
+      }
+    });
+
+    var node = h('div', { class: 'photo-uploader' }, [
+      preview,
+      fileInput,
+      h('div', { class: 'photo-uploader-controls' }, [
+        h('div', { class: 'photo-uploader-actions' }, [chooseBtn, removeBtn]),
+        urlInput,
+        h('span', { class: 'muted', style: 'font-size:11px;' }, 'JPG, PNG, WebP or direct image link. Auto-optimized.')
+      ])
+    ]);
+
+    return {
+      node: node,
+      getValue: function () { return avatarVal; },
+      setValue: function (val) {
+        avatarVal = val || '';
+        renderPreview();
+      }
+    };
+  }
+
   /* ---- toasts ----------------------------------------------------------- */
   function toast(message, warn) {
     var host = document.querySelector('.toasts');
@@ -1158,7 +1278,7 @@ OC.ui = (function () {
     today: today, fmtDate: fmtDate, fmtWhen: fmtWhen, daysLate: daysLate, dueLabel: dueLabel,
     clientChip: clientChip, clientLabel: clientLabel, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
     personName: personName, assigneeName: assigneeName,
-    initials: initials, mark: mark, person: person,
+    initials: initials, mark: mark, person: person, photoUploader: photoUploader,
     STATE_LABEL: STATE_LABEL,
     field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
     assigneePicker: assigneePicker, deptPicker: deptPicker,

@@ -54,6 +54,7 @@ loadFile('assets/js/board.js');
 loadFile('assets/js/dashboard.js');
 loadFile('assets/js/people.js');
 loadFile('assets/js/clients.js');
+loadFile('assets/js/activities.js');
 loadFile('assets/js/app.js');
 
 OC.store.load();
@@ -151,6 +152,47 @@ OC.clients.render(hostClients);
 const clientsPageHasHeading = hasClassInChildren(hostClients, 'page-head');
 assert.strictEqual(clientsPageHasHeading, true, 'Clients page must render page-head');
 console.log('  ✓ OC.clients renders client directory view properly');
+
+// 6. Verify Dashboard Modern Todo Row rendering
+console.log('6. Testing Dashboard Modern Todo Row rendering');
+OC.store.setSession('u-shohag');
+OC.store.state.todos = [testTodo];
+const hostDashboard = document.createElement('div');
+OC.dashboard.render(hostDashboard, function () {});
+const hasDashboardRow = hasClassInChildren(hostDashboard, 'dashboard-todo-row');
+const hasCheckBtn = hasClassInChildren(hostDashboard, 'todo-check-btn');
+const hasChannelBadge = hasClassInChildren(hostDashboard, 'channel-badge');
+
+assert.strictEqual(hasDashboardRow, true, 'Dashboard must render dashboard-todo-row');
+assert.strictEqual(hasCheckBtn, true, 'Dashboard row must have todo-check-btn');
+assert.strictEqual(hasChannelBadge, true, 'Dashboard row must have channel-badge');
+console.log('  ✓ Dashboard renders modern todo row strip with checkbox & channel badge');
+
+// 7. Verify unified Activities view rendering (combining groups & people)
+console.log('7. Testing unified Activities view rendering');
+const hostActivities = document.createElement('div');
+OC.activities.render(hostActivities, function () {});
+const hasActivitiesHead = hasClassInChildren(hostActivities, 'page-head');
+const hasGroupsSub = hasClassInChildren(hostActivities, 'activities-section');
+
+assert.strictEqual(hasActivitiesHead, true, 'Activities must render page-head');
+assert.strictEqual(hasGroupsSub, true, 'Activities must render activities-section');
+// 8. Verify Custom Photo Upload and Avatar Rendering
+console.log('8. Testing Custom Photo Uploader and Avatar Rendering');
+const uploader = OC.ui.photoUploader('https://example.com/photo.jpg', 'Fuad Admin');
+assert.ok(uploader.node, 'photoUploader must create a DOM node');
+assert.strictEqual(uploader.getValue(), 'https://example.com/photo.jpg', 'Initial avatar value must match');
+uploader.setValue('https://example.com/new_avatar.png');
+assert.strictEqual(uploader.getValue(), 'https://example.com/new_avatar.png', 'setValue must update avatar value');
+
+// Test mark with avatar
+const avatarUser = { id: 'u-avatar', name: 'Avatar User', avatar: 'https://example.com/avatar.jpg' };
+OC.store.state.users.push(avatarUser);
+const avatarMark = OC.ui.mark('u-avatar');
+assert.strictEqual(avatarMark.className.includes('mark-avatar'), true, 'mark should have mark-avatar class when user has avatar');
+assert.strictEqual(avatarMark.children[0].tagName, 'IMG', 'mark should contain img tag');
+assert.strictEqual(avatarMark.children[0].attributes.src, 'https://example.com/avatar.jpg', 'img src must match user.avatar');
+console.log('  ✓ Photo uploader component & avatar mark render custom photos accurately');
 
 console.log('\n======================================================');
 console.log(' 🎉 ALL SPECIFIC TODO & CLIENT CHECKS PASSED! ✅');

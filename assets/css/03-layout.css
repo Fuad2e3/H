@@ -340,6 +340,14 @@
   will-change: scroll-position;
 }
 
+.stats,
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s4);
+  margin-bottom: var(--s4);
+}
+
 .grid-2 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -364,8 +372,19 @@
   .board {
     grid-template-columns: 1fr;
   }
+  .stats,
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .grid-3 {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .stats,
+  .grid-4 {
+    grid-template-columns: 1fr;
   }
 }
 

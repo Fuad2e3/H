@@ -68,7 +68,8 @@ OC.dashboard = (function () {
     /* todos grouped by client, oldest due first */
     var byClient = {};
     todos.forEach(function (t) {
-      var name = (OC.store.client(t.client) || {}).name || 'No client';
+      var cid = t.client || (Array.isArray(t.clients) && t.clients.length ? t.clients[0] : '');
+      var name = (OC.store.client(cid) || {}).name || 'No client';
       (byClient[name] = byClient[name] || []).push(t);
     });
 

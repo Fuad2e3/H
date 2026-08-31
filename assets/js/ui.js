@@ -414,18 +414,19 @@ OC.ui = (function () {
     var label = 'Comment on ' + (item.title || String(item.body).slice(0, 40));
     var body = h('input', { type: 'text', placeholder: 'add a comment...', 'aria-label': label });
     var count = (item.comments || []).length;
-    var deptObj = OC.store.department(item.department);
-    var deptName = deptObj ? deptObj.name : 'Department';
+    var deptNames = (Array.isArray(item.departments) && item.departments.length)
+      ? item.departments.map(function (did) { return (OC.store.department(did) || {}).name || did; }).join(', ')
+      : ((OC.store.department(item.department) || {}).name || 'Department');
 
     var wrap = h('details', { class: 'thread' }, [
       h('summary', {}, [
         h('span', {}, count ? count + (count === 1 ? ' comment' : ' comments') : 'Comment'),
-        h('span', { class: 'dept-visibility-tag' }, deptName + ' & Admin only')
+        h('span', { class: 'dept-visibility-tag' }, deptNames + ' & Admin only')
       ]),
       h('div', { class: 'thread-body' }, [
         h('div', { class: 'dept-visibility-notice' }, [
           OC.icon('lock'),
-          h('span', {}, 'Visible to ' + deptName + ' team members & System Admin only.')
+          h('span', {}, 'Visible to ' + deptNames + ' team members & System Admin only.')
         ]),
         (item.comments || []).map(function (c) {
           var canEdit = OC.can && OC.can.canEditComment ? OC.can.canEditComment(user, c, item) : (user && (user.admin || c.author === user.id));

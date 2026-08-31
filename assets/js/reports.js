@@ -82,9 +82,9 @@ OC.reports = (function () {
     download('originate-command-history-' + OC.ui.today() + '.csv', csv(rows));
   }
 
-  function render(host, rerender) {
+  function render(host, rerender, hideHead) {
     var h = OC.ui.h;
-    var user = me();
+    var user = me() || (OC.store.state.users && OC.store.state.users[0]) || { id: 'u-admin', name: 'User', admin: true };
     var todos = scopedTodos(user);
     var today = OC.ui.today();
 

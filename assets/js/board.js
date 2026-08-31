@@ -389,7 +389,10 @@ OC.board = (function () {
     var deptPicker = OC.ui.deptPicker(todo.departments || todo.department || '', user);
 
     var initialAssignees = (Array.isArray(todo.assignees) && todo.assignees.length)
-      ? todo.assignees.map(function (id) { return (todo.assignee_type === 'group' ? 'group:' : 'user:') + id; })
+      ? todo.assignees.map(function (id) {
+          if (typeof id === 'string' && (id.indexOf('user:') === 0 || id.indexOf('group:') === 0)) return id;
+          return (todo.assignee_type === 'group' ? 'group:' : 'user:') + id;
+        })
       : [(todo.assignee_type || 'user') + ':' + (todo.assignee || user.id)];
     var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
 
@@ -508,7 +511,10 @@ OC.board = (function () {
   function reassignTodo(todo) {
     var user = me();
     var initialAssignees = (Array.isArray(todo.assignees) && todo.assignees.length)
-      ? todo.assignees.map(function (id) { return (todo.assignee_type === 'group' ? 'group:' : 'user:') + id; })
+      ? todo.assignees.map(function (id) {
+          if (typeof id === 'string' && (id.indexOf('user:') === 0 || id.indexOf('group:') === 0)) return id;
+          return (todo.assignee_type === 'group' ? 'group:' : 'user:') + id;
+        })
       : [(todo.assignee_type || 'user') + ':' + (todo.assignee || user.id)];
     var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
 

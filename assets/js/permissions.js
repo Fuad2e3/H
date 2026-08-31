@@ -321,9 +321,16 @@ OC.can = (function () {
     var assignees = [];
     if (Array.isArray(todo.assignees) && todo.assignees.length) {
       todo.assignees.forEach(function (aid) {
-        var g = S().group(aid);
-        if (g && g.members) assignees = assignees.concat(g.members);
-        else assignees.push(aid);
+        if (typeof aid === 'string' && aid.indexOf('user:') === 0) {
+          assignees.push(aid.slice(5));
+        } else if (typeof aid === 'string' && aid.indexOf('group:') === 0) {
+          var g = S().group(aid.slice(6));
+          if (g && g.members) assignees = assignees.concat(g.members);
+        } else {
+          var g = S().group(aid);
+          if (g && g.members) assignees = assignees.concat(g.members);
+          else assignees.push(aid);
+        }
       });
     } else if (todo.assignee_type === 'user') {
       assignees = [todo.assignee];

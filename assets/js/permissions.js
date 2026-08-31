@@ -73,16 +73,21 @@ OC.can = (function () {
   function seeTodo(user, todo) {
     if (!user || !todo) return false;
     if (user.admin) return true;
-    if (todo.assignee_type === 'user' && todo.assignee === user.id) return true;
+    if (todo.assignee_type === 'user' && (todo.assignee === user.id || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1))) return true;
     if (todo.assignee_type === 'group' && inGroup(user, todo.assignee)) return true;
-    return inDept(user, todo.department);
+    if (Array.isArray(todo.assignees) && todo.assignees.some(function (id) { return inGroup(user, id); })) return true;
+    if (inDept(user, todo.department)) return true;
+    if (Array.isArray(todo.departments) && todo.departments.some(function (d) { return inDept(user, d); })) return true;
+    return false;
   }
 
   function seeInstruction(user, note) {
     if (!user || !note) return false;
     if (user.admin) return true;
     if (note.author === user.id) return true;
-    return inDept(user, note.department);
+    if (inDept(user, note.department)) return true;
+    if (Array.isArray(note.departments) && note.departments.some(function (d) { return inDept(user, d); })) return true;
+    return false;
   }
 
   /* ---- assignment (3.2) ------------------------------------------------- */
@@ -259,7 +264,9 @@ OC.can = (function () {
   function canSeeComments(user, item) {
     if (!user || !item) return false;
     if (user.admin) return true;
-    return inDept(user, item.department);
+    if (inDept(user, item.department)) return true;
+    if (Array.isArray(item.departments) && item.departments.some(function (d) { return inDept(user, d); })) return true;
+    return false;
   }
 
   function commentOnTodo(user, todo) { return canSeeComments(user, todo); }

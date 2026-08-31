@@ -656,65 +656,247 @@ OC.ui = (function () {
     });
   }
 
-  function clientPicker(selectedValue, onChange) {
-    var selectEl = h('select', {});
+  function clientPicker(selectedValues, onChange) {
     var user = OC.store.user(OC.store.session());
     var canAdd = !!(OC.can && OC.can.createClient ? OC.can.createClient(user) : (user && user.admin));
 
-    function refresh(preselectId) {
-      clear(selectEl);
-      selectEl.appendChild(h('option', { value: '' }, 'Select a client'));
-      OC.store.state.clients.forEach(function (c) {
-        var opt = h('option', { value: c.id }, c.name);
-        if (c.id === preselectId) opt.selected = true;
-        selectEl.appendChild(opt);
-      });
-      if (canAdd) {
-        selectEl.appendChild(h('option', { value: '__new__' }, '+ Add new client...'));
-      }
-      if (preselectId !== undefined) selectEl.value = preselectId;
-    }
-
-    refresh(selectedValue || '');
-
-    selectEl.addEventListener('change', function () {
-      if (selectEl.value === '__new__') {
-        selectEl.value = selectedValue || '';
-        newClientModal(function (newClient) {
-          selectedValue = newClient.id;
-          refresh(newClient.id);
-          if (onChange) onChange(newClient.id);
-        });
-        return;
-      }
-      selectedValue = selectEl.value;
-      if (onChange) onChange(selectEl.value);
+    var chosen = [];
+    (Array.isArray(selectedValues) ? selectedValues : [selectedValues]).forEach(function (val) {
+      if (val && chosen.indexOf(val) === -1) chosen.push(val);
     });
+
+    var root = h('div', { class: 'multi-picker client-multi-picker' });
+    var topRow = h('div', { class: 'multi-picker-head' });
+    var chipsWrap = h('div', { class: 'multi-picker-chips' });
+    var searchInput = h('input', { type: 'search', placeholder: 'Search clients...', 'aria-label': 'Filter clients', style: 'flex:1;' });
+    var listWrap = h('div', { class: 'multi-picker-list', role: 'group', 'aria-label': 'Clients' });
 
     var addBtn = canAdd ? h('button', {
       class: 'btn small',
       type: 'button',
-      title: 'Add new client (Admin and Department Head only)',
+      title: 'Add new client',
       onClick: function () {
         newClientModal(function (newClient) {
-          selectedValue = newClient.id;
-          refresh(newClient.id);
-          if (onChange) onChange(newClient.id);
+          if (chosen.indexOf(newClient.id) === -1) chosen.push(newClient.id);
+          render();
+          if (onChange) onChange(getClients());
         });
       }
     }, [OC.icon ? OC.icon('plus') : '+', ' New Client']) : null;
 
-    var row = h('div', { class: 'client-picker-row' }, [
-      selectEl,
-      addBtn
-    ].filter(Boolean));
+    topRow.appendChild(searchInput);
+    if (addBtn) topRow.appendChild(addBtn);
+
+    function renderChips() {
+      clear(chipsWrap);
+      if (!chosen.length) {
+        chipsWrap.appendChild(h('span', { class: 'muted', style: 'font-size:12px;font-style:italic;' }, 'No client selected (select from list below)'));
+        return;
+      }
+      chosen.forEach(function (cid) {
+        var c = OC.store.client(cid);
+        var label = c ? c.name : cid;
+
+        var removeBtn = h('button', {
+          type: 'button',
+          class: 'chip-remove',
+          title: 'Remove ' + label,
+          onClick: function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var at = chosen.indexOf(cid);
+            if (at > -1) chosen.splice(at, 1);
+            render();
+            if (onChange) onChange(getClients());
+          }
+        }, '✕');
+
+        var chip = h('span', { class: 'multi-picker-chip client-chip' }, [
+          h('span', {}, label),
+          removeBtn
+        ]);
+        chipsWrap.appendChild(chip);
+      });
+    }
+
+    function renderList() {
+      clear(listWrap);
+      var q = searchInput.value.trim().toLowerCase();
+      var clients = (OC.store.state.clients || []).filter(function (c) {
+        return !q || c.name.toLowerCase().indexOf(q) > -1 || (c.contact && c.contact.toLowerCase().indexOf(q) > -1);
+      });
+
+      if (!clients.length) {
+        listWrap.appendChild(h('p', { class: 'ticklist-empty' }, 'No clients found' + (q ? ' matching "' + q + '"' : '') + '. Click "+ New Client" above.'));
+        return;
+      }
+
+      clients.forEach(function (c) {
+        var isChecked = chosen.indexOf(c.id) > -1;
+        var chk = h('input', {
+          type: 'checkbox',
+          value: c.id,
+          checked: isChecked,
+          onChange: function (e) {
+            var at = chosen.indexOf(c.id);
+            if (e.target.checked && at === -1) chosen.push(c.id);
+            if (!e.target.checked && at > -1) chosen.splice(at, 1);
+            render();
+            if (onChange) onChange(getClients());
+          }
+        });
+
+        var line = h('label', { class: 'multi-picker-item-line' }, [
+          chk,
+          h('span', { style: 'font-weight:500;' }, c.name),
+          c.contact ? h('span', { class: 'muted', style: 'margin-left:auto;font-size:11px;' }, c.contact) : null
+        ].filter(Boolean));
+        listWrap.appendChild(line);
+      });
+    }
+
+    function render() {
+      renderChips();
+      renderList();
+    }
+
+    searchInput.addEventListener('input', renderList);
+
+    root.appendChild(chipsWrap);
+    root.appendChild(topRow);
+    root.appendChild(listWrap);
+
+    render();
+
+    function getClients() { return chosen.slice(); }
+    function getValue() { return chosen.length ? chosen[0] : ''; }
 
     return {
-      node: row,
-      select: selectEl,
-      getValue: function () { return selectEl.value; },
-      setValue: function (v) { selectedValue = v; refresh(v); },
-      refresh: refresh
+      node: root,
+      getValue: getValue,
+      getClients: getClients,
+      setValue: function (v) {
+        chosen = (Array.isArray(v) ? v : [v]).filter(Boolean);
+        render();
+      },
+      refresh: function () { render(); }
+    };
+  }
+
+  /* ---- department multi-select picker ------------------------------------- */
+  function deptPicker(selectedValues, currentUser, onChange) {
+    currentUser = currentUser || OC.store.user(OC.store.session());
+    var allDepts = OC.store.state.departments || [];
+    var allowedDepts = (currentUser && currentUser.admin) ? allDepts
+      : allDepts.filter(function (d) { return OC.can && OC.can.inDept ? OC.can.inDept(currentUser, d.id) : true; });
+
+    var chosen = [];
+    (Array.isArray(selectedValues) ? selectedValues : [selectedValues]).forEach(function (val) {
+      if (val && chosen.indexOf(val) === -1) chosen.push(val);
+    });
+
+    if (!chosen.length && allowedDepts.length) {
+      chosen.push(allowedDepts[0].id);
+    }
+
+    var root = h('div', { class: 'multi-picker dept-multi-picker' });
+    var chipsWrap = h('div', { class: 'multi-picker-chips' });
+    var searchInput = h('input', { type: 'search', placeholder: 'Search departments...', 'aria-label': 'Filter departments' });
+    var listWrap = h('div', { class: 'multi-picker-list', role: 'group', 'aria-label': 'Departments' });
+
+    function renderChips() {
+      clear(chipsWrap);
+      if (!chosen.length) {
+        chipsWrap.appendChild(h('span', { class: 'muted', style: 'font-size:12px;font-style:italic;' }, 'No department selected (select below)'));
+        return;
+      }
+      chosen.forEach(function (did) {
+        var d = OC.store.department(did);
+        var label = d ? d.name : did;
+
+        var removeBtn = h('button', {
+          type: 'button',
+          class: 'chip-remove',
+          title: 'Remove ' + label,
+          onClick: function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var at = chosen.indexOf(did);
+            if (at > -1) chosen.splice(at, 1);
+            render();
+            if (onChange) onChange(getDepartments());
+          }
+        }, '✕');
+
+        var chip = h('span', { class: 'multi-picker-chip dept-chip' }, [
+          h('span', {}, label),
+          removeBtn
+        ]);
+        chipsWrap.appendChild(chip);
+      });
+    }
+
+    function renderList() {
+      clear(listWrap);
+      var q = searchInput.value.trim().toLowerCase();
+      var depts = allowedDepts.filter(function (d) {
+        return !q || d.name.toLowerCase().indexOf(q) > -1 || d.id.toLowerCase().indexOf(q) > -1;
+      });
+
+      if (!depts.length) {
+        listWrap.appendChild(h('p', { class: 'ticklist-empty' }, 'No departments found matching "' + q + '"'));
+        return;
+      }
+
+      depts.forEach(function (d) {
+        var isChecked = chosen.indexOf(d.id) > -1;
+        var chk = h('input', {
+          type: 'checkbox',
+          value: d.id,
+          checked: isChecked,
+          onChange: function (e) {
+            var at = chosen.indexOf(d.id);
+            if (e.target.checked && at === -1) chosen.push(d.id);
+            if (!e.target.checked && at > -1) chosen.splice(at, 1);
+            render();
+            if (onChange) onChange(getDepartments());
+          }
+        });
+
+        var line = h('label', { class: 'multi-picker-item-line' }, [
+          chk,
+          h('span', { style: 'font-weight:500;' }, d.name),
+          h('span', { class: 'chip custom', style: 'margin-left:auto;font-size:10.5px;' }, d.id)
+        ]);
+        listWrap.appendChild(line);
+      });
+    }
+
+    function render() {
+      renderChips();
+      renderList();
+    }
+
+    searchInput.addEventListener('input', renderList);
+
+    root.appendChild(chipsWrap);
+    root.appendChild(searchInput);
+    root.appendChild(listWrap);
+
+    render();
+
+    function getDepartments() { return chosen.slice(); }
+    function getValue() { return chosen.length ? chosen[0] : ''; }
+
+    return {
+      node: root,
+      getValue: getValue,
+      getDepartments: getDepartments,
+      setValue: function (v) {
+        chosen = (Array.isArray(v) ? v : [v]).filter(Boolean);
+        render();
+      },
+      refresh: function () { render(); }
     };
   }
 
@@ -925,7 +1107,7 @@ OC.ui = (function () {
     initials: initials, mark: mark, person: person,
     STATE_LABEL: STATE_LABEL,
     field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
-    assigneePicker: assigneePicker,
+    assigneePicker: assigneePicker, deptPicker: deptPicker,
     tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
     modal: modal, confirm: confirm, toast: toast, debounce: debounce
   };

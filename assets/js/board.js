@@ -35,8 +35,14 @@ OC.board = (function () {
 
   /* ---- filtering -------------------------------------------------------- */
   function matches(item, isTodo) {
-    if (filters.client && item.client !== filters.client) return false;
-    if (filters.department && item.department !== filters.department) return false;
+    if (filters.client) {
+      var cHit = item.client === filters.client || (Array.isArray(item.clients) && item.clients.indexOf(filters.client) > -1);
+      if (!cHit) return false;
+    }
+    if (filters.department) {
+      var dHit = item.department === filters.department || (Array.isArray(item.departments) && item.departments.indexOf(filters.department) > -1);
+      if (!dHit) return false;
+    }
     if (filters.tag && (item.tags || []).indexOf(filters.tag) === -1) return false;
 
     if (filters.person) {
@@ -332,8 +338,12 @@ OC.board = (function () {
       h('div', { class: 'title' }, todo.title),
       todo.description ? h('div', { class: 'desc' }, todo.description) : null,
       h('div', { class: 'meta' }, [
-        OC.ui.clientChip(todo.client),
-        OC.ui.deptChip(todo.department),
+        (Array.isArray(todo.clients) && todo.clients.length > 1)
+          ? h('span', { class: 'multi-clients-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, todo.clients.map(OC.ui.clientChip))
+          : OC.ui.clientChip(todo.client),
+        (Array.isArray(todo.departments) && todo.departments.length > 1)
+          ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, todo.departments.map(OC.ui.deptChip))
+          : OC.ui.deptChip(todo.department),
         (Array.isArray(todo.assignees) && todo.assignees.length > 1)
           ? h('span', { class: 'multi-assignees-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center;' },
               todo.assignees.map(function (uid) {
@@ -375,10 +385,8 @@ OC.board = (function () {
     var user = me();
     var title = h('input', { type: 'text', value: todo.title || '' });
     var desc = h('textarea', {}, todo.description || '');
-    var clientPicker = OC.ui.clientPicker(todo.client || '');
-    var depts = user.admin ? OC.store.state.departments
-      : OC.store.state.departments.filter(function (d) { return OC.can.inDept(user, d.id); });
-    var department = OC.ui.select(optionsFor(depts, 'Select a department'), todo.department || '');
+    var clientPicker = OC.ui.clientPicker(todo.clients || todo.client || '');
+    var deptPicker = OC.ui.deptPicker(todo.departments || todo.department || '', user);
 
     var initialAssignees = (Array.isArray(todo.assignees) && todo.assignees.length)
       ? todo.assignees.map(function (id) { return (todo.assignee_type === 'group' ? 'group:' : 'user:') + id; })
@@ -404,9 +412,12 @@ OC.board = (function () {
         label: 'Save changes', primary: true, onClick: function (close) {
           var newTitle = title.value.trim();
           if (!newTitle) return 'A todo needs a title.';
-          var selectedClient = clientPicker.getValue();
-          if (!selectedClient || selectedClient === '__new__') return 'Please select a client.';
-          if (!department.value) return 'Please select a department.';
+          var selectedClients = clientPicker.getClients();
+          var primaryClient = clientPicker.getValue();
+          if (!selectedClients.length || !primaryClient) return 'Please select at least one client.';
+          var selectedDepts = deptPicker.getDepartments();
+          var primaryDept = deptPicker.getValue();
+          if (!selectedDepts.length || !primaryDept) return 'Please select at least one department.';
 
           var assignees = assigneePicker.getAssignees();
           var assigneeTypes = assigneePicker.getAssigneeTypes();
@@ -423,8 +434,10 @@ OC.board = (function () {
           }, function () {
             todo.title = newTitle;
             todo.description = desc.value.trim();
-            todo.client = selectedClient;
-            todo.department = department.value;
+            todo.client = primaryClient;
+            todo.clients = selectedClients;
+            todo.department = primaryDept;
+            todo.departments = selectedDepts;
             if (canReassign) {
               todo.assignee_type = primaryType;
               todo.assignee = primaryAssignee;
@@ -480,8 +493,8 @@ OC.board = (function () {
       content: h('div', {}, [
         OC.ui.field('Title', title, { required: true }),
         OC.ui.field('Description', desc),
-        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select client or click "+ New Client" (5.2).' }),
-        OC.ui.field('Department', department, { required: true }),
+        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
+        OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),
         OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: canReassign ? 'Select one or multiple team members or groups to assign.' : 'Only authorized leads/admins can reassign (3.2).' }),
         OC.ui.field('Due date', due, { required: true }),
         OC.ui.field('Priority', priority),
@@ -542,10 +555,8 @@ OC.board = (function () {
     preset = preset || {};
     var title = h('input', { type: 'text', value: preset.title || '' });
     var desc = h('textarea', {}, preset.description || '');
-    var clientPicker = OC.ui.clientPicker(preset.client || '');
-    var depts = user.admin ? OC.store.state.departments
-      : OC.store.state.departments.filter(function (d) { return OC.can.inDept(user, d.id); });
-    var department = OC.ui.select(optionsFor(depts, 'Select a department'), preset.department || '');
+    var clientPicker = OC.ui.clientPicker(preset.clients || preset.client || '');
+    var deptPicker = OC.ui.deptPicker(preset.departments || preset.department || '', user);
 
     var initialAssignees = (preset.assignees && preset.assignees.length)
       ? preset.assignees
@@ -570,8 +581,8 @@ OC.board = (function () {
       content: h('div', {}, [
         OC.ui.field('Title', title, { required: true }),
         OC.ui.field('Description', desc),
-        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select an existing client or click "+ New Client" to add a custom client (5.2).' }),
-        OC.ui.field('Department', department, { required: true }),
+        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
+        OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),
         OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: assignHint }),
         OC.ui.field('Due date', due, { required: true }),
         OC.ui.field('Priority', priority),
@@ -583,9 +594,12 @@ OC.board = (function () {
         {
           label: 'Create todo', primary: true, onClick: function (close) {
             if (!title.value.trim()) return 'A todo needs a title.';
-            var selectedClient = clientPicker.getValue();
-            if (!selectedClient || selectedClient === '__new__') return 'Select a client or add a new one. This is required by 5.2.';
-            if (!department.value) return 'Select a department. This is required by 5.2.';
+            var selectedClients = clientPicker.getClients();
+            var primaryClient = clientPicker.getValue();
+            if (!selectedClients.length || !primaryClient) return 'Select at least one client or add a new one. This is required by 5.2.';
+            var selectedDepts = deptPicker.getDepartments();
+            var primaryDept = deptPicker.getValue();
+            if (!selectedDepts.length || !primaryDept) return 'Select at least one department. This is required by 5.2.';
 
             var assignees = assigneePicker.getAssignees();
             var assigneeTypes = assigneePicker.getAssigneeTypes();
@@ -597,7 +611,8 @@ OC.board = (function () {
             var todo = {
               id: OC.store.uid('t'),
               title: title.value.trim(), description: desc.value.trim(),
-              client: selectedClient, department: department.value,
+              client: primaryClient, clients: selectedClients,
+              department: primaryDept, departments: selectedDepts,
               assignee_type: primaryType, assignee: primaryAssignee,
               assignees: assignees,
               state: 'open', priority: priority.value, due: due.value,
@@ -707,8 +722,12 @@ OC.board = (function () {
       ]),
       h('div', { class: 'body' }, note.body),
       h('div', { class: 'tags' }, [
-        OC.ui.clientChip(note.client),
-        OC.ui.deptChip(note.department),
+        (Array.isArray(note.clients) && note.clients.length > 1)
+          ? h('span', { class: 'multi-clients-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, note.clients.map(OC.ui.clientChip))
+          : OC.ui.clientChip(note.client),
+        (Array.isArray(note.departments) && note.departments.length > 1)
+          ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, note.departments.map(OC.ui.deptChip))
+          : OC.ui.deptChip(note.department),
         note.tags.map(OC.ui.tagChip)
       ]),
       h('div', { class: 'readers' }, readers.length
@@ -723,10 +742,8 @@ OC.board = (function () {
   function editInstruction(note) {
     var user = me();
     var body = h('textarea', {}, note.body || '');
-    var clientPicker = OC.ui.clientPicker(note.client || '');
-    var depts = user.admin ? OC.store.state.departments
-      : OC.store.state.departments.filter(function (d) { return OC.can.inDept(user, d.id); });
-    var department = OC.ui.select(optionsFor(depts, 'Select a department'), note.department || '');
+    var clientPicker = OC.ui.clientPicker(note.clients || note.client || '');
+    var deptPicker = OC.ui.deptPicker(note.departments || note.department || '', user);
     var tags = OC.ui.tagPicker(note.tags || []);
 
     var actions = [
@@ -735,9 +752,12 @@ OC.board = (function () {
         label: 'Save changes', primary: true, onClick: function (close) {
           var newBody = body.value.trim();
           if (!newBody) return 'Write the instruction text.';
-          var selectedClient = clientPicker.getValue();
-          if (!selectedClient || selectedClient === '__new__') return 'Please select a client.';
-          if (!department.value) return 'Please select a department.';
+          var selectedClients = clientPicker.getClients();
+          var primaryClient = clientPicker.getValue();
+          if (!selectedClients.length || !primaryClient) return 'Please select at least one client.';
+          var selectedDepts = deptPicker.getDepartments();
+          var primaryDept = deptPicker.getValue();
+          if (!selectedDepts.length || !primaryDept) return 'Please select at least one department.';
 
           OC.store.mutate({
             actor: user.id,
@@ -746,8 +766,10 @@ OC.board = (function () {
             detail: 'Updated instruction'
           }, function () {
             note.body = newBody;
-            note.client = selectedClient;
-            note.department = department.value;
+            note.client = primaryClient;
+            note.clients = selectedClients;
+            note.department = primaryDept;
+            note.departments = selectedDepts;
             note.tags = tags.resolve();
           });
 
@@ -781,8 +803,8 @@ OC.board = (function () {
       title: 'Edit instruction',
       content: h('div', {}, [
         OC.ui.field('Instruction', body, { required: true }),
-        OC.ui.field('Client', clientPicker.node, { required: true }),
-        OC.ui.field('Department', department, { required: true }),
+        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients (5.2).' }),
+        OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),
         OC.ui.field('Tags', tags.node)
       ]),
       actions: actions
@@ -807,7 +829,8 @@ OC.board = (function () {
     newTodo({
       title: note.body.slice(0, 70) + (note.body.length > 70 ? '…' : ''),
       description: 'From an instruction posted by ' + OC.ui.personName(note.author) + ' on ' + OC.ui.fmtDate(note.posted_at) + '.',
-      client: note.client, department: note.department
+      client: note.client, clients: note.clients,
+      department: note.department, departments: note.departments
     }, function (todo) {
       /* only once the todo actually exists — cancelling must leave the
          instruction unconverted */
@@ -821,15 +844,15 @@ OC.board = (function () {
     var user = me();
     var body = h('textarea', { placeholder: 'the instruction, as it was given' });
     var clientPicker = OC.ui.clientPicker('');
-    var department = OC.ui.select(optionsFor(OC.store.state.departments, 'Select a department'), '');
+    var deptPicker = OC.ui.deptPicker('', user);
     var tags = OC.ui.tagPicker([]);
 
     OC.ui.modal({
       title: 'Post an instruction',
       content: h('div', {}, [
         OC.ui.field('Instruction', body, { required: true, hint: 'Anyone may post an instruction — it is not restricted the way assignment is (6.3).' }),
-        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select an existing client or click "+ New Client" to add a custom client (5.2).' }),
-        OC.ui.field('Department', department, { required: true, hint: 'Any department, not only your own (3.2).' }),
+        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
+        OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (3.2).' }),
         OC.ui.field('Tags', tags.node, { hint: 'Typing narrows the list. A new tag is created inline and available to everyone immediately (6.4).' })
       ]),
       actions: [
@@ -837,13 +860,18 @@ OC.board = (function () {
         {
           label: 'Post instruction', primary: true, onClick: function (close) {
             if (!body.value.trim()) return 'Write the instruction first.';
-            var selectedClient = clientPicker.getValue();
-            if (!selectedClient || selectedClient === '__new__') return 'Select a client or add a new one. This is required by 5.2.';
-            if (!department.value) return 'Select a department. This is required by 5.2.';
+            var selectedClients = clientPicker.getClients();
+            var primaryClient = clientPicker.getValue();
+            if (!selectedClients.length || !primaryClient) return 'Select at least one client or add a new one. This is required by 5.2.';
+            var selectedDepts = deptPicker.getDepartments();
+            var primaryDept = deptPicker.getValue();
+            if (!selectedDepts.length || !primaryDept) return 'Select at least one department. This is required by 5.2.';
 
             var note = {
               id: OC.store.uid('n'), body: body.value.trim(), author: user.id,
-              client: selectedClient, department: department.value, tags: tags.resolve(),
+              client: primaryClient, clients: selectedClients,
+              department: primaryDept, departments: selectedDepts,
+              tags: tags.resolve(),
               posted_at: new Date().toISOString(), read_by: [user.id],
               archived: false, linked_todo: null, comments: []
             };

@@ -206,7 +206,12 @@ OC.can = (function () {
 
   function canDeleteComment(user, comment, item) {
     if (!user || !comment) return false;
-    return user.admin || comment.author === user.id || (item && isHead(user, item.department));
+    if (user.admin || comment.author === user.id) return true;
+    if (item) {
+      if (item.department && isHead(user, item.department)) return true;
+      if (Array.isArray(item.departments) && item.departments.some(function (d) { return isHead(user, d); })) return true;
+    }
+    return false;
   }
 
   function manageDepartment(user, deptId) {

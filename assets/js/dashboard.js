@@ -85,16 +85,18 @@ OC.dashboard = (function () {
       badgeStyleClass = 'badge-default';
     }
 
-    // Client name
-    var clientObj = OC.store.client(t.client || (Array.isArray(t.clients) ? t.clients[0] : ''));
-    var clientName = clientObj ? (clientObj.name || clientObj.id) : '';
+    // Client name - now standardized to show only Client code via OC.ui.clientLabel
+    var clientCode = OC.ui.clientLabel(t.client || (Array.isArray(t.clients) ? t.clients[0] : ''));
 
     // Assignee / Creator name on right side
     var assigneeUser = OC.store.user(t.assignee || (Array.isArray(t.assignees) ? t.assignees[0] : ''));
-    var assigneeText = assigneeUser ? (assigneeUser.name + (assigneeUser.title ? ' ' + assigneeUser.title : '')) : (t.assignee || '');
+    var assigneeText = assigneeUser ? assigneeUser.name : (t.assignee || '');
+    var assigneeTitle = assigneeUser ? assigneeUser.title : '';
+
     if (!assigneeText && t.created_by) {
       var creator = OC.store.user(t.created_by);
-      assigneeText = creator ? (creator.name + (creator.title ? ' ' + creator.title : '')) : t.created_by;
+      assigneeText = creator ? creator.name : t.created_by;
+      assigneeTitle = creator ? creator.title : '';
     }
 
     var checkbox = h('button', {
@@ -138,8 +140,9 @@ OC.dashboard = (function () {
       assigneeUser
         ? h('span', { class: 'dashboard-assignee-text', style: 'display:inline-flex;align-items:center;gap:6px;' }, [
             OC.ui.mark(assigneeUser.id),
-            h('span', {}, assigneeText)
-          ])
+            h('span', { class: 'name' }, assigneeText),
+            assigneeTitle ? h('span', { class: 'chip role', style: 'font-size:10px;padding:1px 6px;' }, assigneeTitle) : null
+          ].filter(Boolean))
         : (assigneeText ? h('span', { class: 'dashboard-assignee-text' }, assigneeText) : null)
     ].filter(Boolean));
   }

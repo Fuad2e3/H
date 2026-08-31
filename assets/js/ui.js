@@ -204,9 +204,15 @@ OC.ui = (function () {
   /* a person, shown as mark plus name */
   function person(userId, extraClass) {
     var cleanId = (typeof userId === 'string' && userId.indexOf('user:') === 0) ? userId.slice(5) : userId;
+    var u = OC.store.user(cleanId);
+    var name = u ? u.name : 'Unknown';
+    var title = u ? u.title : '';
+
     return h('span', { class: 'person' + (extraClass ? ' ' + extraClass : '') }, [
-      mark(cleanId), h('span', {}, personName(cleanId))
-    ]);
+      mark(cleanId),
+      h('span', { class: 'name' }, name),
+      title ? h('span', { class: 'chip role', style: 'margin-left:4px;font-size:10.5px;' }, title) : null
+    ].filter(Boolean));
   }
 
   function personName(id) {

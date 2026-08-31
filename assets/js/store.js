@@ -297,6 +297,7 @@ OC.store = (function () {
           existing.admin = su.admin;
           existing.title = su.title;
           existing.departments = su.departments;
+          if (su.avatar) existing.avatar = su.avatar;
           modified = true;
         }
       });

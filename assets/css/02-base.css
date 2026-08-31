@@ -309,6 +309,10 @@ select {
   display: none !important;
 }
 
+button, input, select, textarea, a, .chip, .segmented button {
+  touch-action: manipulation;
+}
+
 /* ---- buttons ------------------------------------------------------------ */
 .btn {
   display: inline-flex;
@@ -326,18 +330,21 @@ select {
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  user-select: none;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: background var(--t), border-color var(--t), color var(--t), transform var(--t), box-shadow var(--t);
+  transition: transform var(--t-fast), background var(--t-fast), border-color var(--t-fast), color var(--t-fast), box-shadow var(--t-fast);
+  will-change: transform;
 }
 .btn:hover {
   border-color: var(--blueprint);
   background: var(--tint);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.12);
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
 }
 .btn:active {
   background: var(--tint-strong);
-  transform: translateY(0);
+  transform: scale(0.97) translateY(0.5px);
+  transition: transform var(--t-instant), background var(--t-instant);
 }
 .btn[disabled] {
   opacity: 0.45;
@@ -348,6 +355,7 @@ select {
 .btn[disabled]:hover {
   border-color: var(--rule-strong);
   background: var(--card-bg);
+  transform: none;
 }
 
 /* Standard Button (Non-primary/Non-orange/Non-danger) */
@@ -362,6 +370,11 @@ select {
   border-color: var(--btn-hover-border);
   color: var(--btn-hover-text);
   box-shadow: 0 3px 8px rgba(37, 99, 235, 0.16);
+  transform: translateY(-1.5px);
+}
+.btn:not(.primary):not(.orange):not(.danger):active {
+  transform: scale(0.97) translateY(0.5px);
+  transition: transform var(--t-instant);
 }
 
 /* Primary Action Buttons */
@@ -375,9 +388,14 @@ select {
 }
 .btn.primary:hover {
   filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
   color: #FFFFFF !important;
+}
+.btn.primary:active {
+  transform: scale(0.97) translateY(0.5px);
+  filter: brightness(0.96);
+  transition: transform var(--t-instant);
 }
 
 /* Brand Orange Buttons */

@@ -195,7 +195,8 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);
-  transition: background var(--t), color var(--t);
+  user-select: none;
+  transition: background var(--t-fast), color var(--t-fast), transform var(--t-instant);
 }
 .segmented button + button {
   border-left: 1px solid var(--rule);
@@ -203,6 +204,10 @@
 .segmented button:hover {
   background: var(--tint);
   color: var(--ink);
+}
+.segmented button:active {
+  transform: scale(0.95);
+  transition: transform var(--t-instant);
 }
 .segmented button[aria-pressed="true"] {
   background: var(--card-bg) !important;
@@ -218,11 +223,16 @@
   background: var(--card-bg);
   box-shadow: var(--sh1);
   padding: var(--s4);
-  transition: transform var(--t), box-shadow var(--t), border-color var(--t);
+  transition: transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast);
+  will-change: transform;
 }
 .card:hover {
   border-color: rgba(37, 99, 235, 0.25);
   box-shadow: var(--sh2);
+}
+.card:active {
+  transform: scale(0.992);
+  transition: transform var(--t-instant);
 }
 .card h3 {
   font-size: 16px;
@@ -488,10 +498,11 @@
   background: var(--card-bg);
   padding: var(--s3) var(--s4) var(--s3) calc(var(--s4) + 6px);
   box-shadow: var(--sh1);
-  transition: transform var(--t), border-color var(--t), box-shadow var(--t), background var(--t);
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  will-change: transform;
 }
 .item::before {
   content: "";
@@ -531,6 +542,10 @@
   box-shadow: var(--sh2);
   border-color: var(--blueprint);
 }
+.item:active {
+  transform: scale(0.988) translateY(0);
+  transition: transform var(--t-instant);
+}
 .item .title {
   font-size: 14.5px;
   font-weight: 700;
@@ -568,7 +583,8 @@
   background: var(--card-bg);
   padding: var(--s3) var(--s4) var(--s3) calc(var(--s4) + 6px);
   box-shadow: var(--sh1);
-  transition: transform var(--t), border-color var(--t), box-shadow var(--t), background var(--t);
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+  will-change: transform;
 }
 .note::before {
   content: "";
@@ -582,7 +598,11 @@
 .note:hover {
   border-color: rgba(139, 92, 246, 0.35);
   box-shadow: var(--sh2);
-  transform: translateY(-1px);
+  transform: translateY(-1.5px);
+}
+.note:active {
+  transform: scale(0.988) translateY(0);
+  transition: transform var(--t-instant);
 }
 .note.unread::before {
   opacity: 1;
@@ -798,12 +818,13 @@ dialog.modal {
   padding: 0;
   width: min(560px, 94vw);
   overflow: hidden;
-  animation: modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modal-in 130ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
 }
 @keyframes modal-in {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(8px);
+    transform: scale(0.97) translateY(6px);
   }
   to {
     opacity: 1;
@@ -831,6 +852,8 @@ dialog.modal::backdrop {
   padding: var(--s4);
   max-height: min(70vh, 620px);
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
 }
 .modal-body > .field:last-child {
   margin-bottom: 0;

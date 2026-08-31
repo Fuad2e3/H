@@ -168,11 +168,16 @@
   border-bottom: 2.5px solid transparent;
   border-radius: 6px 6px 0 0;
   white-space: nowrap;
-  transition: color var(--t), background var(--t), border-color var(--t);
+  user-select: none;
+  transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast), transform var(--t-instant);
 }
 .nav button:hover {
   color: var(--ink);
   background: var(--tint);
+}
+.nav button:active {
+  transform: scale(0.96);
+  transition: transform var(--t-instant);
 }
 .nav button[aria-current="page"] {
   color: var(--blueprint);
@@ -186,6 +191,18 @@
   max-width: 1440px;
   margin: 0 auto;
   padding: var(--s5) var(--s5) 96px;
+  animation: pageFadeIn 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+@keyframes pageFadeIn {
+  from {
+    opacity: 0.88;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .page-head {
   margin-bottom: var(--s5);
@@ -243,17 +260,26 @@
   cursor: pointer;
   padding: 10px 12px;
   font-size: 13.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
-  transition: background var(--t), color var(--t);
+  user-select: none;
+  transition: background var(--t-fast), color var(--t-fast), transform var(--t-instant);
 }
 .panel-tabs button + button {
   border-left: 1px solid var(--rule);
 }
+.panel-tabs button:hover {
+  background: var(--tint);
+  color: var(--ink);
+}
+.panel-tabs button:active {
+  transform: scale(0.96);
+  transition: transform var(--t-instant);
+}
 .panel-tabs button[aria-pressed="true"] {
   background: var(--grad-primary);
   color: #FFFFFF;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .panel {

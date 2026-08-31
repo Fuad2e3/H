@@ -498,10 +498,12 @@
   background: var(--card-bg);
   padding: var(--s3) var(--s4) var(--s3) calc(var(--s4) + 6px);
   box-shadow: var(--sh1);
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
   will-change: transform;
 }
 .item::before {
@@ -583,7 +585,9 @@
   background: var(--card-bg);
   padding: var(--s3) var(--s4) var(--s3) calc(var(--s4) + 6px);
   box-shadow: var(--sh1);
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 140px;
   will-change: transform;
 }
 .note::before {
@@ -802,7 +806,9 @@ tbody tr:last-child td, tbody tr:last-child th {
   border-bottom: none;
 }
 tbody tr {
-  transition: background var(--t);
+  transition: background var(--t-fast);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 44px;
 }
 tbody tr:hover {
   background: var(--blueprint-soft);
@@ -1482,10 +1488,15 @@ dialog.modal::backdrop {
 .group-chat-messages {
   max-height: min(48vh, 380px);
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 4px 2px;
+  contain: layout paint;
+  transform: translateZ(0);
 }
 .group-msg-item {
   background: var(--card-bg-alt);
@@ -1496,7 +1507,9 @@ dialog.modal::backdrop {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  transition: transform var(--t), box-shadow var(--t);
+  transition: transform var(--t-fast), box-shadow var(--t-fast);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 70px;
 }
 .group-msg-item:hover {
   box-shadow: var(--sh1);
@@ -1547,6 +1560,8 @@ dialog.modal::backdrop {
 .tl-entry {
   position: relative;
   margin-bottom: var(--s4);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 .tl-entry::before {
   content: "";

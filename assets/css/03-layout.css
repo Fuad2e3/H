@@ -332,6 +332,12 @@
 .panel-body.scroll {
   max-height: calc(100vh - 280px);
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto; /* Raw 1:1 hardware scroll tracking with no inertia lag */
+  contain: layout paint;
+  transform: translateZ(0);
+  will-change: scroll-position;
 }
 
 .grid-2 {

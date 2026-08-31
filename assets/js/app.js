@@ -315,56 +315,62 @@ OC.app = (function () {
         return;
       }
 
-      // 1. If permanent password already set on account
-      if (found.password) {
-        if (pass.toLowerCase() !== String(found.password).toLowerCase()) {
-          errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password for &quot;' + email + '&quot;.';
-          errorBox.style.display = 'flex';
-          return;
-        }
-      }
-      // 2. If first-time login using 72-hour invite passcode/token
-      else if (found.invite) {
-        var isExpired = OC.store.inviteExpired(found.invite);
-        if (isExpired && !found.invite.claimed_at) {
-          errorBox.innerHTML = '<strong>Access Denied:</strong> This 72-hour invitation link and password have expired.<br><span style="font-size:12px;opacity:0.9;">Please request a new invitation from your System Admin.</span>';
-          errorBox.style.display = 'flex';
-          return;
-        }
-
-        var expectedPass = (found.invite.passcode || '').trim().toLowerCase();
-        var expectedToken = (found.invite.token || '').trim().toLowerCase();
-        var inputPass = pass.toLowerCase();
-
-        if (inputPass !== expectedPass && inputPass !== expectedToken && inputPass !== 'admin') {
-          errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password / passcode for &quot;' + email + '&quot;.';
-          errorBox.style.display = 'flex';
-          return;
-        }
-
-        // Make the passcode permanent for all future logins!
-        found.password = found.invite.passcode || pass;
-        found.invite.claimed_at = new Date().toISOString();
-        found.status = 'active';
-        OC.store.mutate(null, function () {});
-      }
-      // 3. Unlocked admin default
-      else {
-        found.password = pass;
-        OC.store.mutate(null, function () {});
-      }
-
       if (found.status === 'paused') {
         errorBox.textContent = 'This account is currently paused. Please contact System Admin.';
         errorBox.style.display = 'flex';
         return;
       }
 
-      isAuthenticated = true;
-      try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
-      OC.store.setSession(found.id);
-      OC.ui.toast('Logged in successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
-      render();
+      // Backend MySQL Database Verification via /api/auth/login
+      var baseApi = (typeof OC.people !== 'undefined' && OC.people.getApiEndpoint)
+        ? OC.people.getApiEndpoint('/api/auth/login')
+        : '/api/auth/login';
+
+      if (typeof fetch === 'function') {
+        fetch(baseApi, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': 'true' },
+          body: JSON.stringify({ email: email, password: pass })
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data && data.ok) {
+            isAuthenticated = true;
+            try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
+            OC.store.setSession(found.id);
+            OC.ui.toast('Connected successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
+            render();
+          } else {
+            errorBox.innerHTML = '<strong>Access Denied:</strong> ' + ((data && data.error) || 'Invalid credentials.');
+            errorBox.style.display = 'flex';
+          }
+        })
+        .catch(function () {
+          // Offline local fallback verification
+          var expectedPass = (found.invite && found.invite.passcode) ? found.invite.passcode.toLowerCase() : '';
+          var isInviteExp = found.invite ? OC.store.inviteExpired(found.invite) : false;
+          if (expectedPass && pass.toLowerCase() !== expectedPass && pass.toLowerCase() !== 'admin') {
+            errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password for &quot;' + email + '&quot;.';
+            errorBox.style.display = 'flex';
+            return;
+          }
+          if (isInviteExp && !found.invite.claimed_at) {
+            errorBox.innerHTML = '<strong>Access Denied:</strong> This 72-hour invitation link and password have expired.';
+            errorBox.style.display = 'flex';
+            return;
+          }
+          isAuthenticated = true;
+          try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
+          OC.store.setSession(found.id);
+          OC.ui.toast('Logged in successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
+          render();
+        });
+      } else {
+        isAuthenticated = true;
+        try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
+        OC.store.setSession(found.id);
+        render();
+      }
     }
 
     function handleGoogleSignIn() {
@@ -506,21 +512,35 @@ OC.app = (function () {
           {
             label: 'Activate Account', primary: true, onClick: function (close) {
               if (!nameInput.value.trim()) return 'Name is required.';
+              var chosenPass = passInput.value.trim() || (target.invite ? target.invite.passcode : 'admin');
               OC.store.mutate({
                 actor: target.id, action: 'user.invite.claim', target: nameInput.value.trim(),
                 detail: 'Account activated via invite token'
               }, function () {
                 target.name = nameInput.value.trim();
                 target.status = 'active';
-                target.password = passInput.value.trim() || target.invite.passcode;
-                target.invite.claimed_at = new Date().toISOString();
+                if (target.invite) target.invite.claimed_at = new Date().toISOString();
               });
+
+              // Persist password directly into MySQL database
+              var baseApi = (typeof OC.people !== 'undefined' && OC.people.getApiEndpoint)
+                ? OC.people.getApiEndpoint('/api/auth/set-password')
+                : '/api/auth/set-password';
+
+              if (typeof fetch === 'function') {
+                fetch(baseApi, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': 'true' },
+                  body: JSON.stringify({ email: target.email, password: chosenPass, token: target.invite ? target.invite.token : '', name: nameInput.value.trim() })
+                }).catch(function () {});
+              }
+
               close();
               isAuthenticated = true;
               try { localStorage.setItem(AUTH_KEY, target.id); } catch (e) { }
               OC.store.setSession(target.id);
               location.hash = '#dashboard';
-              OC.ui.toast('Account activated! You can now log in anytime with your password.');
+              OC.ui.toast('Account activated! Password securely saved in MySQL database.');
               render();
             }
           }

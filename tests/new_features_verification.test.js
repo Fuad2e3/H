@@ -257,15 +257,76 @@ test('Comments & Reactions add notifications to targets and exclude the actor', 
 });
 
 // -------------------------------------------------------------------------
-// 5. Clean Seed & Reset Verification
+// 5. Database-Only Password Security Verification
 // -------------------------------------------------------------------------
-console.log('\n--- [5/5] Testing Store Reset & Clean Seed ---');
+console.log('\n--- [5/6] Testing Database-Only Password Security Architecture ---');
 
-test('store.js reset restores initial production schema cleanly', () => {
+test('Client state and API getState never expose user passwords', () => {
+  const ctrl = require('../dev3/API/controllers/commandController');
+  const req = {};
+  let sentJson = null;
+  const res = {
+    status(code) {
+      assert.strictEqual(code, 200);
+      return this;
+    },
+    json(data) {
+      sentJson = data;
+      return this;
+    }
+  };
+
+  ctrl.getState(req, res);
+  assert.ok(sentJson, 'getState must return state');
+  assert.ok(Array.isArray(sentJson.users), 'Must contain users array');
+  sentJson.users.forEach(u => {
+    assert.strictEqual(u.password, undefined, `User ${u.name} must not have password exposed in API`);
+  });
+});
+
+test('Backend /api/auth/login verifies credentials directly against database', () => {
+  const ctrl = require('../dev3/API/controllers/commandController');
+  let result = null;
+  let statusCode = null;
+  const res = {
+    status(code) {
+      statusCode = code;
+      return this;
+    },
+    json(data) {
+      result = data;
+      return this;
+    }
+  };
+
+  // Test with correct admin email
+  const req = { body: { email: 'fuadkalaroa2002@gmail.com', password: 'admin' } };
+  ctrl.loginUser(req, res);
+  assert.strictEqual(statusCode, 200);
+  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.user.email, 'fuadkalaroa2002@gmail.com');
+  assert.strictEqual(result.user.password, undefined, 'Sanitized user must not have password');
+
+  // Test with non-existent user
+  const reqBad = { body: { email: 'nonexistent@example.com', password: 'wrong' } };
+  ctrl.loginUser(reqBad, res);
+  assert.strictEqual(statusCode, 404);
+  assert.strictEqual(result.ok, undefined);
+});
+
+// -------------------------------------------------------------------------
+// 6. Clean Seed & Reset Verification
+// -------------------------------------------------------------------------
+console.log('\n--- [6/6] Testing Store Reset & Clean Seed ---');
+
+test('store.js reset restores initial production schema cleanly with no client passwords', () => {
   OC.store.reset();
   assert.strictEqual(OC.store.state.version, 1);
   assert.ok(OC.store.state.departments.length >= 6);
   assert.ok(OC.store.state.users.length >= 3);
+  OC.store.state.users.forEach(u => {
+    assert.strictEqual(u.password, null, 'Client users must not hold hardcoded passwords');
+  });
   assert.strictEqual(OC.store.state.clients.length, 0);
   assert.strictEqual(OC.store.state.todos.length, 0);
   assert.strictEqual(OC.store.state.instructions.length, 0);

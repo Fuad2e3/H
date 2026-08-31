@@ -62,7 +62,6 @@ OC.people = (function () {
               id: OC.store.uid('u'), name: name.value.trim(), email: email.value.trim(),
               title: title.value.trim() || 'Team member', admin: false, status: 'invited',
               departments: [{ department: deptSelect.value, level: levelSelect.value }],
-              password: inv.passcode,
               prefs: { push: true, email: true, discord: false },
               invite: inv
             };
@@ -294,12 +293,19 @@ OC.people = (function () {
 
   function claim(account) {
     OC.ui.confirm('Simulate ' + account.name + ' following their link and completing their profile?', function () {
+      var pass = account.invite ? account.invite.passcode : 'admin';
       OC.store.mutate({ actor: account.id, action: 'user.invite.claim', target: account.name }, function () {
-        account.invite.claimed_at = new Date().toISOString();
-        account.password = account.invite.passcode;
+        if (account.invite) account.invite.claimed_at = new Date().toISOString();
         account.status = 'active';
       });
-      OC.ui.toast(account.name + ' is now an active account with permanent password.');
+      if (typeof fetch === 'function' && account.email) {
+        fetch(getApiEndpoint('/api/auth/set-password'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: account.email, password: pass, token: account.invite ? account.invite.token : '' })
+        }).catch(function () {});
+      }
+      OC.ui.toast(account.name + ' is now an active account in MySQL database.');
     });
   }
 

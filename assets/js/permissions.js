@@ -340,8 +340,10 @@ OC.can = (function () {
     }
     chain.push({ step: 'Assignee', users: assignees });
 
-    var dept = todo.department;
-    var heads = S().state.users.filter(function (u) { return isHead(u, dept); }).map(function (u) { return u.id; });
+    var deptList = (Array.isArray(todo.departments) && todo.departments.length) ? todo.departments : (todo.department ? [todo.department] : []);
+    var heads = S().state.users.filter(function (u) {
+      return deptList.some(function (d) { return isHead(u, d); });
+    }).map(function (u) { return u.id; });
     var leadership = S().state.users.filter(function (u) { return u.admin; }).map(function (u) { return u.id; });
 
     if (heads.length) chain.push({ step: 'Department head, day one', users: heads });

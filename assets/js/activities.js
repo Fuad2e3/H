@@ -86,7 +86,8 @@ OC.activities = (function () {
     /* ---- 3. Sub-navigation tabs ---- */
     var tabs = [
       ['all', 'All Overview'],
-      ['departments', 'Departments & Groups (' + (depts.length + allGroups.length) + ')'],
+      ['groups', 'Groups & Discussions (' + allGroups.length + ')'],
+      ['departments', 'Departments (' + depts.length + ')'],
       ['accounts', 'Team Accounts (' + users.length + ')'],
       ['reports', 'Work Reports & Analytics']
     ];
@@ -112,7 +113,18 @@ OC.activities = (function () {
 
     var content = [pageHead, topActions, subNav];
 
-    /* ---- Section A: Departments & Cross-Department Groups ---- */
+    /* ---- Section A: Groups & Discussions ---- */
+    if (activeTab === 'all' || activeTab === 'groups') {
+      var groupsSection = h('div', { class: 'activities-section', id: 'activities-groups-sec', style: 'margin-bottom:32px;' });
+      var groupsHost = h('div', { class: 'groups-sub-host' });
+      if (OC.groups && OC.groups.render) {
+        OC.groups.render(groupsHost, function () { render(host, rerender); }, true);
+      }
+      groupsSection.appendChild(groupsHost);
+      content.push(groupsSection);
+    }
+
+    /* ---- Section B: Departments ---- */
     if (activeTab === 'all' || activeTab === 'departments') {
       var deptSection = h('div', { class: 'activities-section', id: 'activities-depts-sec', style: 'margin-bottom:32px;' }, [
         h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;' }, [
@@ -131,7 +143,7 @@ OC.activities = (function () {
               }, [OC.icon('plus'), 'New department'])
             : null
         ]),
-        h('div', { class: 'grid-2', style: 'margin-top:12px;margin-bottom:28px;' }, depts.map(function (d) {
+        h('div', { class: 'grid-2', style: 'margin-top:12px;' }, depts.map(function (d) {
           var members = users.filter(function (u) { return OC.can && OC.can.inDept && OC.can.inDept(u, d.id); });
           return h('div', { class: 'card' }, [
             h('div', { class: 'row' }, [
@@ -174,22 +186,6 @@ OC.activities = (function () {
           ]);
         }))
       ]);
-
-      // Cross-Department Groups & Discussions embedded inside Department section
-      var groupsSection = h('div', { class: 'activities-section', id: 'activities-groups-sec', style: 'margin-bottom:32px;' }, [
-        h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;' }, [
-          h('h2', { class: 'section-head', style: 'margin:0;' }, [
-            'Cross-Department Groups & Teams',
-            h('span', { class: 'chip count' }, allGroups.length + ' total')
-          ])
-        ])
-      ]);
-      var groupsHost = h('div', { class: 'groups-sub-host' });
-      if (OC.groups && OC.groups.render) {
-        OC.groups.render(groupsHost, function () { render(host, rerender); }, true);
-      }
-      groupsSection.appendChild(groupsHost);
-      deptSection.appendChild(groupsSection);
       content.push(deptSection);
     }
 

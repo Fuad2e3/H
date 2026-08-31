@@ -1073,7 +1073,15 @@ OC.board = (function () {
   }
 
   return {
-    render: render, newTodo: newTodo, newInstruction: newInstruction,
+    render: render,
+    newTodo: newTodo,
+    newInstruction: newInstruction,
+    editTodo: editTodo,
+    changeState: changeState,
+    stateSelect: stateSelect,
+    reassignTodo: reassignTodo,
+    archiveTodo: archiveTodo,
+    todoItem: todoItem,
     applyFilter: function (next) { filters = JSON.parse(JSON.stringify(next)); mode = 'panels'; },
     /* a getter, because applying a pinned filter rebinds the object */
     get filters() { return filters; }

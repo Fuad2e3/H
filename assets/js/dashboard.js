@@ -102,19 +102,48 @@ OC.dashboard = (function () {
                   h('div', { class: 'group-head' }, [name, h('span', { class: 'n push' }, byClient[name].length)]),
                   byClient[name].map(function (t) {
                     var late = OC.ui.daysLate(t.due) > 0;
-                    return h('article', { class: 'item is-' + t.state + (late ? ' is-overdue' : '') }, [
-                      h('div', { class: 'title' }, t.title),
+                    var overdue = t.state !== 'done' && late > 0;
+                    var actions = [];
+                    if (OC.board && OC.board.stateSelect) {
+                      actions.push(OC.board.stateSelect(t));
+                    } else {
+                      actions.push(OC.ui.stateChip(t.state));
+                    }
+                    if (OC.can.canEditTodo(user, t)) {
+                      actions.push(h('button', {
+                        class: 'btn small', type: 'button',
+                        onClick: function () { if (OC.board && OC.board.editTodo) OC.board.editTodo(t); }
+                      }, 'Edit Task'));
+                    }
+
+                    return h('article', { class: 'item is-' + t.state + (overdue ? ' is-overdue' : '') }, [
+                      h('div', {
+                        class: 'title',
+                        style: 'cursor:pointer;display:flex;align-items:center;justify-content:space-between;',
+                        onClick: function () { if (OC.board && OC.board.editTodo) OC.board.editTodo(t); }
+                      }, [
+                        h('span', {}, t.title),
+                        OC.can.canEditTodo(user, t) ? h('span', { class: 'muted', style: 'font-size:11px;font-weight:normal;' }, 'Edit ↗') : null
+                      ]),
+                      t.description ? h('div', { class: 'desc', style: 'margin:4px 0 8px;font-size:13px;color:var(--text-secondary);' }, t.description) : null,
                       h('div', { class: 'meta' }, [
+                        (Array.isArray(t.clients) && t.clients.length > 1)
+                          ? h('span', { class: 'multi-clients-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, t.clients.map(OC.ui.clientChip))
+                          : OC.ui.clientChip(t.client),
                         (Array.isArray(t.departments) && t.departments.length > 1)
                           ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, t.departments.map(OC.ui.deptChip))
                           : OC.ui.deptChip(t.department),
-                        OC.ui.stateChip(t.state),
-                        h('span', { class: late ? 'chip overdue' : '' }, OC.ui.dueLabel(t.due)),
+                        h('span', { class: overdue ? 'chip overdue' : '' }, OC.ui.dueLabel(t.due)),
                         (Array.isArray(t.assignees) && t.assignees.length > 1)
                           ? h('span', { class: 'chip group' }, OC.ui.assigneeName(t))
                           : (t.assignee_type === 'group' ? h('span', { class: 'chip group' }, OC.ui.assigneeName(t)) : null)
                       ]),
-                      OC.ui.reactionsBar('todo', t)
+                      t.blocked_reason
+                        ? h('div', { class: 'blocked-note' }, [OC.icon('alert'), h('span', {}, 'Blocked: ' + t.blocked_reason)])
+                        : null,
+                      h('div', { class: 'actions', style: 'display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap;' }, actions),
+                      OC.ui.reactionsBar('todo', t),
+                      OC.can.canSeeComments(user, t) ? OC.ui.commentThread('todo', t) : null
                     ]);
                   })
                 ]);

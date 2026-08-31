@@ -109,22 +109,9 @@ OC.dashboard = (function () {
                     } else {
                       actions.push(OC.ui.stateChip(t.state));
                     }
-                    if (OC.can.canEditTodo(user, t)) {
-                      actions.push(h('button', {
-                        class: 'btn small', type: 'button',
-                        onClick: function () { if (OC.board && OC.board.editTodo) OC.board.editTodo(t); }
-                      }, 'Edit Task'));
-                    }
 
                     return h('article', { class: 'item is-' + t.state + (overdue ? ' is-overdue' : '') }, [
-                      h('div', {
-                        class: 'title',
-                        style: 'cursor:pointer;display:flex;align-items:center;justify-content:space-between;',
-                        onClick: function () { if (OC.board && OC.board.editTodo) OC.board.editTodo(t); }
-                      }, [
-                        h('span', {}, t.title),
-                        OC.can.canEditTodo(user, t) ? h('span', { class: 'muted', style: 'font-size:11px;font-weight:normal;' }, 'Edit ↗') : null
-                      ]),
+                      h('div', { class: 'title' }, t.title),
                       t.description ? h('div', { class: 'desc', style: 'margin:4px 0 8px;font-size:13px;color:var(--text-secondary);' }, t.description) : null,
                       h('div', { class: 'meta' }, [
                         (Array.isArray(t.clients) && t.clients.length > 1)

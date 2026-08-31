@@ -787,5 +787,14 @@ OC.people = (function () {
     ]);
   }
 
-  return { render: render, invite: invite, editPrefs: editPrefs, editDepartment: editDepartment, editClient: editClient, editAccount: editAccount };
+  return {
+    render: render,
+    invite: invite,
+    editPrefs: editPrefs,
+    editDepartment: editDepartment,
+    editClient: editClient,
+    editAccount: editAccount,
+    getApiEndpoint: getApiEndpoint,
+    dispatchInviteEmail: dispatchInviteEmail
+  };
 })();

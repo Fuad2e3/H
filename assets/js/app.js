@@ -20,9 +20,8 @@ OC.app = (function () {
   var ROUTES = [
     { id: 'dashboard', label: 'Dashboard', view: function () { return OC.dashboard; } },
     { id: 'board', label: 'Board', view: function () { return OC.board; } },
-    { id: 'activities', label: 'Activities', view: function () { return OC.activities || OC.groups || OC.people; } },
-    { id: 'reports', label: 'Reports', view: function () { return OC.reports; } },
-    { id: 'clients', label: 'Clients', view: function () { return OC.clients; } }
+    { id: 'clients', label: 'Clients', view: function () { return OC.clients; } },
+    { id: 'activities', label: 'Activities', view: function () { return OC.activities || OC.groups || OC.people; } }
   ];
 
   /* ---- theme ------------------------------------------------------------ */
@@ -677,7 +676,7 @@ OC.app = (function () {
   }
 
   function currentView() {
-    if (route === 'groups' || route === 'people') return (OC.activities || OC.groups || OC.people);
+    if (route === 'groups' || route === 'people' || route === 'reports') return (OC.activities || OC.groups || OC.people);
     for (var i = 0; i < ROUTES.length; i++) if (ROUTES[i].id === route) return ROUTES[i].view();
     return OC.dashboard;
   }
@@ -727,7 +726,7 @@ OC.app = (function () {
       var hash = location.hash.slice(1);
       if (hash && hash.indexOf('claim=') === 0) {
         checkClaimToken();
-      } else if (hash === 'groups' || hash === 'people') {
+      } else if (hash === 'groups' || hash === 'people' || hash === 'reports') {
         route = 'activities';
       } else if (hash && ROUTES.some(function (r) { return r.id === hash; })) {
         route = hash;
@@ -737,7 +736,7 @@ OC.app = (function () {
         var id = location.hash.slice(1);
         if (id && id.indexOf('claim=') === 0) {
           checkClaimToken();
-        } else if ((id === 'groups' || id === 'people') && route !== 'activities') {
+        } else if ((id === 'groups' || id === 'people' || id === 'reports') && route !== 'activities') {
           go('activities');
         } else if (id && ROUTES.some(function (r) { return r.id === id; }) && id !== route) {
           go(id);

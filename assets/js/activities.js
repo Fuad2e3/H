@@ -86,9 +86,9 @@ OC.activities = (function () {
     /* ---- 3. Sub-navigation tabs ---- */
     var tabs = [
       ['all', 'All Overview'],
-      ['groups', 'Groups & Discussions (' + allGroups.length + ')'],
-      ['departments', 'Departments (' + depts.length + ')'],
-      ['accounts', 'Accounts (' + users.length + ')']
+      ['departments', 'Departments & Groups (' + (depts.length + allGroups.length) + ')'],
+      ['accounts', 'Team Accounts (' + users.length + ')'],
+      ['reports', 'Work Reports & Analytics']
     ];
     if (pending.length) {
       tabs.push(['invites', 'Pending Invites (' + pending.length + ')']);
@@ -112,74 +112,9 @@ OC.activities = (function () {
 
     var content = [pageHead, topActions, subNav];
 
-    /* ---- Section A: Groups & Discussions ---- */
-    if (activeTab === 'all' || activeTab === 'groups') {
-      var groupsSection = h('div', { class: 'activities-section', id: 'activities-groups-sec', style: 'margin-bottom:32px;' });
-      var groupsHost = h('div', { class: 'groups-sub-host' });
-      if (OC.groups && OC.groups.render) {
-        OC.groups.render(groupsHost, function () { render(host, rerender); }, true);
-      }
-      groupsSection.appendChild(groupsHost);
-      content.push(groupsSection);
-    }
-
-    /* ---- Section B: Pending Invites (if any) ---- */
-    if ((activeTab === 'all' || activeTab === 'invites') && pending.length) {
-      var invitesSection = h('div', { class: 'activities-section', style: 'margin-bottom:32px;' }, [
-        h('h2', { class: 'section-head' }, [
-          'Pending Invites',
-          h('span', { class: 'chip count' }, pending.length + ' awaiting')
-        ]),
-        h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:12px;max-width:74ch;' },
-          'Single-use links that expire 72 hours after issue. Unclaimed invites can be resent or revoked by whoever sent them or system admin.'
-        )
-      ]);
-
-      var invitesGrid = h('div', { class: 'grid-2' }, pending.map(function (u) {
-        var inv = u.invite;
-        return h('div', { class: 'card' }, [
-          h('div', { class: 'row' }, [
-            h('h3', {}, u.name),
-            h('span', { class: 'chip overdue push' }, 'unclaimed')
-          ]),
-          h('p', { class: 'muted', style: 'font-size:13px;margin:6px 0 10px;' }, 'Email: ' + u.email + ' · ' + u.title),
-          h('div', { class: 'row', style: 'font-size:12.5px;align-items:center;' }, [
-            h('span', { class: 'chip custom' }, 'Expires ' + OC.ui.fmtWhen(inv.expires_at)),
-            h('button', {
-              class: 'btn small push', type: 'button',
-              onClick: function () {
-                var link = location.origin + location.pathname + '#claim=' + inv.token;
-                if (navigator.clipboard) {
-                  navigator.clipboard.writeText(link);
-                  OC.ui.toast('Invite link copied to clipboard.');
-                } else {
-                  OC.ui.toast('Token: ' + inv.token);
-                }
-              }
-            }, 'Copy link'),
-            h('button', {
-              class: 'btn small danger', type: 'button', style: 'margin-left:6px;',
-              onClick: function () {
-                OC.ui.confirm('Revoke invite for ' + u.name + '?', function () {
-                  OC.store.mutate({ actor: user.id, action: 'invite.revoke', target: u.name }, function () {
-                    OC.store.state.users = OC.store.state.users.filter(function (x) { return x.id !== u.id; });
-                  });
-                  OC.ui.toast('Invite revoked.');
-                  render(host, rerender);
-                });
-              }
-            }, 'Revoke')
-          ])
-        ]);
-      }));
-
-      invitesSection.appendChild(invitesGrid);
-      content.push(invitesSection);
-    }
-
-    /* ---- Section C: Departments ---- */
+    /* ---- Section A: Departments & Cross-Department Groups ---- */
     if (activeTab === 'all' || activeTab === 'departments') {
-      var deptSection = h('div', { class: 'activities-section', style: 'margin-bottom:32px;' }, [
+      var deptSection = h('div', { class: 'activities-section', id: 'activities-depts-sec', style: 'margin-bottom:32px;' }, [
         h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;' }, [
           h('h2', { class: 'section-head', style: 'margin:0;' }, [
             'Departments',
@@ -196,7 +131,7 @@ OC.activities = (function () {
               }, [OC.icon('plus'), 'New department'])
             : null
         ]),
-        h('div', { class: 'grid-2', style: 'margin-top:12px;' }, depts.map(function (d) {
+        h('div', { class: 'grid-2', style: 'margin-top:12px;margin-bottom:28px;' }, depts.map(function (d) {
           var members = users.filter(function (u) { return OC.can && OC.can.inDept && OC.can.inDept(u, d.id); });
           return h('div', { class: 'card' }, [
             h('div', { class: 'row' }, [
@@ -239,10 +174,26 @@ OC.activities = (function () {
           ]);
         }))
       ]);
+
+      // Cross-Department Groups & Discussions embedded inside Department section
+      var groupsSection = h('div', { class: 'activities-section', id: 'activities-groups-sec', style: 'margin-bottom:32px;' }, [
+        h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;' }, [
+          h('h2', { class: 'section-head', style: 'margin:0;' }, [
+            'Cross-Department Groups & Teams',
+            h('span', { class: 'chip count' }, allGroups.length + ' total')
+          ])
+        ])
+      ]);
+      var groupsHost = h('div', { class: 'groups-sub-host' });
+      if (OC.groups && OC.groups.render) {
+        OC.groups.render(groupsHost, function () { render(host, rerender); }, true);
+      }
+      groupsSection.appendChild(groupsHost);
+      deptSection.appendChild(groupsSection);
       content.push(deptSection);
     }
 
-    /* ---- Section D: Team Accounts Directory ---- */
+    /* ---- Section B: Team Accounts Directory ---- */
     if (activeTab === 'all' || activeTab === 'accounts') {
       var accountsSection = h('div', { class: 'activities-section', style: 'margin-bottom:32px;' }, [
         h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;' }, [
@@ -302,6 +253,75 @@ OC.activities = (function () {
         ])
       ]);
       content.push(accountsSection);
+    }
+
+    /* ---- Section C: Work Reports & Analytics ---- */
+    if (activeTab === 'all' || activeTab === 'reports') {
+      var reportsSection = h('div', { class: 'activities-section', id: 'activities-reports-sec', style: 'margin-bottom:32px;' }, [
+        h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;' }, [
+          h('h2', { class: 'section-head', style: 'margin:0;' }, 'Work Reports & Analytics')
+        ])
+      ]);
+      var reportsHost = h('div', { class: 'reports-sub-host' });
+      if (OC.reports && OC.reports.render) {
+        OC.reports.render(reportsHost, function () { render(host, rerender); }, true);
+      }
+      reportsSection.appendChild(reportsHost);
+      content.push(reportsSection);
+    }
+
+    /* ---- Section D: Pending Invites (if any) ---- */
+    if ((activeTab === 'all' || activeTab === 'invites') && pending.length) {
+      var invitesSection = h('div', { class: 'activities-section', style: 'margin-bottom:32px;' }, [
+        h('h2', { class: 'section-head' }, [
+          'Pending Invites',
+          h('span', { class: 'chip count' }, pending.length + ' awaiting')
+        ]),
+        h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:12px;max-width:74ch;' },
+          'Single-use links that expire 72 hours after issue. Unclaimed invites can be resent or revoked by whoever sent them or system admin.'
+        )
+      ]);
+
+      var invitesGrid = h('div', { class: 'grid-2' }, pending.map(function (u) {
+        var inv = u.invite;
+        return h('div', { class: 'card' }, [
+          h('div', { class: 'row' }, [
+            h('h3', {}, u.name),
+            h('span', { class: 'chip overdue push' }, 'unclaimed')
+          ]),
+          h('p', { class: 'muted', style: 'font-size:13px;margin:6px 0 10px;' }, 'Email: ' + u.email + ' · ' + u.title),
+          h('div', { class: 'row', style: 'font-size:12.5px;align-items:center;' }, [
+            h('span', { class: 'chip custom' }, 'Expires ' + OC.ui.fmtWhen(inv.expires_at)),
+            h('button', {
+              class: 'btn small push', type: 'button',
+              onClick: function () {
+                var link = location.origin + location.pathname + '#claim=' + inv.token;
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(link);
+                  OC.ui.toast('Invite link copied to clipboard.');
+                } else {
+                  OC.ui.toast('Token: ' + inv.token);
+                }
+              }
+            }, 'Copy link'),
+            h('button', {
+              class: 'btn small danger', type: 'button', style: 'margin-left:6px;',
+              onClick: function () {
+                OC.ui.confirm('Revoke invite for ' + u.name + '?', function () {
+                  OC.store.mutate({ actor: user.id, action: 'invite.revoke', target: u.name }, function () {
+                    OC.store.state.users = OC.store.state.users.filter(function (x) { return x.id !== u.id; });
+                  });
+                  OC.ui.toast('Invite revoked.');
+                  render(host, rerender);
+                });
+              }
+            }, 'Revoke')
+          ])
+        ]);
+      }));
+
+      invitesSection.appendChild(invitesGrid);
+      content.push(invitesSection);
     }
 
     OC.ui.append(host, content);

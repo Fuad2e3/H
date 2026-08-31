@@ -138,14 +138,20 @@ OC.reports = (function () {
     var audit = allAudit.slice(0, limitNum);
 
     OC.ui.clear(host);
-    OC.ui.append(host, [
-      h('div', { class: 'page-head' }, [
-        h('h1', {}, 'Reports'),
-        h('p', {}, 'The daily snapshot, scoped to what you may see. ' +
-          (user.admin ? 'As system admin this covers every department.'
-                      : 'As ' + OC.can.roleLabel(user) + ' this covers your department only (6.7).'))
-      ]),
+    var elements = [];
 
+    if (!hideHead) {
+      elements.push(
+        h('div', { class: 'page-head' }, [
+          h('h1', {}, 'Reports'),
+          h('p', {}, 'The daily snapshot, scoped to what you may see. ' +
+            (user.admin ? 'As system admin this covers every department.'
+                        : 'As ' + OC.can.roleLabel(user) + ' this covers your department only (6.7).'))
+        ])
+      );
+    }
+
+    elements.push(
       h('div', { class: 'grid-3', style: 'margin-bottom:20px' }, [
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Clients complete'), h('div', { class: 'v tabular' }, [String(clientsComplete), h('small', {}, ' / ' + Object.keys(byClient).length)])]),
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks complete'), h('div', { class: 'v tabular' }, String(done.length))]),
@@ -288,7 +294,10 @@ OC.reports = (function () {
           }, 'See all (' + allAudit.length + ')')
         ])
       ]) : null
-    ]);
+    );
+
+    OC.ui.clear(host);
+    OC.ui.append(host, elements);
   }
 
   return { render: render, csv: csv, exportAudit: exportAudit };

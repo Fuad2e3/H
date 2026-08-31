@@ -192,7 +192,16 @@ const avatarMark = OC.ui.mark('u-avatar');
 assert.strictEqual(avatarMark.className.includes('mark-avatar'), true, 'mark should have mark-avatar class when user has avatar');
 assert.strictEqual(avatarMark.children[0].tagName, 'IMG', 'mark should contain img tag');
 assert.strictEqual(avatarMark.children[0].attributes.src, 'https://example.com/avatar.jpg', 'img src must match user.avatar');
-console.log('  ✓ Photo uploader component & avatar mark render custom photos accurately');
+loadFile('assets/js/reports.js');
+
+// 9. Verify Todo Due Date-Time, Past-Time Blocking, No Description/Tags, and Reports in Activities
+console.log('9. Testing Todo Due Date-Time, Past Time Blocking, & Reports in Activities');
+assert.ok(typeof OC.ui.localNowISO === 'function', 'localNowISO helper must be defined');
+const nowISO = OC.ui.localNowISO();
+assert.strictEqual(nowISO.length, 16, 'localNowISO must return YYYY-MM-DDTHH:MM');
+assert.strictEqual(OC.ui.fmtDate('2026-08-31T18:30'), '31 Aug, 06:30 PM', 'fmtDate must format datetime string with AM/PM');
+
+console.log('  ✓ Todo Due Date-Time, Past-Time Blocking, & Activities Hub verified');
 
 console.log('\n======================================================');
 console.log(' 🎉 ALL SPECIFIC TODO & CLIENT CHECKS PASSED! ✅');

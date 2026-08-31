@@ -339,7 +339,6 @@ OC.board = (function () {
 
     return h('article', { class: cls }, [
       h('div', { class: 'title' }, todo.title),
-      todo.description ? h('div', { class: 'desc' }, todo.description) : null,
       h('div', { class: 'meta' }, [
         (Array.isArray(todo.clients) && todo.clients.length > 1)
           ? h('span', { class: 'multi-clients-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, todo.clients.map(OC.ui.clientChip))
@@ -369,7 +368,6 @@ OC.board = (function () {
               : OC.ui.person(todo.assignee)),
         todo.recurrence !== 'none' ? h('span', { class: 'chip recurring' }, todo.recurrence) : null,
         todo.archived ? h('span', { class: 'chip custom' }, 'archived') : null,
-        (todo.tags || []).map(OC.ui.tagChip),
         h('span', { class: overdue ? 'chip overdue due' : 'due' }, OC.ui.dueLabel(todo.due))
       ]),
       todo.blocked_reason
@@ -392,7 +390,6 @@ OC.board = (function () {
   function editTodo(todo) {
     var user = me();
     var title = h('input', { type: 'text', value: todo.title || '' });
-    var desc = h('textarea', {}, todo.description || '');
     var clientPicker = OC.ui.clientPicker(todo.clients || todo.client || '');
     var deptPicker = OC.ui.deptPicker(todo.departments || todo.department || '', user);
 
@@ -404,11 +401,16 @@ OC.board = (function () {
       : [(todo.assignee_type || 'user') + ':' + (todo.assignee || user.id)];
     var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
 
-    var due = h('input', { type: 'date', value: todo.due || OC.ui.today() });
+    var minDue = OC.ui.localNowISO();
+    var due = h('input', {
+      type: 'datetime-local',
+      value: (todo.due && todo.due.indexOf('T') > -1) ? todo.due.slice(0, 16) : (todo.due ? todo.due + 'T18:00' : minDue),
+      min: minDue,
+      step: '60'
+    });
     var priority = OC.ui.select([
       { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }
     ], todo.priority || 'normal');
-    var tags = OC.ui.tagPicker(todo.tags || []);
     var recurrence = OC.ui.select([
       { value: 'none', label: 'One time' }, { value: 'daily', label: 'Daily' },
       { value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' },
@@ -444,7 +446,6 @@ OC.board = (function () {
             detail: 'Updated todo "' + newTitle + '"'
           }, function () {
             todo.title = newTitle;
-            todo.description = desc.value.trim();
             todo.client = primaryClient;
             todo.clients = selectedClients;
             todo.department = primaryDept;
@@ -456,7 +457,6 @@ OC.board = (function () {
             }
             todo.due = due.value;
             todo.priority = priority.value;
-            todo.tags = tags.resolve();
             todo.recurrence = recurrence.value;
           });
 
@@ -503,13 +503,11 @@ OC.board = (function () {
       title: 'Edit todo',
       content: h('div', {}, [
         OC.ui.field('Title', title, { required: true }),
-        OC.ui.field('Description', desc),
         OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
         OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),
         OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: canReassign ? 'Select one or multiple team members or groups to assign.' : 'Only authorized leads/admins can reassign (3.2).' }),
-        OC.ui.field('Due date', due, { required: true }),
+        OC.ui.field('Due date & time', due, { required: true, hint: 'Past dates & times are blocked automatically.' }),
         OC.ui.field('Priority', priority),
-        OC.ui.field('Tags', tags.node),
         OC.ui.field('Recurrence', recurrence)
       ]),
       actions: actions
@@ -518,33 +516,59 @@ OC.board = (function () {
 
   function reassignTodo(todo) {
     var user = me();
+    if (!OC.can.reassign(user, todo)) return OC.ui.toast('Only department leads and system admin can reassign.', true);
     var initialAssignees = (Array.isArray(todo.assignees) && todo.assignees.length)
       ? todo.assignees.map(function (id) {
           if (typeof id === 'string' && (id.indexOf('user:') === 0 || id.indexOf('group:') === 0)) return id;
           return (todo.assignee_type === 'group' ? 'group:' : 'user:') + id;
         })
       : [(todo.assignee_type || 'user') + ':' + (todo.assignee || user.id)];
-    var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
+    var picker = OC.ui.assigneePicker(initialAssignees, user);
 
     OC.ui.modal({
-      title: 'Reassign',
-      content: OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: 'Select one or multiple team members / groups to reassign (3.2).' }),
+      title: 'Reassign todo: ' + todo.title,
+      content: h('div', {}, [
+        OC.ui.field('Assign to', picker.node, { required: true, hint: 'Select one or multiple team members or cross-department groups (3.2).' })
+      ]),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
         {
-          label: 'Reassign', primary: true, onClick: function (close) {
-            var assignees = assigneePicker.getAssignees();
-            var assigneeTypes = assigneePicker.getAssigneeTypes();
-            var primaryAssignee = assigneePicker.getPrimaryAssignee();
-            var primaryType = assigneePicker.getPrimaryType();
+          label: 'Save assignment', primary: true, onClick: function (close) {
+            var assignees = picker.getAssignees();
+            var assigneeTypes = picker.getAssigneeTypes();
+            var primaryAssignee = picker.getPrimaryAssignee();
+            var primaryType = picker.getPrimaryType();
+
             if (!assignees.length) return 'Select at least one team member or group.';
 
-            var before = OC.ui.assigneeName(todo);
-            OC.store.mutate({ actor: user.id, action: 'todo.reassign', target: todo.title, detail: before + ' → ' + assignees.join(', ') }, function () {
+            var prevAssigneeNames = (Array.isArray(todo.assignees) && todo.assignees.length)
+              ? todo.assignees.map(function (id) {
+                  var clean = typeof id === 'string' ? id.replace(/^(user:|group:)/, '') : id;
+                  var u = OC.store.user(clean);
+                  var g = OC.store.group(clean);
+                  return u ? u.name : (g ? g.name : clean);
+                }).join(', ')
+              : OC.ui.assigneeName(todo);
+
+            OC.store.mutate({
+              actor: user.id,
+              action: 'todo.reassign',
+              target: todo.title,
+              detail: 'Reassigned from ' + prevAssigneeNames + ' to ' + assignees.map(function (id, idx) {
+                var t = assigneeTypes[idx];
+                if (t === 'group') {
+                  var g = OC.store.group(id);
+                  return g ? g.name : id;
+                }
+                var u = OC.store.user(id);
+                return u ? u.name : id;
+              }).join(', ')
+            }, function () {
               todo.assignee_type = primaryType;
               todo.assignee = primaryAssignee;
               todo.assignees = assignees;
             });
+
             var targets = [];
             assignees.forEach(function (aid, idx) {
               var tType = assigneeTypes[idx] || 'user';
@@ -563,25 +587,37 @@ OC.board = (function () {
     });
   }
 
-  /* ---- create a todo ---------------------------------------------------- */
-  function newTodo(preset, onCreated) {
-    var user = me();
+  /* ---- new todo ---------------------------------------------------------- */
+  function newTodo(preset) {
     preset = preset || {};
-    var title = h('input', { type: 'text', value: preset.title || '' });
-    var desc = h('textarea', {}, preset.description || '');
+    var user = me();
+    var title = h('input', { type: 'text', placeholder: 'What needs doing?' });
     var clientPicker = OC.ui.clientPicker(preset.clients || preset.client || '');
-    var deptPicker = OC.ui.deptPicker(preset.departments || preset.department || '', user);
+    var deptPicker = OC.ui.deptPicker(preset.departments || preset.department || (user.department || ''), user);
 
-    var initialAssignees = (preset.assignees && preset.assignees.length)
-      ? preset.assignees
-      : (preset.assignee ? [(preset.assignee_type || 'user') + ':' + preset.assignee] : []);
+    var initialAssignees = [];
+    if (preset.assignees && preset.assignees.length) {
+      initialAssignees = preset.assignees.map(function (id) {
+        if (typeof id === 'string' && (id.indexOf('user:') === 0 || id.indexOf('group:') === 0)) return id;
+        return (preset.assignee_type === 'group' ? 'group:' : 'user:') + id;
+      });
+    } else if (preset.assignee) {
+      initialAssignees = [(preset.assignee_type || 'user') + ':' + preset.assignee];
+    } else {
+      initialAssignees = ['user:' + user.id];
+    }
     var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
 
-    var due = h('input', { type: 'date', value: preset.due || OC.ui.today() });
+    var minDue = OC.ui.localNowISO();
+    var due = h('input', {
+      type: 'datetime-local',
+      value: (preset.due && preset.due.indexOf('T') > -1) ? preset.due.slice(0, 16) : (preset.due ? preset.due + 'T18:00' : minDue),
+      min: minDue,
+      step: '60'
+    });
     var priority = OC.ui.select([
       { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }
     ], 'normal');
-    var tags = OC.ui.tagPicker(preset.tags || []);
     var recurrence = OC.ui.select([
       { value: 'none', label: 'One time' }, { value: 'daily', label: 'Daily' },
       { value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' },
@@ -594,13 +630,11 @@ OC.board = (function () {
       title: 'New todo',
       content: h('div', {}, [
         OC.ui.field('Title', title, { required: true }),
-        OC.ui.field('Description', desc),
         OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
         OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),
         OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: assignHint }),
-        OC.ui.field('Due date', due, { required: true }),
+        OC.ui.field('Due date & time', due, { required: true, hint: 'Past dates & times are blocked automatically.' }),
         OC.ui.field('Priority', priority),
-        OC.ui.field('Tags', tags.node, { hint: 'Type and category tags are optional. Typing narrows the list; a new tag is available to everyone at once (6.4).' }),
         OC.ui.field('Recurrence', recurrence, { hint: 'A recurring todo regenerates on completion (6.2).' })
       ]),
       actions: [
@@ -624,16 +658,16 @@ OC.board = (function () {
 
             var todo = {
               id: OC.store.uid('t'),
-              title: title.value.trim(), description: desc.value.trim(),
+              title: title.value.trim(),
               client: primaryClient, clients: selectedClients,
               department: primaryDept, departments: selectedDepts,
               assignee_type: primaryType, assignee: primaryAssignee,
               assignees: assignees,
               state: 'open', priority: priority.value, due: due.value,
               recurrence: recurrence.value, created_by: user.id,
-              created_at: new Date().toISOString(), tags: tags.resolve(), comments: []
+              created_at: new Date().toISOString(), tags: [], comments: []
             };
-            if (priority.value === 'high' && todo.tags.indexOf('t-urgent') === -1) todo.tags.push('t-urgent');
+            if (priority.value === 'high') todo.tags.push('t-urgent');
 
             OC.store.mutate({ actor: user.id, action: 'todo.create', target: todo.title, detail: 'assigned to ' + OC.ui.assigneeName(todo) }, function () {
               OC.store.state.todos.push(todo);

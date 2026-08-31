@@ -67,20 +67,41 @@ OC.ui = (function () {
 
   function today() { return new Date().toISOString().slice(0, 10); }
 
+  function localNowISO() {
+    var d = new Date();
+    var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
   function fmtDate(isoDate) {
     if (!isoDate) return '—';
     var p = isoDate.slice(0, 10).split('-');
-    return Number(p[2]) + ' ' + MONTHS[Number(p[1]) - 1];
+    var dStr = Number(p[2]) + ' ' + MONTHS[Number(p[1]) - 1];
+    if (isoDate.length >= 16 && isoDate.indexOf('T') > -1) {
+      var timePart = isoDate.slice(11, 16);
+      var parts = timePart.split(':');
+      var hours = Number(parts[0]);
+      var mins = parts[1];
+      var ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      return dStr + ', ' + (hours < 10 ? '0' + hours : hours) + ':' + mins + ' ' + ampm;
+    }
+    return dStr;
   }
 
   function daysLate(dueDate) {
     if (!dueDate) return 0;
-    var due = new Date(dueDate + 'T12:00:00');
-    var now = new Date(); now.setHours(12, 0, 0, 0);
+    var due = new Date(dueDate.indexOf('T') > -1 ? dueDate : dueDate + 'T12:00:00');
+    var now = new Date();
+    if (dueDate.indexOf('T') === -1) {
+      due.setHours(12, 0, 0, 0);
+      now.setHours(12, 0, 0, 0);
+    }
     return Math.round((now - due) / 86400000);
   }
 
   function dueLabel(dueDate) {
+    if (!dueDate) return '';
     var late = daysLate(dueDate);
     if (late === 0) return 'due today';
     if (late === 1) return '1 day overdue';
@@ -1353,7 +1374,7 @@ OC.ui = (function () {
 
   return {
     h: h, clear: clear, append: append,
-    today: today, fmtDate: fmtDate, fmtWhen: fmtWhen, daysLate: daysLate, dueLabel: dueLabel,
+    today: today, localNowISO: localNowISO, fmtDate: fmtDate, fmtWhen: fmtWhen, daysLate: daysLate, dueLabel: dueLabel,
     clientChip: clientChip, clientLabel: clientLabel, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
     personName: personName, assigneeName: assigneeName,
     initials: initials, mark: mark, person: person, photoUploader: photoUploader,

@@ -16,8 +16,10 @@ OC.dashboard = (function () {
   function myTodos(user) {
     return OC.store.state.todos.filter(function (t) {
       if (t.archived || t.state === 'done') return false;
-      if (t.assignee_type === 'user') return t.assignee === user.id;
-      return OC.can.inGroup(user, t.assignee);
+      if (t.assignee_type === 'user') {
+        return t.assignee === user.id || (Array.isArray(t.assignees) && t.assignees.indexOf(user.id) > -1);
+      }
+      return OC.can.inGroup(user, t.assignee) || (Array.isArray(t.assignees) && t.assignees.some(function (aid) { return OC.can.inGroup(user, aid); }));
     }).sort(function (a, b) { return (a.due || '').localeCompare(b.due || ''); });
   }
 

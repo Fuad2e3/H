@@ -132,8 +132,9 @@ OC.can = (function () {
   function changeState(user, todo) {
     if (!user || !todo) return false;
     if (user.admin) return true;
-    if (todo.assignee_type === 'user' && todo.assignee === user.id) return true;
+    if (todo.assignee_type === 'user' && (todo.assignee === user.id || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1))) return true;
     if (todo.assignee_type === 'group' && inGroup(user, todo.assignee)) return true;
+    if (Array.isArray(todo.assignees) && todo.assignees.some(function (id) { return inGroup(user, id); })) return true;
     return todo.assignee_type === 'user' && assignTo(user, todo.assignee);
   }
 
@@ -249,7 +250,8 @@ OC.can = (function () {
     if (user.admin) return true;
     if (isHead(user, todo.department)) return true;
     if (todo.created_by === user.id) return true;
-    if (todo.assignee_type === 'user' && todo.assignee === user.id) return true;
+    if (todo.assignee_type === 'user' && (todo.assignee === user.id || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1))) return true;
+    if (todo.assignee_type === 'group' && inGroup(user, todo.assignee)) return true;
     return false;
   }
 
@@ -279,7 +281,13 @@ OC.can = (function () {
   function escalationChain(todo) {
     var chain = [];
     var assignees = [];
-    if (todo.assignee_type === 'user') {
+    if (Array.isArray(todo.assignees) && todo.assignees.length) {
+      todo.assignees.forEach(function (aid) {
+        var g = S().group(aid);
+        if (g && g.members) assignees = assignees.concat(g.members);
+        else assignees.push(aid);
+      });
+    } else if (todo.assignee_type === 'user') {
       assignees = [todo.assignee];
     } else {
       var g = S().group(todo.assignee);

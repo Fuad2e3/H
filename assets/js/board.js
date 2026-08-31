@@ -41,10 +41,17 @@ OC.board = (function () {
 
     if (filters.person) {
       if (isTodo) {
-        var hit = item.assignee_type === 'user' && item.assignee === filters.person;
+        var hit = (item.assignee_type === 'user' && item.assignee === filters.person) ||
+                  (Array.isArray(item.assignees) && item.assignees.indexOf(filters.person) > -1);
         if (!hit && item.assignee_type === 'group') {
           var g = OC.store.group(item.assignee);
           hit = !!g && g.members.indexOf(filters.person) > -1;
+        }
+        if (!hit && Array.isArray(item.assignees)) {
+          hit = item.assignees.some(function (aid) {
+            var g2 = OC.store.group(aid);
+            return !!g2 && g2.members.indexOf(filters.person) > -1;
+          });
         }
         if (!hit) return false;
       } else if (item.author !== filters.person) {
@@ -327,9 +334,19 @@ OC.board = (function () {
       h('div', { class: 'meta' }, [
         OC.ui.clientChip(todo.client),
         OC.ui.deptChip(todo.department),
-        todo.assignee_type === 'group'
-          ? h('span', { class: 'chip group' }, OC.ui.assigneeName(todo))
-          : OC.ui.person(todo.assignee),
+        (Array.isArray(todo.assignees) && todo.assignees.length > 1)
+          ? h('span', { class: 'multi-assignees-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center;' },
+              todo.assignees.map(function (uid) {
+                var u = OC.store.user(uid);
+                if (u) return OC.ui.person(uid);
+                var g = OC.store.group(uid);
+                if (g) return h('span', { class: 'chip group' }, g.name);
+                return OC.ui.person(uid);
+              })
+            )
+          : (todo.assignee_type === 'group'
+              ? h('span', { class: 'chip group' }, OC.ui.assigneeName(todo))
+              : OC.ui.person(todo.assignee)),
         todo.recurrence !== 'none' ? h('span', { class: 'chip recurring' }, todo.recurrence) : null,
         todo.archived ? h('span', { class: 'chip custom' }, 'archived') : null,
         (todo.tags || []).map(OC.ui.tagChip),
@@ -363,16 +380,11 @@ OC.board = (function () {
       : OC.store.state.departments.filter(function (d) { return OC.can.inDept(user, d.id); });
     var department = OC.ui.select(optionsFor(depts, 'Select a department'), todo.department || '');
 
-    var people = OC.can.assignableUsers(user).map(function (u) { return { value: 'user:' + u.id, label: u.name }; });
-    var groups = OC.can.assignableGroups(user).map(function (g) { return { value: 'group:' + g.id, label: g.name + ' (group)' }; });
-    var currentAssigneeValue = (todo.assignee_type || 'user') + ':' + (todo.assignee || user.id);
-    var allAssigneeOptions = people.concat(groups);
-    var hasCurrentOption = allAssigneeOptions.some(function (opt) { return opt.value === currentAssigneeValue; });
-    if (!hasCurrentOption && todo.assignee) {
-      allAssigneeOptions.unshift({ value: currentAssigneeValue, label: OC.ui.assigneeName(todo) });
-    }
+    var initialAssignees = (Array.isArray(todo.assignees) && todo.assignees.length)
+      ? todo.assignees.map(function (id) { return (todo.assignee_type === 'group' ? 'group:' : 'user:') + id; })
+      : [(todo.assignee_type || 'user') + ':' + (todo.assignee || user.id)];
+    var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
 
-    var assignee = OC.ui.select(allAssigneeOptions, currentAssigneeValue);
     var due = h('input', { type: 'date', value: todo.due || OC.ui.today() });
     var priority = OC.ui.select([
       { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }
@@ -385,9 +397,6 @@ OC.board = (function () {
     ], todo.recurrence || 'none');
 
     var canReassign = OC.can.reassign(user, todo);
-    if (!canReassign) {
-      assignee.disabled = true;
-    }
 
     var actions = [
       { label: 'Cancel', onClick: function (close) { close(); } },
@@ -399,9 +408,12 @@ OC.board = (function () {
           if (!selectedClient || selectedClient === '__new__') return 'Please select a client.';
           if (!department.value) return 'Please select a department.';
 
-          var parts = assignee.value.split(':');
-          var oldAssignee = todo.assignee;
-          var oldAssigneeType = todo.assignee_type;
+          var assignees = assigneePicker.getAssignees();
+          var assigneeTypes = assigneePicker.getAssigneeTypes();
+          var primaryAssignee = assigneePicker.getPrimaryAssignee();
+          var primaryType = assigneePicker.getPrimaryType();
+
+          if (!assignees.length) return 'Select at least one team member or group to assign to.';
 
           OC.store.mutate({
             actor: user.id,
@@ -414,8 +426,9 @@ OC.board = (function () {
             todo.client = selectedClient;
             todo.department = department.value;
             if (canReassign) {
-              todo.assignee_type = parts[0];
-              todo.assignee = parts[1];
+              todo.assignee_type = primaryType;
+              todo.assignee = primaryAssignee;
+              todo.assignees = assignees;
             }
             todo.due = due.value;
             todo.priority = priority.value;
@@ -423,8 +436,16 @@ OC.board = (function () {
             todo.recurrence = recurrence.value;
           });
 
-          if (canReassign && (oldAssignee !== parts[1] || oldAssigneeType !== parts[0])) {
-            var targets = parts[0] === 'user' ? [parts[1]] : (OC.store.group(parts[1]) || { members: [] }).members;
+          if (canReassign) {
+            var targets = [];
+            assignees.forEach(function (aid, idx) {
+              var tType = assigneeTypes[idx] || 'user';
+              if (tType === 'user') targets.push(aid);
+              else {
+                var g = OC.store.group(aid);
+                if (g && g.members) targets = targets.concat(g.members);
+              }
+            });
             OC.store.notify(targets.filter(function (id) { return id !== user.id; }), user.name + ' assigned you: ' + todo.title, todo.id);
           }
 
@@ -461,7 +482,7 @@ OC.board = (function () {
         OC.ui.field('Description', desc),
         OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select client or click "+ New Client" (5.2).' }),
         OC.ui.field('Department', department, { required: true }),
-        OC.ui.field('Assign to', assignee, { required: true, hint: canReassign ? 'Reassign to team member or group.' : 'Only authorized leads/admins can reassign (3.2).' }),
+        OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: canReassign ? 'Select one or multiple team members or groups to assign.' : 'Only authorized leads/admins can reassign (3.2).' }),
         OC.ui.field('Due date', due, { required: true }),
         OC.ui.field('Priority', priority),
         OC.ui.field('Tags', tags.node),
@@ -473,24 +494,40 @@ OC.board = (function () {
 
   function reassignTodo(todo) {
     var user = me();
-    var people = OC.can.assignableUsers(user).map(function (u) { return { value: 'user:' + u.id, label: u.name }; });
-    var groups = OC.can.assignableGroups(user).map(function (g) { return { value: 'group:' + g.id, label: g.name + ' (group)' }; });
-    var control = OC.ui.select(people.concat(groups), todo.assignee_type + ':' + todo.assignee);
+    var initialAssignees = (Array.isArray(todo.assignees) && todo.assignees.length)
+      ? todo.assignees.map(function (id) { return (todo.assignee_type === 'group' ? 'group:' : 'user:') + id; })
+      : [(todo.assignee_type || 'user') + ':' + (todo.assignee || user.id)];
+    var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
+
     OC.ui.modal({
       title: 'Reassign',
-      content: OC.ui.field('Assign to', control, { required: true, hint: 'Only people you may assign to appear here (3.2).' }),
+      content: OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: 'Select one or multiple team members / groups to reassign (3.2).' }),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
         {
           label: 'Reassign', primary: true, onClick: function (close) {
-            var parts = control.value.split(':');
+            var assignees = assigneePicker.getAssignees();
+            var assigneeTypes = assigneePicker.getAssigneeTypes();
+            var primaryAssignee = assigneePicker.getPrimaryAssignee();
+            var primaryType = assigneePicker.getPrimaryType();
+            if (!assignees.length) return 'Select at least one team member or group.';
+
             var before = OC.ui.assigneeName(todo);
-            OC.store.mutate({ actor: user.id, action: 'todo.reassign', target: todo.title, detail: before + ' → ' + control.selectedOptions[0].textContent }, function () {
-              todo.assignee_type = parts[0];
-              todo.assignee = parts[1];
+            OC.store.mutate({ actor: user.id, action: 'todo.reassign', target: todo.title, detail: before + ' → ' + assignees.join(', ') }, function () {
+              todo.assignee_type = primaryType;
+              todo.assignee = primaryAssignee;
+              todo.assignees = assignees;
             });
-            var targets = parts[0] === 'user' ? [parts[1]] : (OC.store.group(parts[1]) || { members: [] }).members;
-            OC.store.notify(targets, user.name + ' assigned you: ' + todo.title, todo.id);
+            var targets = [];
+            assignees.forEach(function (aid, idx) {
+              var tType = assigneeTypes[idx] || 'user';
+              if (tType === 'user') targets.push(aid);
+              else {
+                var g = OC.store.group(aid);
+                if (g && g.members) targets = targets.concat(g.members);
+              }
+            });
+            OC.store.notify(targets.filter(function (id) { return id !== user.id; }), user.name + ' assigned you: ' + todo.title, todo.id);
             OC.ui.toast('Reassigned.');
             close();
           }
@@ -510,9 +547,11 @@ OC.board = (function () {
       : OC.store.state.departments.filter(function (d) { return OC.can.inDept(user, d.id); });
     var department = OC.ui.select(optionsFor(depts, 'Select a department'), preset.department || '');
 
-    var people = OC.can.assignableUsers(user).map(function (u) { return { value: 'user:' + u.id, label: u.name }; });
-    var groups = OC.can.assignableGroups(user).map(function (g) { return { value: 'group:' + g.id, label: g.name + ' (group)' }; });
-    var assignee = OC.ui.select(people.concat(groups), 'user:' + user.id);
+    var initialAssignees = (preset.assignees && preset.assignees.length)
+      ? preset.assignees
+      : (preset.assignee ? [(preset.assignee_type || 'user') + ':' + preset.assignee] : ['user:' + user.id]);
+    var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
+
     var due = h('input', { type: 'date', value: preset.due || OC.ui.today() });
     var priority = OC.ui.select([
       { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }
@@ -524,9 +563,7 @@ OC.board = (function () {
       { value: 'quarterly', label: 'Quarterly' }
     ], 'none');
 
-    var assignHint = people.length === 1 && people[0].value === 'user:' + user.id
-      ? 'Your role can assign work to yourself only (3.2).'
-      : 'Admin and department heads only (3.2).';
+    var assignHint = 'Select one or multiple team members or cross-department groups (3.2).';
 
     OC.ui.modal({
       title: 'New todo',
@@ -535,7 +572,7 @@ OC.board = (function () {
         OC.ui.field('Description', desc),
         OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select an existing client or click "+ New Client" to add a custom client (5.2).' }),
         OC.ui.field('Department', department, { required: true }),
-        OC.ui.field('Assign to', assignee, { required: true, hint: assignHint }),
+        OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: assignHint }),
         OC.ui.field('Due date', due, { required: true }),
         OC.ui.field('Priority', priority),
         OC.ui.field('Tags', tags.node, { hint: 'Type and category tags are optional. Typing narrows the list; a new tag is available to everyone at once (6.4).' }),
@@ -549,14 +586,20 @@ OC.board = (function () {
             var selectedClient = clientPicker.getValue();
             if (!selectedClient || selectedClient === '__new__') return 'Select a client or add a new one. This is required by 5.2.';
             if (!department.value) return 'Select a department. This is required by 5.2.';
-            var parts = assignee.value.split(':');
-            if (parts[0] === 'user' && !OC.can.assignTo(user, parts[1])) return 'You cannot assign work to that person (3.2).';
+
+            var assignees = assigneePicker.getAssignees();
+            var assigneeTypes = assigneePicker.getAssigneeTypes();
+            var primaryAssignee = assigneePicker.getPrimaryAssignee();
+            var primaryType = assigneePicker.getPrimaryType();
+
+            if (!assignees.length) return 'Select at least one team member or group to assign to.';
 
             var todo = {
               id: OC.store.uid('t'),
               title: title.value.trim(), description: desc.value.trim(),
               client: selectedClient, department: department.value,
-              assignee_type: parts[0], assignee: parts[1],
+              assignee_type: primaryType, assignee: primaryAssignee,
+              assignees: assignees,
               state: 'open', priority: priority.value, due: due.value,
               recurrence: recurrence.value, created_by: user.id,
               created_at: new Date().toISOString(), tags: tags.resolve(), comments: []
@@ -566,7 +609,16 @@ OC.board = (function () {
             OC.store.mutate({ actor: user.id, action: 'todo.create', target: todo.title, detail: 'assigned to ' + OC.ui.assigneeName(todo) }, function () {
               OC.store.state.todos.push(todo);
             });
-            var targets = parts[0] === 'user' ? [parts[1]] : (OC.store.group(parts[1]) || { members: [] }).members;
+
+            var targets = [];
+            assignees.forEach(function (aid, idx) {
+              var tType = assigneeTypes[idx] || 'user';
+              if (tType === 'user') targets.push(aid);
+              else {
+                var g = OC.store.group(aid);
+                if (g && g.members) targets = targets.concat(g.members);
+              }
+            });
             OC.store.notify(targets.filter(function (id) { return id !== user.id; }), user.name + ' assigned you: ' + todo.title, todo.id);
             if (onCreated) onCreated(todo);
             OC.ui.toast('Todo created.');

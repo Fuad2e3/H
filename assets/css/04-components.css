@@ -1063,6 +1063,79 @@ dialog.modal::backdrop {
   margin: var(--s1) 0;
 }
 
+/* ---- assignee multi-select picker --------------------------------------- */
+.assignee-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.assignee-selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+  align-items: center;
+}
+.assignee-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 6px;
+  background: var(--surface-2, rgba(56, 189, 248, 0.12));
+  border: 1px solid var(--accent, #38BDF8);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink, #FFFFFF);
+}
+.assignee-chip .chip-remove {
+  background: transparent;
+  border: none;
+  color: var(--ink-muted, #94A3B8);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+.assignee-chip .chip-remove:hover {
+  color: #EF4444;
+}
+.assignee-list {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--r1);
+  padding: 6px 10px;
+  background: var(--card-bg-alt);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.assignee-item-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 13px;
+  user-select: none;
+}
+.assignee-item-line:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.assignee-item-line input[type="checkbox"] {
+  cursor: pointer;
+  margin: 0;
+  width: 15px;
+  height: 15px;
+}
+
 /* ---- reactions bar & picker --------------------------------------------- */
 .reactions-bar {
   display: flex;

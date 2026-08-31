@@ -164,6 +164,15 @@ OC.ui = (function () {
   }
 
   function assigneeName(item) {
+    if (!item) return 'Unassigned';
+    if (Array.isArray(item.assignees) && item.assignees.length > 1) {
+      return item.assignees.map(function (id) {
+        var u = OC.store.user(id);
+        if (u) return u.name;
+        var g = OC.store.group(id);
+        return g ? g.name : id;
+      }).join(', ');
+    }
     if (item.assignee_type === 'group') {
       var g = OC.store.group(item.assignee);
       return g ? g.name : 'Unknown group';
@@ -709,6 +718,192 @@ OC.ui = (function () {
     };
   }
 
+  /* ---- assignee picker (multi-select persons & groups) -------------------- */
+  function assigneePicker(selectedValues, currentUser, onChange) {
+    currentUser = currentUser || OC.store.user(OC.store.session());
+    var assignablePeople = OC.can ? OC.can.assignableUsers(currentUser) : (OC.store.state.users || []);
+    var assignableGroups = OC.can ? OC.can.assignableGroups(currentUser) : (OC.store.state.groups || []);
+
+    var chosen = [];
+    (Array.isArray(selectedValues) ? selectedValues : [selectedValues]).forEach(function (val) {
+      if (!val) return;
+      var str = String(val);
+      if (str.indexOf(':') === -1) {
+        var isGroup = assignableGroups.some(function (g) { return g.id === str; });
+        str = (isGroup ? 'group:' : 'user:') + str;
+      }
+      if (chosen.indexOf(str) === -1) chosen.push(str);
+    });
+
+    if (!chosen.length && currentUser) {
+      chosen.push('user:' + currentUser.id);
+    }
+
+    var root = h('div', { class: 'assignee-picker' });
+    var chipsWrap = h('div', { class: 'assignee-selected-chips' });
+    var searchInput = h('input', { type: 'search', placeholder: 'Search team members or groups...', 'aria-label': 'Filter assignees' });
+    var listWrap = h('div', { class: 'assignee-list', role: 'group', 'aria-label': 'Assignees' });
+
+    function renderChips() {
+      clear(chipsWrap);
+      if (!chosen.length) {
+        chipsWrap.appendChild(h('span', { class: 'muted', style: 'font-size:12px;font-style:italic;' }, 'No person selected (click below to select)'));
+        return;
+      }
+      chosen.forEach(function (itemVal) {
+        var parts = itemVal.split(':');
+        var type = parts[0];
+        var id = parts[1];
+        var label = '';
+        var markEl = null;
+
+        if (type === 'group') {
+          var g = OC.store.group(id);
+          label = g ? g.name + ' (group)' : id;
+          markEl = h('span', { class: 'chip group' }, 'Group');
+        } else {
+          var u = OC.store.user(id);
+          label = u ? u.name : id;
+          markEl = mark(id);
+        }
+
+        var removeBtn = h('button', {
+          type: 'button',
+          class: 'chip-remove',
+          title: 'Remove ' + label,
+          onClick: function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var at = chosen.indexOf(itemVal);
+            if (at > -1) chosen.splice(at, 1);
+            render();
+            if (onChange) onChange(getAssignees());
+          }
+        }, '✕');
+
+        var chip = h('span', { class: 'assignee-chip' }, [
+          markEl,
+          h('span', {}, label),
+          removeBtn
+        ]);
+        chipsWrap.appendChild(chip);
+      });
+    }
+
+    function renderList() {
+      clear(listWrap);
+      var q = searchInput.value.trim().toLowerCase();
+
+      var filteredPeople = assignablePeople.filter(function (u) {
+        return !q || u.name.toLowerCase().indexOf(q) > -1 || (u.email && u.email.toLowerCase().indexOf(q) > -1);
+      });
+
+      var filteredGroups = assignableGroups.filter(function (g) {
+        return !q || g.name.toLowerCase().indexOf(q) > -1 || (g.purpose && g.purpose.toLowerCase().indexOf(q) > -1);
+      });
+
+      if (!filteredPeople.length && !filteredGroups.length) {
+        listWrap.appendChild(h('p', { class: 'ticklist-empty' }, 'No team members or groups found matching "' + q + '"'));
+        return;
+      }
+
+      if (filteredPeople.length) {
+        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--ink-muted);margin:3px 0;font-weight:700;' }, 'Team Members'));
+        filteredPeople.forEach(function (u) {
+          var val = 'user:' + u.id;
+          var isChecked = chosen.indexOf(val) > -1;
+          var chk = h('input', {
+            type: 'checkbox',
+            value: val,
+            checked: isChecked,
+            onChange: function (e) {
+              var at = chosen.indexOf(val);
+              if (e.target.checked && at === -1) chosen.push(val);
+              if (!e.target.checked && at > -1) chosen.splice(at, 1);
+              render();
+              if (onChange) onChange(getAssignees());
+            }
+          });
+
+          var line = h('label', { class: 'assignee-item-line' }, [
+            chk,
+            mark(u.id),
+            h('span', { style: 'font-weight:500;' }, u.name),
+            u.title ? h('span', { class: 'chip custom', style: 'margin-left:auto;font-size:10.5px;' }, u.title) : null
+          ].filter(Boolean));
+          listWrap.appendChild(line);
+        });
+      }
+
+      if (filteredGroups.length) {
+        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--ink-muted);margin:8px 0 3px 0;font-weight:700;' }, 'Cross-Dept Groups'));
+        filteredGroups.forEach(function (g) {
+          var val = 'group:' + g.id;
+          var isChecked = chosen.indexOf(val) > -1;
+          var chk = h('input', {
+            type: 'checkbox',
+            value: val,
+            checked: isChecked,
+            onChange: function (e) {
+              var at = chosen.indexOf(val);
+              if (e.target.checked && at === -1) chosen.push(val);
+              if (!e.target.checked && at > -1) chosen.splice(at, 1);
+              render();
+              if (onChange) onChange(getAssignees());
+            }
+          });
+
+          var line = h('label', { class: 'assignee-item-line' }, [
+            chk,
+            h('span', { class: 'chip group' }, 'Group'),
+            h('span', { style: 'font-weight:500;' }, g.name),
+            h('span', { class: 'chip count', style: 'margin-left:auto;' }, (g.members || []).length + ' members')
+          ]);
+          listWrap.appendChild(line);
+        });
+      }
+    }
+
+    function render() {
+      renderChips();
+      renderList();
+    }
+
+    searchInput.addEventListener('input', renderList);
+
+    root.appendChild(chipsWrap);
+    root.appendChild(searchInput);
+    root.appendChild(listWrap);
+
+    render();
+
+    function getAssignees() {
+      return chosen.map(function (v) { return v.split(':')[1]; });
+    }
+
+    function getAssigneeTypes() {
+      return chosen.map(function (v) { return v.split(':')[0]; });
+    }
+
+    function getPrimaryAssignee() {
+      return chosen.length ? chosen[0].split(':')[1] : (currentUser ? currentUser.id : null);
+    }
+
+    function getPrimaryType() {
+      return chosen.length ? chosen[0].split(':')[0] : 'user';
+    }
+
+    return {
+      node: root,
+      getAssignees: getAssignees,
+      getAssigneeTypes: getAssigneeTypes,
+      getPrimaryAssignee: getPrimaryAssignee,
+      getPrimaryType: getPrimaryType,
+      getChosenValues: function () { return chosen.slice(); },
+      setChosenValues: function (arr) { chosen = (arr || []).slice(); render(); }
+    };
+  }
+
   /* ---- toasts ----------------------------------------------------------- */
   function toast(message, warn) {
     var host = document.querySelector('.toasts');
@@ -730,6 +925,7 @@ OC.ui = (function () {
     initials: initials, mark: mark, person: person,
     STATE_LABEL: STATE_LABEL,
     field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
+    assigneePicker: assigneePicker,
     tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
     modal: modal, confirm: confirm, toast: toast, debounce: debounce
   };

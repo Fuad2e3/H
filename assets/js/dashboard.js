@@ -16,10 +16,19 @@ OC.dashboard = (function () {
   function myTodos(user) {
     return OC.store.state.todos.filter(function (t) {
       if (t.archived || t.state === 'done') return false;
-      if (t.assignee_type === 'user') {
-        return t.assignee === user.id || (Array.isArray(t.assignees) && t.assignees.indexOf(user.id) > -1);
-      }
-      return OC.can.inGroup(user, t.assignee) || (Array.isArray(t.assignees) && t.assignees.some(function (aid) { return OC.can.inGroup(user, aid); }));
+      // Check legacy single-assignee fields
+      if (t.assignee_type === 'user' && (t.assignee === user.id)) return true;
+      if (t.assignee_type === 'group' && OC.can.inGroup(user, t.assignee)) return true;
+      // Check multi-assignee array (handles raw ids, user:uid, group:gid prefixes)
+      if (Array.isArray(t.assignees) && t.assignees.some(function (aid) {
+        if (aid === user.id) return true;
+        if (typeof aid === 'string') {
+          if (aid.indexOf('user:') === 0 && aid.slice(5) === user.id) return true;
+          if (aid.indexOf('group:') === 0 && OC.can.inGroup(user, aid.slice(6))) return true;
+        }
+        return OC.can.inGroup(user, aid);
+      })) return true;
+      return false;
     }).sort(function (a, b) { return (a.due || '').localeCompare(b.due || ''); });
   }
 
@@ -44,8 +53,16 @@ OC.dashboard = (function () {
     var groups = OC.store.state.groups.filter(function (g) { return g.status === 'active' && g.members.indexOf(user.id) > -1; });
 
     var clientIds = {};
-    todos.forEach(function (t) { clientIds[t.client] = true; });
-    notes.forEach(function (n) { if (n.read_by.indexOf(user.id) === -1) clientIds[n.client] = true; });
+    todos.forEach(function (t) {
+      if (t.client) clientIds[t.client] = true;
+      if (Array.isArray(t.clients)) t.clients.forEach(function (cid) { if (cid) clientIds[cid] = true; });
+    });
+    notes.forEach(function (n) {
+      if (n.read_by.indexOf(user.id) === -1) {
+        if (n.client) clientIds[n.client] = true;
+        if (Array.isArray(n.clients)) n.clients.forEach(function (cid) { if (cid) clientIds[cid] = true; });
+      }
+    });
     var clients = Object.keys(clientIds).map(OC.store.client).filter(Boolean);
 
     /* todos grouped by client, oldest due first */

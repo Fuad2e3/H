@@ -251,16 +251,9 @@
   border-left: 1px solid var(--rule);
 }
 .panel-tabs button[aria-pressed="true"] {
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  background: var(--grad-primary);
   color: #FFFFFF;
   font-weight: 600;
-}
-:root[data-theme="dark"] .panel-tabs button[aria-pressed="true"],
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .panel-tabs button[aria-pressed="true"] {
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-    color: #FFFFFF;
-  }
 }
 
 .panel {

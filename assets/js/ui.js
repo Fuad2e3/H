@@ -129,11 +129,7 @@ OC.ui = (function () {
       if (obj) c = obj;
       else return c;
     }
-    var parts = [];
-    if (c.client_id) parts.push(c.client_id);
-    if (c.client_code) parts.push(c.client_code);
-    if (c.name) parts.push(c.name);
-    return parts.length ? parts.join(' - ') : (c.name || 'No client');
+    return c.client_code || c.name || 'No client';
   }
 
   function clientChip(id) {

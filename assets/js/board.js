@@ -604,7 +604,7 @@ OC.board = (function () {
     } else if (preset.assignee) {
       initialAssignees = [(preset.assignee_type || 'user') + ':' + preset.assignee];
     } else {
-      initialAssignees = ['user:' + user.id];
+      initialAssignees = [];
     }
     var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
 

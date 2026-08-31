@@ -13,7 +13,7 @@ OC.dashboard = (function () {
 
   function me() { return OC.store.user(OC.store.session()); }
 
-  var showUpcoming = false;
+  var showUpcoming = true;
 
   function allMyTodos(user) {
     return OC.store.state.todos.filter(function (t) {
@@ -38,6 +38,7 @@ OC.dashboard = (function () {
     var all = allMyTodos(user);
     if (showUpcoming) return all;
     // Show only Due Today & Overdue tasks by default (hide future/tomorrow tasks until their due date arrives)
+    // NOTE: This filter is currently bypassed because showUpcoming defaults to true.
     return all.filter(function (t) {
       return !t.due || OC.ui.daysLate(t.due) >= 0;
     });
@@ -152,7 +153,7 @@ OC.dashboard = (function () {
     var unread = notes.filter(function (n) { return n.read_by.indexOf(user.id) === -1; });
     var overdue = allTodos.filter(function (t) { return OC.ui.daysLate(t.due) > 0; });
     var upcoming = allTodos.filter(function (t) { return OC.ui.daysLate(t.due) < 0; });
-    var groups = OC.store.state.groups.filter(function (g) { return g.status === 'active' && g.members.indexOf(user.id) > -1; });
+
 
     var clientIds = {};
     allTodos.forEach(function (t) {

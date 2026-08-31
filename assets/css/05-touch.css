@@ -88,11 +88,9 @@
 @media (max-width:600px){
   dialog.modal{width:96vw; max-height:94vh;}
   .group-chat-messages{max-height:42vh;}
-  .reaction-picker-pop{
-    position:fixed;
-    left:50% !important;
-    top:50% !important;
-    transform:translate(-50%, -50%) !important;
-    z-index:120;
+  .reaction-picker-pop {
+    max-width: calc(100vw - 32px);
+    overflow-x: auto;
+    z-index: 1000;
   }
 }

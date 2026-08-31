@@ -486,16 +486,22 @@ OC.people = (function () {
   function editClient(client) {
     var h = OC.ui.h;
     var user = me();
-    var name = h('input', { type: 'text', value: client.name });
+    var clientId = h('input', { type: 'text', value: client.client_id || '' });
+    var clientCode = h('input', { type: 'text', value: client.client_code || '' });
+    var name = h('input', { type: 'text', value: client.name || '' });
     var contact = h('input', { type: 'text', value: client.contact || client.name });
     var status = OC.ui.select([
       { value: 'active', label: 'Active' },
       { value: 'paused', label: 'Paused' }
     ], client.status || 'active');
 
+    var currentLabel = OC.ui.clientLabel ? OC.ui.clientLabel(client) : client.name;
+
     OC.ui.modal({
-      title: 'Edit client: ' + client.name,
+      title: 'Edit client: ' + currentLabel,
       content: h('div', {}, [
+        OC.ui.field('Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
+        OC.ui.field('Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
         OC.ui.field('Client / Company name', name, { required: true }),
         OC.ui.field('Primary contact', contact, { hint: 'Contact person name.' }),
         OC.ui.field('Status', status)
@@ -520,6 +526,8 @@ OC.people = (function () {
               actor: user.id, action: 'client.update', target: name.value.trim(),
               detail: 'Updated details for ' + client.name
             }, function () {
+              client.client_id = clientId.value.trim();
+              client.client_code = clientCode.value.trim();
               client.name = name.value.trim();
               client.contact = contact.value.trim() || client.name;
               client.status = status.value;
@@ -691,9 +699,10 @@ OC.people = (function () {
       ]),
       OC.store.state.clients.length ? h('div', { class: 'grid-2', style: 'margin:12px 0 22px' }, OC.store.state.clients.map(function (c) {
         var clientTodos = OC.store.state.todos.filter(function (t) { return t.client === c.id; });
+        var displayTitle = OC.ui.clientLabel ? OC.ui.clientLabel(c) : c.name;
         return h('div', { class: 'card' }, [
           h('div', { class: 'row' }, [
-            h('h3', {}, c.name),
+            h('h3', {}, displayTitle),
             h('span', { class: 'chip ' + (c.status === 'active' ? 'dept' : 'custom') + ' push' }, c.status)
           ]),
           h('p', { class: 'muted', style: 'font-size:13px;margin:6px 0 10px;' }, 'Primary contact: ' + (c.contact || c.name)),

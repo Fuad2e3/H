@@ -36,6 +36,7 @@ console.log('--- [1/5] Checking Javascript Files Syntax ---');
 const jsFiles = [
   'assets/js/app.js',
   'assets/js/board.js',
+  'assets/js/clients.js',
   'assets/js/dashboard.js',
   'assets/js/groups.js',
   'assets/js/people.js',

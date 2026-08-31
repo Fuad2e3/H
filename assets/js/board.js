@@ -101,7 +101,10 @@ OC.board = (function () {
   /* ---- filter bar ------------------------------------------------------- */
   function optionsFor(list, blank) {
     return [{ value: '', label: blank }].concat(list.map(function (x) {
-      return { value: x.id, label: x.name || x.label };
+      var lbl = (x.client_id || x.client_code) && OC.ui && OC.ui.clientLabel
+        ? OC.ui.clientLabel(x)
+        : (x.name || x.label);
+      return { value: x.id, label: lbl };
     }));
   }
 
@@ -373,9 +376,7 @@ OC.board = (function () {
         ? h('div', { class: 'blocked-note' }, [OC.icon('alert'), h('span', {}, 'Blocked: ' + todo.blocked_reason)])
         : null,
       escalationNote(todo),
-      h('div', { class: 'actions' }, actions),
-      OC.ui.reactionsBar('todo', todo),
-      OC.can.canSeeComments(user, todo) ? OC.ui.commentThread('todo', todo) : null
+      h('div', { class: 'actions' }, actions)
     ]);
   }
 

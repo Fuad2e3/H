@@ -47,8 +47,8 @@ OC.reports = (function () {
     todos.forEach(function (t) {
       var late = OC.ui.daysLate(t.due);
       var clientNames = (Array.isArray(t.clients) && t.clients.length)
-        ? t.clients.map(function (cid) { return (OC.store.client(cid) || {}).name || cid; }).join(', ')
-        : ((OC.store.client(t.client) || {}).name || '');
+        ? t.clients.map(function (cid) { var c = OC.store.client(cid); return c ? (OC.ui.clientLabel ? OC.ui.clientLabel(c) : c.name) : cid; }).join(', ')
+        : (function () { var c = OC.store.client(t.client); return c ? (OC.ui.clientLabel ? OC.ui.clientLabel(c) : c.name) : ''; })();
       var deptNames = (Array.isArray(t.departments) && t.departments.length)
         ? t.departments.map(function (did) { return (OC.store.department(did) || {}).name || did; }).join(', ')
         : ((OC.store.department(t.department) || {}).name || '');

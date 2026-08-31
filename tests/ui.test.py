@@ -319,14 +319,14 @@ with sync_playwright() as pw:
     page.click('.filterbar-head button:has-text("Clear")'); page.wait_for_timeout(300)
 
     print("\n=== 5.0 comments ===")
-    thread = page.locator('.panel--todos .item .thread').first
+    thread = page.locator('.panel--instructions .note .thread').first
     thread.locator('summary').click(); page.wait_for_timeout(250)
     thread.locator('input[type=text]').fill('Checked with the client this morning.')
     thread.locator('button:has-text("Post")').click(); page.wait_for_timeout(400)
     ok("comment posted and counted",
-       page.locator('.panel--todos .item .thread summary', has_text='1 comment').count()>0)
+       page.locator('.panel--instructions .note .thread summary', has_text='1 comment').count()>0)
     ok("comment recorded in the audit log",
-       page.evaluate("OC.store.state.audit.some(a=>a.action==='todo.comment')"))
+       page.evaluate("OC.store.state.audit.some(a=>a.action==='instruction.comment')"))
 
     print("\n=== 6.4 tag field: searchable tick list ===")
     page.get_by_role('button', name='New todo', exact=True).first.click(); page.wait_for_timeout(300)

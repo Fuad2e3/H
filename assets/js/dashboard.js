@@ -150,9 +150,7 @@ OC.dashboard = (function () {
                       t.blocked_reason
                         ? h('div', { class: 'blocked-note' }, [OC.icon('alert'), h('span', {}, 'Blocked: ' + t.blocked_reason)])
                         : null,
-                      h('div', { class: 'actions', style: 'display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap;' }, actions),
-                      OC.ui.reactionsBar('todo', t),
-                      OC.can.canSeeComments(user, t) ? OC.ui.commentThread('todo', t) : null
+                      h('div', { class: 'actions', style: 'display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap;' }, actions)
                     ]);
                   })
                 ]);

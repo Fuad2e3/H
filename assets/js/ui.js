@@ -101,9 +101,23 @@ OC.ui = (function () {
   }
 
   /* ---- chips ------------------------------------------------------------ */
+  function clientLabel(c) {
+    if (!c) return 'No client';
+    if (typeof c === 'string') {
+      var obj = OC.store.client(c);
+      if (obj) c = obj;
+      else return c;
+    }
+    var parts = [];
+    if (c.client_id) parts.push(c.client_id);
+    if (c.client_code) parts.push(c.client_code);
+    if (c.name) parts.push(c.name);
+    return parts.length ? parts.join(' - ') : (c.name || 'No client');
+  }
+
   function clientChip(id) {
     var c = OC.store.client(id);
-    return h('span', { class: 'chip client', title: 'Client' }, c ? c.name : 'No client');
+    return h('span', { class: 'chip client', title: 'Client' }, c ? clientLabel(c) : 'No client');
   }
 
   function deptChip(id) {
@@ -648,12 +662,16 @@ OC.ui = (function () {
   /* ---- custom client creation modal & picker --------------------------- */
   function newClientModal(onCreated) {
     var user = OC.store.user(OC.store.session());
+    var clientId = h('input', { type: 'text', placeholder: 'e.g. 0583, CL-101' });
+    var clientCode = h('input', { type: 'text', placeholder: 'e.g. TFR, ACME' });
     var name = h('input', { type: 'text', placeholder: 'e.g. Acme Corp, Apex Solutions' });
     var contact = h('input', { type: 'text', placeholder: 'e.g. John Doe / Lead Contact' });
 
     modal({
       title: 'Add new client',
       content: h('div', {}, [
+        field('Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
+        field('Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
         field('Client / Company name', name, { required: true, hint: 'Official client or account name for task assignment.' }),
         field('Primary contact', contact, { hint: 'Person responsible on the client side (optional).' })
       ]),
@@ -663,6 +681,8 @@ OC.ui = (function () {
           label: 'Add client', primary: true, onClick: function (close) {
             var cName = name.value.trim();
             if (!cName) return 'Please enter a client name.';
+            var cIdVal = clientId.value.trim();
+            var cCodeVal = clientCode.value.trim();
             var exists = OC.store.state.clients.some(function (c) {
               return c.name.toLowerCase() === cName.toLowerCase();
             });
@@ -670,6 +690,8 @@ OC.ui = (function () {
 
             var newClient = {
               id: OC.store.uid('c'),
+              client_id: cIdVal,
+              client_code: cCodeVal,
               name: cName,
               contact: contact.value.trim() || cName,
               status: 'active'
@@ -679,12 +701,12 @@ OC.ui = (function () {
               actor: user ? user.id : 'u-shohag',
               action: 'client.create',
               target: newClient.name,
-              detail: 'Added client ' + newClient.name
+              detail: 'Added client ' + clientLabel(newClient)
             }, function () {
               OC.store.state.clients.push(newClient);
             });
 
-            toast('Client "' + newClient.name + '" added.');
+            toast('Client "' + clientLabel(newClient) + '" added.');
             if (onCreated) onCreated(newClient);
             close();
           }
@@ -732,7 +754,7 @@ OC.ui = (function () {
       }
       chosen.forEach(function (cid) {
         var c = OC.store.client(cid);
-        var label = c ? c.name : cid;
+        var label = c ? clientLabel(c) : cid;
 
         var removeBtn = h('button', {
           type: 'button',
@@ -760,7 +782,9 @@ OC.ui = (function () {
       clear(listWrap);
       var q = searchInput.value.trim().toLowerCase();
       var clients = (OC.store.state.clients || []).filter(function (c) {
-        return !q || c.name.toLowerCase().indexOf(q) > -1 || (c.contact && c.contact.toLowerCase().indexOf(q) > -1);
+        if (!q) return true;
+        var full = [c.client_id, c.client_code, c.name, c.contact].filter(Boolean).join(' ').toLowerCase();
+        return full.indexOf(q) > -1;
       });
 
       if (!clients.length) {
@@ -770,6 +794,7 @@ OC.ui = (function () {
 
       clients.forEach(function (c) {
         var isChecked = chosen.indexOf(c.id) > -1;
+        var display = clientLabel(c);
         var chk = h('input', {
           type: 'checkbox',
           value: c.id,
@@ -785,8 +810,8 @@ OC.ui = (function () {
 
         var line = h('label', { class: 'multi-picker-item-line' }, [
           chk,
-          h('span', { style: 'font-weight:500;' }, c.name),
-          c.contact ? h('span', { class: 'muted', style: 'margin-left:auto;font-size:11px;' }, c.contact) : null
+          h('span', { style: 'font-weight:500;' }, display),
+          c.contact && c.contact !== c.name ? h('span', { class: 'muted', style: 'margin-left:auto;font-size:11px;' }, c.contact) : null
         ].filter(Boolean));
         listWrap.appendChild(line);
       });
@@ -1131,7 +1156,7 @@ OC.ui = (function () {
   return {
     h: h, clear: clear, append: append,
     today: today, fmtDate: fmtDate, fmtWhen: fmtWhen, daysLate: daysLate, dueLabel: dueLabel,
-    clientChip: clientChip, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
+    clientChip: clientChip, clientLabel: clientLabel, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
     personName: personName, assigneeName: assigneeName,
     initials: initials, mark: mark, person: person,
     STATE_LABEL: STATE_LABEL,

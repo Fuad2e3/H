@@ -22,7 +22,8 @@ OC.app = (function () {
     { id: 'board', label: 'Board', view: function () { return OC.board; } },
     { id: 'groups', label: 'Groups', view: function () { return OC.groups; } },
     { id: 'reports', label: 'Reports', view: function () { return OC.reports; } },
-    { id: 'people', label: 'People', view: function () { return OC.people; } }
+    { id: 'people', label: 'People', view: function () { return OC.people; } },
+    { id: 'clients', label: 'Clients', view: function () { return OC.clients; } }
   ];
 
   /* ---- theme ------------------------------------------------------------ */

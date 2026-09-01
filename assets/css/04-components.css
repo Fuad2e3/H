@@ -2522,7 +2522,7 @@ dialog.modal.fallback {
   gap: 4px;
 }
 
-/* ---- user profile badge banner (dashboard header) ---------------------- */
+/* ---- user profile badge banner (dashboard header - Day/Night adaptive) - */
 .user-profile-banner {
   background: linear-gradient(135deg, #132a48 0%, #0d1e34 100%);
   border: 1px solid rgba(56, 189, 248, 0.28);
@@ -2535,10 +2535,39 @@ dialog.modal.fallback {
   gap: 16px;
   cursor: pointer;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.2s ease;
   position: relative;
   overflow: hidden;
 }
+
+/* Light / Day Mode Theme */
+[data-theme="light"] .user-profile-banner {
+  background: linear-gradient(135deg, #163d6b 0%, #0f2c52 100%);
+  border: 1px solid rgba(37, 99, 235, 0.30);
+  box-shadow: 0 6px 20px rgba(15, 44, 82, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+[data-theme="light"] .user-profile-banner:hover {
+  border-color: #2563eb;
+  box-shadow: 0 10px 28px rgba(15, 44, 82, 0.26);
+  transform: translateY(-1.5px);
+}
+[data-theme="light"] .user-profile-status-badge {
+  background: rgba(8, 24, 45, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Dark / Night Mode Theme */
+[data-theme="dark"] .user-profile-banner {
+  background: linear-gradient(135deg, #11253e 0%, #0b192c 100%);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 18px rgba(14, 165, 233, 0.10);
+}
+[data-theme="dark"] .user-profile-banner:hover {
+  border-color: #38bdf8;
+  box-shadow: 0 8px 30px rgba(14, 165, 233, 0.22);
+  transform: translateY(-1.5px);
+}
+
 .user-profile-banner:hover {
   border-color: #38bdf8;
   box-shadow: 0 8px 26px rgba(14, 165, 233, 0.18);
@@ -2560,11 +2589,12 @@ dialog.modal.fallback {
   overflow: hidden;
   flex-shrink: 0;
   background: #1e293b;
-  border: 2px solid rgba(255, 255, 255, 0.16);
+  border: 2px solid rgba(255, 255, 255, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .user-profile-avatar-wrap img {
   width: 100%;
@@ -2599,13 +2629,13 @@ dialog.modal.fallback {
 .user-profile-name {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #ffffff !important;
   letter-spacing: -0.01em;
   line-height: 1.2;
 }
 .user-profile-badge {
   background: #ea580c;
-  color: #ffffff;
+  color: #ffffff !important;
   font-size: 11px;
   font-weight: 700;
   padding: 2px 7px;
@@ -2618,13 +2648,13 @@ dialog.modal.fallback {
 .user-profile-role-line {
   font-size: 13.5px;
   font-weight: 600;
-  color: #cbd5e1;
+  color: #cbd5e1 !important;
   line-height: 1.3;
   margin-top: 2px;
 }
 .user-profile-meta-line {
   font-size: 12px;
-  color: #94a3b8;
+  color: #94a3b8 !important;
   line-height: 1.3;
   margin-top: 1px;
   font-family: var(--font-mono, monospace);
@@ -2637,7 +2667,7 @@ dialog.modal.fallback {
 }
 .user-profile-status-badge {
   background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   padding: 7px 14px;
   text-align: right;
@@ -2646,7 +2676,7 @@ dialog.modal.fallback {
 .user-profile-status-label {
   font-size: 9.5px;
   font-weight: 700;
-  color: #94a3b8;
+  color: #94a3b8 !important;
   letter-spacing: 0.6px;
   text-transform: uppercase;
   margin-bottom: 2px;
@@ -2654,7 +2684,7 @@ dialog.modal.fallback {
 .user-profile-status-val {
   font-size: 12px;
   font-weight: 700;
-  color: #ff7849;
+  color: #ff7849 !important;
   letter-spacing: 0.2px;
 }
 .user-profile-edit-hint {
@@ -2663,7 +2693,7 @@ dialog.modal.fallback {
   gap: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: #38bdf8;
+  color: #38bdf8 !important;
   background: rgba(56, 189, 248, 0.12);
   border: 1px solid rgba(56, 189, 248, 0.3);
   padding: 5px 9px;
@@ -2673,7 +2703,7 @@ dialog.modal.fallback {
 .user-profile-banner:hover .user-profile-edit-hint {
   background: rgba(56, 189, 248, 0.25);
   border-color: #38bdf8;
-  color: #ffffff;
+  color: #ffffff !important;
 }
 
 @media (max-width: 680px) {

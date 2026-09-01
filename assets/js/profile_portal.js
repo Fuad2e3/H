@@ -635,6 +635,7 @@ OC.profilePortal = (function () {
 
   /* ---- 3. Leave Portal Tab View (Photo 2) --------------------------------- */
   function renderLeaveTab(user, rerender) {
+    var loggedInUser = me();
     var allLeaves = OC.store.state.leaves || [];
     var myLeaves = allLeaves.filter(function (l) { return l.user_id === user.id; });
 
@@ -705,6 +706,7 @@ OC.profilePortal = (function () {
       var appObj = {
         id: OC.store.uid('lv'),
         user_id: user.id,
+        user_name: user.name,
         from_date: fromInput.value,
         to_date: toInput.value,
         manager_id: managerSelect.value,
@@ -729,12 +731,7 @@ OC.profilePortal = (function () {
 
       // Dispatch in-app notification to the assigned Reporting Lead / Manager
       if (OC.store.notify && appObj.manager_id && appObj.manager_id !== user.id) {
-        OC.store.notify(appObj.manager_id, {
-          type: 'leave.request',
-          title: '📋 New Leave Request: ' + user.name,
-          body: user.name + ' applied for ' + totalApplied + ' days leave (' + appObj.from_date + ' to ' + appObj.to_date + '). Click to review and approve/reject.',
-          link: '#profile'
-        });
+        OC.store.notify([appObj.manager_id], user.name + ' applied for ' + totalApplied + ' days leave (' + appObj.from_date + ' to ' + appObj.to_date + ').', '#profile');
       }
 
       // Reset form inputs after successful submission
@@ -758,24 +755,19 @@ OC.profilePortal = (function () {
     function approveLeave(app) {
       var applicant = OC.store.user(app.user_id);
       OC.store.mutate({
-        actor: user.id,
+        actor: (loggedInUser ? loggedInUser.id : user.id),
         action: 'leave.approve',
         target: applicant ? applicant.name : app.user_id,
         detail: 'Approved leave for ' + app.from_date + ' to ' + app.to_date
       }, function () {
         app.status = 'Approved';
-        app.reviewed_by = user.id;
-        app.reviewed_by_name = user.name;
+        app.reviewed_by = (loggedInUser ? loggedInUser.id : user.id);
+        app.reviewed_by_name = (loggedInUser ? loggedInUser.name : user.name);
         app.reviewed_at = new Date().toISOString();
       });
 
       if (OC.store.notify && app.user_id) {
-        OC.store.notify(app.user_id, {
-          type: 'leave.approved',
-          title: '🎉 Leave Approved!',
-          body: 'Your leave application for ' + app.from_date + ' to ' + app.to_date + ' has been APPROVED by ' + user.name + '.',
-          link: '#profile'
-        });
+        OC.store.notify([app.user_id], 'Your leave application for ' + app.from_date + ' to ' + app.to_date + ' has been APPROVED.', '#profile');
       }
 
       OC.ui.toast('Leave application approved successfully! ✅');
@@ -802,25 +794,20 @@ OC.profilePortal = (function () {
             onClick: function (close) {
               var rejReason = reasonBox.value.trim();
               OC.store.mutate({
-                actor: user.id,
+                actor: (loggedInUser ? loggedInUser.id : user.id),
                 action: 'leave.reject',
                 target: applicant ? applicant.name : app.user_id,
                 detail: 'Rejected leave for ' + app.from_date + ' to ' + app.to_date + (rejReason ? ' (' + rejReason + ')' : '')
               }, function () {
                 app.status = 'Rejected';
                 app.rejection_reason = rejReason;
-                app.reviewed_by = user.id;
-                app.reviewed_by_name = user.name;
+                app.reviewed_by = (loggedInUser ? loggedInUser.id : user.id);
+                app.reviewed_by_name = (loggedInUser ? loggedInUser.name : user.name);
                 app.reviewed_at = new Date().toISOString();
               });
 
               if (OC.store.notify && app.user_id) {
-                OC.store.notify(app.user_id, {
-                  type: 'leave.rejected',
-                  title: '❌ Leave Request Rejected',
-                  body: 'Your leave application for ' + app.from_date + ' to ' + app.to_date + ' was Rejected by ' + user.name + (rejReason ? ': ' + rejReason : '.'),
-                  link: '#profile'
-                });
+                OC.store.notify([app.user_id], 'Your leave application for ' + app.from_date + ' to ' + app.to_date + ' was Rejected' + (rejReason ? ': ' + rejReason : '.'), '#profile');
               }
 
               OC.ui.toast('Leave application has been rejected.');
@@ -833,8 +820,9 @@ OC.profilePortal = (function () {
     }
 
     /* Check for incoming leave requests where current user is the Manager or Admin */
+    var currentSessionUser = loggedInUser || user;
     var incomingLeaves = allLeaves.filter(function (a) {
-      return a.manager_id === user.id || Boolean(user.admin) || Boolean(loggedInUser && loggedInUser.admin);
+      return a.manager_id === currentSessionUser.id || a.manager_id === user.id || Boolean(currentSessionUser.admin) || Boolean(user.admin);
     });
     var pendingIncoming = incomingLeaves.filter(function (a) { return a.status === 'Pending'; });
 
@@ -1050,7 +1038,7 @@ OC.profilePortal = (function () {
 
     var allLeaves = OC.store.state.leaves || [];
     var pendingForMe = allLeaves.filter(function (a) {
-      return (a.manager_id === (loggedInUser ? loggedInUser.id : '') || (loggedInUser && loggedInUser.role === 'admin')) && a.status === 'Pending';
+      return (a.manager_id === (loggedInUser ? loggedInUser.id : '') || (loggedInUser && (loggedInUser.admin || loggedInUser.role === 'admin'))) && a.status === 'Pending';
     }).length;
 
     var sidebarItems = [

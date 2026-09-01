@@ -660,17 +660,23 @@ OC.store = (function () {
     },
 
     notify: function (userIds, text, ref) {
-      if (!userIds || !userIds.length) return;
+      if (!userIds) return;
+      if (!Array.isArray(userIds)) userIds = [userIds];
+      if (!userIds.length) return;
+      var msg = (typeof text === 'object' && text !== null)
+        ? (text.title ? (text.title + ' — ' + (text.body || '')) : (text.body || JSON.stringify(text)))
+        : String(text || '');
       var at = new Date().toISOString();
+      state.notifications = state.notifications || [];
       userIds.forEach(function (uid_) {
         state.notifications.unshift({
           id: 'nt-' + Date.now() + '-' + uid_ + Math.random().toString(36).slice(2, 5),
-          user: uid_, text: text, ref: ref || null, at: at, read: false
+          user: uid_, text: msg, ref: ref || null, at: at, read: false
         });
       });
       write();
       emit();
-      pushMutationToServer({ actor: 'system', action: 'notification.send', target: text, detail: 'notified ' + userIds.length + ' users' });
+      pushMutationToServer({ actor: 'system', action: 'notification.send', target: msg, detail: 'notified ' + userIds.length + ' users' });
     }
   };
 

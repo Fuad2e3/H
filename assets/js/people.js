@@ -21,7 +21,6 @@ OC.people = (function () {
 
     var levelOptions = [
       { value: 'member', label: 'Member' },
-      { value: 'lead', label: 'Lead' },
       { value: 'head', label: 'Department Head' }
     ];
     if (user && user.admin) {

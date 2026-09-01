@@ -269,148 +269,6 @@ OC.profilePortal = (function () {
     var lateCount = currentMonthLogs.filter(function (a) { return a.status === 'Late'; }).length;
     var fyLates = myLogs.filter(function (a) { return a.status === 'Late'; }).length;
 
-    function openAttendanceTimeModal(existingLog) {
-      var now = new Date();
-      var hasIn = Boolean(existingLog && existingLog.punch_in);
-      var hasOut = Boolean(existingLog && existingLog.punch_out);
-
-      if (hasIn && hasOut) {
-        OC.ui.modal({
-          title: 'Daily Attendance Status (Today)',
-          content: h('div', { class: 'form-body', style: 'display:flex;flex-direction:column;gap:12px;' }, [
-            h('div', { class: 'callout success', style: 'font-size:13px;padding:12px 14px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);border-radius:8px;' },
-              '🔒 Immutable Policy: Your attendance for Today (' + todayStr + ') has been recorded and locked permanently.'
-            ),
-            h('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;' }, [
-              h('div', { class: 'portal-info-item' }, [
-                h('span', { class: 'portal-info-label' }, 'PUNCH IN (LOCKED):'),
-                h('span', { class: 'portal-info-val mono bold', style: 'color:#10b981;' }, existingLog.punch_in)
-              ]),
-              h('div', { class: 'portal-info-item' }, [
-                h('span', { class: 'portal-info-label' }, 'PUNCH OUT (LOCKED):'),
-                h('span', { class: 'portal-info-val mono bold', style: 'color:#38bdf8;' }, existingLog.punch_out)
-              ])
-            ]),
-            h('p', { class: 'muted', style: 'font-size:12px;margin:8px 0 0;' },
-              'Once In and Out times are submitted, they cannot be modified to ensure audit integrity in the database.'
-            )
-          ]),
-          actions: [
-            { label: 'Close', primary: true, onClick: function (close) { close(); } }
-          ]
-        });
-        return;
-      }
-
-      var defaultIn = hasIn ? existingLog.punch_in : now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-      var defaultOut = hasOut ? existingLog.punch_out : (hasIn ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '');
-
-      var dateInput = h('input', {
-        type: 'date',
-        value: todayStr,
-        min: todayStr,
-        max: todayStr,
-        disabled: true,
-        style: 'background:rgba(255,255,255,0.06);color:var(--text-secondary);cursor:not-allowed;font-weight:600;'
-      });
-
-      var inTimeInput = h('input', {
-        type: 'text',
-        placeholder: 'e.g. 10:00 AM',
-        value: defaultIn,
-        disabled: hasIn,
-        style: 'font-weight:700;' + (hasIn ? 'background:rgba(255,255,255,0.06);color:var(--text-secondary);cursor:not-allowed;' : '')
-      });
-
-      var outTimeInput = h('input', {
-        type: 'text',
-        placeholder: 'e.g. 06:30 PM (optional)',
-        value: defaultOut,
-        disabled: hasOut,
-        style: 'font-weight:700;' + (hasOut ? 'background:rgba(255,255,255,0.06);color:var(--text-secondary);cursor:not-allowed;' : '')
-      });
-
-      var noteInput = h('input', {
-        type: 'text',
-        placeholder: 'Operational remark (optional)',
-        value: existingLog ? (existingLog.note || '') : 'Manual In/Out log entry'
-      });
-
-      OC.ui.modal({
-        title: 'Daily Attendance Time Entry (Today)',
-        content: h('div', { class: 'form-body', style: 'display:flex;flex-direction:column;gap:12px;' }, [
-          h('div', { class: 'callout info', style: 'font-size:12px;padding:8px 12px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);border-radius:6px;' },
-            '⚠️ Policy Notice: Once In Time or Out Time is submitted, it is locked permanently and cannot be changed later.'
-          ),
-          OC.ui.field('Date (Today Only - Past Dates Blocked)', dateInput, { hint: 'Past dates cannot be selected.' }),
-          OC.ui.field('In Time (Punch In) *', inTimeInput, { hint: hasIn ? '🔒 In Time already set & locked (cannot be changed).' : 'Format: HH:MM AM/PM' }),
-          OC.ui.field('Out Time (Punch Out)', outTimeInput, { hint: hasOut ? '🔒 Out Time already set & locked (cannot be changed).' : 'Format: HH:MM AM/PM (leave blank if currently active)' }),
-          OC.ui.field('Remark / Note', noteInput)
-        ]),
-        actions: [
-          { label: 'Cancel', onClick: function (close) { close(); } },
-          {
-            label: 'Save & Lock Time Entry',
-            primary: true,
-            onClick: function (close) {
-              var inVal = inTimeInput.value.trim();
-              var outVal = outTimeInput.value.trim();
-
-              if (!hasIn && !inVal) {
-                OC.ui.toast('Please specify a valid In Time.', true);
-                return;
-              }
-
-              OC.store.mutate({
-                actor: user.id,
-                action: 'attendance.manual_time_entry',
-                target: user.name,
-                detail: 'Recorded In: ' + (hasIn ? existingLog.punch_in : inVal) + (outVal ? ', Out: ' + outVal : '')
-              }, function () {
-                var allAtt = OC.store.state.attendance || [];
-                var target = allAtt.find(function (a) { return a.user_id === user.id && a.date === todayStr; });
-                var finalIn = hasIn ? existingLog.punch_in : inVal;
-                var finalOut = hasOut ? existingLog.punch_out : (outVal || null);
-
-                var isLate = finalIn.toLowerCase().indexOf('pm') > -1 || (function () {
-                  var match = finalIn.match(/(\d+):(\d+)\s*(am|pm)/i);
-                  if (!match) return false;
-                  var hh = parseInt(match[1], 10);
-                  var mm = parseInt(match[2], 10);
-                  var ampm = match[3].toLowerCase();
-                  if (ampm === 'am' && (hh > 10 || (hh === 10 && mm > 15))) return true;
-                  if (ampm === 'pm') return true;
-                  return false;
-                })();
-
-                if (target) {
-                  if (!hasIn && inVal) target.punch_in = inVal;
-                  if (!hasOut && outVal) target.punch_out = outVal;
-                  target.status = isLate ? 'Late' : 'Present';
-                  target.note = noteInput.value.trim() || 'Manual time entry';
-                } else {
-                  OC.store.state.attendance.unshift({
-                    id: OC.store.uid('att'),
-                    user_id: user.id,
-                    date: todayStr,
-                    scheduled_in: '10:00 AM',
-                    punch_in: finalIn,
-                    punch_out: finalOut,
-                    status: isLate ? 'Late' : 'Present',
-                    note: noteInput.value.trim() || 'Manual time entry'
-                  });
-                }
-              });
-
-              OC.ui.toast('Attendance time saved and permanently locked in database. ✅');
-              rerender();
-              close();
-            }
-          }
-        ]
-      });
-    }
-
     function handlePunch() {
       if (todayLog && todayLog.punch_in && todayLog.punch_out) {
         OC.ui.toast('🔒 Your attendance for today is already completed and locked.', true);
@@ -435,12 +293,12 @@ OC.profilePortal = (function () {
             punch_in: nowTime,
             punch_out: null,
             status: isLate ? 'Late' : 'Present',
-            note: 'Self-punched in'
+            note: 'Auto Quick Punch In'
           });
-          OC.ui.toast('Punch In recorded and permanently locked at ' + nowTime + ' ✅');
+          OC.ui.toast('Punch In recorded successfully at ' + nowTime + ' ✅');
         } else if (!existing.punch_out) {
           existing.punch_out = nowTime;
-          OC.ui.toast('Punch Out recorded and permanently locked at ' + nowTime + ' 🏁');
+          OC.ui.toast('Punch Out recorded successfully at ' + nowTime + ' 🏁');
         }
       });
       rerender();
@@ -459,18 +317,12 @@ OC.profilePortal = (function () {
             'Punch machine & self-checkin logs for ' + user.name + ' (' + (user.employee_id || 'EMP-1188') + '). Standard Scheduled In-Time: 10:00 AM.'
           )
         ]),
-        h('div', { class: 'row', style: 'gap:10px;align-items:center;flex-wrap:wrap;' }, [
-          h('button', {
-            class: 'btn' + (isComplete ? ' secondary' : ''),
-            type: 'button',
-            style: 'font-weight:600;display:inline-flex;align-items:center;gap:6px;',
-            onClick: function () { openAttendanceTimeModal(todayLog); }
-          }, [isComplete ? '👁️ View Today Entry' : '✏️ Manual In/Out Entry']),
+        h('div', { class: 'row', style: 'gap:10px;align-items:center;' }, [
           h('button', {
             class: 'btn primary',
             type: 'button',
             disabled: isComplete,
-            style: 'font-weight:700;' + (isComplete ? 'opacity:0.6;cursor:not-allowed;' : ''),
+            style: 'font-weight:700;padding:10px 22px;' + (isComplete ? 'opacity:0.6;cursor:not-allowed;' : ''),
             onClick: handlePunch
           }, [punchBtnLabel])
         ])
@@ -495,21 +347,13 @@ OC.profilePortal = (function () {
         ])
       ]),
 
-      /* Table: Daily Attendance Logs */
+      /* Table: Daily Attendance Logs matching Photo 4 */
       h('div', { class: 'portal-table-container' }, [
         h('div', { class: 'portal-table-head' }, [
           h('div', { style: 'display:flex;align-items:center;gap:10px;' }, [
             h('h3', {}, 'Daily Attendance Logs (' + selectedMonth + ')'),
             h('span', { class: 'chip count' }, currentMonthLogs.length + ' entries')
-          ]),
-          !isComplete
-            ? h('button', {
-                class: 'btn small',
-                type: 'button',
-                style: 'font-size:12px;',
-                onClick: function () { openAttendanceTimeModal(todayLog); }
-              }, ['➕ Record Today In/Out Time'])
-            : h('span', { class: 'chip success', style: 'font-size:11px;' }, '🔒 Today Completed')
+          ])
         ]),
         h('div', { class: 'tablewrap' }, [
           h('table', {}, [
@@ -518,49 +362,26 @@ OC.profilePortal = (function () {
               h('th', { scope: 'col' }, 'SCHEDULED IN'),
               h('th', { scope: 'col' }, 'PUNCH IN'),
               h('th', { scope: 'col' }, 'PUNCH OUT'),
-              h('th', { scope: 'col' }, 'STATUS'),
-              h('th', { scope: 'col' }, 'ACTIONS')
+              h('th', { scope: 'col' }, 'STATUS')
             ])),
             h('tbody', {}, currentMonthLogs.length
               ? currentMonthLogs.map(function (log) {
                   var statusChipClass = (log.status === 'Present') ? 'chip success'
                     : (log.status === 'Late') ? 'chip warning'
                     : 'chip';
-                  var isToday = log.date === todayStr;
-
-                  var actionCell = isToday
-                    ? (log.punch_in && log.punch_out
-                        ? h('span', {
-                            class: 'chip success',
-                            style: 'font-size:11px;',
-                            title: 'Both In and Out times recorded and permanently locked'
-                          }, ['🔒 Locked & Completed'])
-                        : h('button', {
-                            class: 'btn small',
-                            type: 'button',
-                            style: 'font-size:11px;padding:3px 8px;',
-                            title: 'Record Out Time',
-                            onClick: function () { openAttendanceTimeModal(log); }
-                          }, [!log.punch_in ? '⏱️ Set In Time' : '🏁 Set Out Time']))
-                    : h('span', {
-                        class: 'chip',
-                        style: 'font-size:11px;color:var(--text-secondary);opacity:0.75;',
-                        title: 'Past date attendance is locked and tamper-evident'
-                      }, ['🔒 Locked (Past Date)']);
 
                   return h('tr', {}, [
                     h('td', { class: 'mono bold' }, log.date),
                     h('td', { class: 'muted mono' }, log.scheduled_in || '10:00 AM'),
                     h('td', { class: 'mono bold' }, log.punch_in || '—'),
                     h('td', { class: 'mono' }, log.punch_out || '—'),
-                    h('td', {}, h('span', { class: statusChipClass }, log.status || 'Present')),
-                    h('td', {}, actionCell)
+                    h('td', {}, h('span', { class: statusChipClass }, log.status || 'Present'))
                   ]);
                 })
               : [
                   h('tr', {}, [
-                    h('td', { colspan: '6', style: 'text-align:center;padding:28px;color:var(--text-secondary);' },
-                      'No punch logs recorded for ' + selectedMonth + '. Use the "Record Today In/Out Time" or "Punch In" button above to log your time today.')
+                    h('td', { colspan: '5', style: 'text-align:center;padding:28px;color:var(--text-secondary);' },
+                      'No punch logs recorded for ' + selectedMonth + '. Click the "Quick Punch In" button above to record your attendance today.')
                   ])
                 ]
             )

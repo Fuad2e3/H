@@ -105,24 +105,22 @@ OC.store.mutate({
 
 assert(OC.store.state.attendance.length > 0, 'Attendance record should be saved in state');
 assert.strictEqual(OC.store.state.attendance[0].user_id, 'u-fuad');
+assert.strictEqual(OC.store.state.attendance[0].punch_in, '10:05 AM');
 assert.strictEqual(OC.store.state.attendance[0].status, 'Present');
-console.log('  ✓ Attendance punch records accurately with date, timestamp, and status');
+console.log('  ✓ Quick Punch 1st click: Punch In records accurately with timestamp & status');
 
-// Manual In/Out adjustment for today
+// Quick Punch 2nd click (Punch Out)
 OC.store.mutate({
   actor: 'u-fuad',
-  action: 'attendance.manual_time_entry',
+  action: 'attendance.punch',
   target: 'Abdullah al Fuad',
-  detail: 'Adjusted in/out time'
+  detail: 'Punched out for testing'
 }, () => {
-  OC.store.state.attendance[0].punch_in = '09:55 AM';
-  OC.store.state.attendance[0].punch_out = '06:15 PM';
-  OC.store.state.attendance[0].status = 'Present';
+  OC.store.state.attendance[0].punch_out = '06:30 PM';
 });
 
-assert.strictEqual(OC.store.state.attendance[0].punch_in, '09:55 AM');
-assert.strictEqual(OC.store.state.attendance[0].punch_out, '06:15 PM');
-console.log('  ✓ Manual In/Out time entry records and saves accurately to today log');
+assert.strictEqual(OC.store.state.attendance[0].punch_out, '06:30 PM');
+console.log('  ✓ Quick Punch 2nd click: Punch Out records and locks attendance for the day');
 
 // Test per-person attendance isolation
 const user2Log = {
@@ -144,8 +142,8 @@ assert.notStrictEqual(fuadLogs[0].id, shohagLogs[0].id, 'Attendance IDs are uniq
 console.log('  ✓ Daily Attendance logs are completely isolated per person in database');
 
 // Verify once In/Out is submitted, record cannot be changed (irreversible)
-assert.strictEqual(fuadLogs[0].punch_in, '09:55 AM');
-assert.strictEqual(fuadLogs[0].punch_out, '06:15 PM');
+assert.strictEqual(fuadLogs[0].punch_in, '10:05 AM');
+assert.strictEqual(fuadLogs[0].punch_out, '06:30 PM');
 console.log('  ✓ In and Out times are permanently locked and cannot be changed once submitted');
 
 // Verify past date log is blocked from tampering

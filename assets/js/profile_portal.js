@@ -659,11 +659,16 @@ OC.profilePortal = (function () {
     // Form inputs
     var fromInput = h('input', { type: 'date', value: getLocalDateStr() });
     var toInput = h('input', { type: 'date', value: getLocalDateStr() });
+
+    var managerUsers = (OC.store.state.users || []).filter(function (u) { return u.admin || (u.id !== user.id); });
+    if (!managerUsers.length) managerUsers = (OC.store.state.users || []).slice();
+    var defaultMgrId = (managerUsers.find(function (u) { return u.admin; }) || managerUsers[0] || {}).id || 'u-shohag';
+
     var managerSelect = OC.ui.select(
-      OC.store.state.users.filter(function (u) { return u.admin || (u.id !== user.id); }).map(function (u) {
-        return { value: u.id, label: u.name + ' (' + (u.title || 'Lead') + ')' };
+      managerUsers.map(function (u) {
+        return { value: u.id, label: u.name + ' (' + (u.title || (u.admin ? 'System Admin' : 'Lead')) + ')' };
       }),
-      'u-shohag'
+      defaultMgrId
     );
 
     var clInput = h('input', { type: 'number', step: '0.5', min: '0', value: '0', style: 'font-weight:700;' });
@@ -686,7 +691,7 @@ OC.profilePortal = (function () {
     }
 
     function submitApplication(e) {
-      if (e) e.preventDefault();
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
       var cl = parseFloat(clInput.value) || 0;
       var el = parseFloat(elInput.value) || 0;
       var sl = parseFloat(slInput.value) || 0;
@@ -702,14 +707,15 @@ OC.profilePortal = (function () {
         return;
       }
 
-      var mgrUser = OC.store.user(managerSelect.value);
+      var chosenMgrId = managerSelect.value || defaultMgrId;
+      var mgrUser = OC.store.user(chosenMgrId);
       var appObj = {
         id: OC.store.uid('lv'),
         user_id: user.id,
         user_name: user.name,
-        from_date: fromInput.value,
-        to_date: toInput.value,
-        manager_id: managerSelect.value,
+        from_date: fromInput.value || getLocalDateStr(),
+        to_date: toInput.value || getLocalDateStr(),
+        manager_id: chosenMgrId,
         manager_name: mgrUser ? mgrUser.name : 'System Admin',
         cl_days: cl,
         el_days: el,
@@ -720,11 +726,12 @@ OC.profilePortal = (function () {
         submitted_at: new Date().toISOString()
       };
 
+      OC.store.state.leaves = OC.store.state.leaves || [];
       OC.store.mutate({
         actor: user.id,
         action: 'leave.submit',
         target: user.name,
-        detail: 'Applied for ' + totalApplied + ' days leave (' + fromInput.value + ' to ' + toInput.value + ')'
+        detail: 'Applied for ' + totalApplied + ' days leave (' + appObj.from_date + ' to ' + appObj.to_date + ')'
       }, function () {
         OC.store.state.leaves.unshift(appObj);
       });
@@ -972,8 +979,9 @@ OC.profilePortal = (function () {
           h('div', { style: 'display:flex;justify-content:flex-end;margin-top:16px;' }, [
             h('button', {
               class: 'btn primary',
-              type: 'submit',
-              style: 'background:linear-gradient(135deg, #ea580c 0%, #c2410c 100%);color:#fff;font-weight:700;padding:9px 20px;'
+              type: 'button',
+              onClick: submitApplication,
+              style: 'background:linear-gradient(135deg, #ea580c 0%, #c2410c 100%);color:#fff;font-weight:700;padding:9px 20px;cursor:pointer;'
             }, 'Submit Application & Generate Document')
           ])
         ])

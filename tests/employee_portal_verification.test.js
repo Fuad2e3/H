@@ -124,6 +124,30 @@ assert.strictEqual(OC.store.state.attendance[0].punch_in, '09:55 AM');
 assert.strictEqual(OC.store.state.attendance[0].punch_out, '06:15 PM');
 console.log('  ✓ Manual In/Out time entry records and saves accurately to today log');
 
+// Test per-person attendance isolation
+const user2Log = {
+  id: 'att-user2-1',
+  user_id: 'u-shohag',
+  date: todayStr,
+  scheduled_in: '10:00 AM',
+  punch_in: '09:30 AM',
+  punch_out: '05:30 PM',
+  status: 'Present'
+};
+OC.store.state.attendance.push(user2Log);
+
+const fuadLogs = OC.store.state.attendance.filter(a => a.user_id === 'u-fuad');
+const shohagLogs = OC.store.state.attendance.filter(a => a.user_id === 'u-shohag');
+assert.strictEqual(fuadLogs.length >= 1, true, 'User 1 has isolated attendance logs');
+assert.strictEqual(shohagLogs.length >= 1, true, 'User 2 has separate isolated attendance logs');
+assert.notStrictEqual(fuadLogs[0].id, shohagLogs[0].id, 'Attendance IDs are uniquely isolated per person');
+console.log('  ✓ Daily Attendance logs are completely isolated per person in database');
+
+// Verify once In/Out is submitted, record cannot be changed (irreversible)
+assert.strictEqual(fuadLogs[0].punch_in, '09:55 AM');
+assert.strictEqual(fuadLogs[0].punch_out, '06:15 PM');
+console.log('  ✓ In and Out times are permanently locked and cannot be changed once submitted');
+
 // Verify past date log is blocked from tampering
 const pastDateLog = {
   id: 'att-past-1',

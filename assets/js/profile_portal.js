@@ -26,7 +26,28 @@ OC.profilePortal = (function () {
     return y + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
   }
 
-  var activeTab = 'profile'; /* 'profile' | 'attendance' | 'leave' */
+  function getSavedTab() {
+    try {
+      if (typeof window !== 'undefined') {
+        var hash = (window.location && window.location.hash) || '';
+        if (hash.indexOf('attendance') !== -1) return 'attendance';
+        if (hash.indexOf('leave') !== -1) return 'leave';
+        var stored = sessionStorage.getItem('oc_portal_tab') || localStorage.getItem('oc_portal_tab');
+        if (stored === 'attendance' || stored === 'leave' || stored === 'profile') return stored;
+      }
+    } catch (_) {}
+    return 'profile';
+  }
+
+  function setSavedTab(tab) {
+    activeTab = tab;
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('oc_portal_tab', tab);
+      if (typeof localStorage !== 'undefined') localStorage.setItem('oc_portal_tab', tab);
+    } catch (_) {}
+  }
+
+  var activeTab = getSavedTab(); /* 'profile' | 'attendance' | 'leave' */
   var selectedMonth = getLocalDateStr().slice(0, 7);
 
   /* ---- Defaults generator for user profile sections ---------------------- */
@@ -1049,7 +1070,7 @@ OC.profilePortal = (function () {
           type: 'button',
           class: 'portal-nav-btn' + (isActive ? ' active' : ''),
           onClick: function () {
-            activeTab = item.id;
+            setSavedTab(item.id);
             render(host, rerender);
           }
         }, [
@@ -1112,14 +1133,17 @@ OC.profilePortal = (function () {
 
   return {
     render: render,
-    setActiveTab: function (tab) { activeTab = tab; },
+    setActiveTab: function (tab) { setSavedTab(tab); },
     openForUser: function (userOrId, tab) {
       if (typeof userOrId === 'string') targetUserId = userOrId;
       else if (userOrId && userOrId.id) targetUserId = userOrId.id;
       else targetUserId = null;
 
-      if (tab) activeTab = tab;
-      else activeTab = 'profile';
+      if (tab) {
+        setSavedTab(tab);
+      } else {
+        activeTab = getSavedTab();
+      }
 
       if (OC.app && OC.app.go) {
         OC.app.go('profile');

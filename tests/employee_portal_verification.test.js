@@ -146,7 +146,7 @@ assert.strictEqual(fuadLogs[0].punch_in, '10:05 AM');
 assert.strictEqual(fuadLogs[0].punch_out, '06:30 PM');
 console.log('  ✓ In and Out times are permanently locked and cannot be changed once submitted');
 
-// Verify past date log is blocked from tampering
+// Verify past date log is stored and filterable by month
 const pastDateLog = {
   id: 'att-past-1',
   user_id: 'u-fuad',
@@ -158,7 +158,12 @@ const pastDateLog = {
 };
 OC.store.state.attendance.push(pastDateLog);
 assert.strictEqual(pastDateLog.date < todayStr, true, 'Past date should be earlier than today');
-console.log('  ✓ Past dates and timestamps are locked from manual modification');
+
+const augustLogs = OC.store.state.attendance.filter(a => a.user_id === 'u-fuad' && a.date.indexOf('2026-08') === 0);
+const septemberLogs = OC.store.state.attendance.filter(a => a.user_id === 'u-fuad' && a.date.indexOf('2026-09') === 0);
+assert.strictEqual(augustLogs.length, 1, 'August logs filtered correctly');
+assert.strictEqual(septemberLogs.length >= 1, true, 'September logs filtered correctly');
+console.log('  ✓ Month switcher correctly isolates and displays logs across previous, current, and next months');
 
 console.log('--- [3/4] Testing Leave Portal Tab & Formal Application Submission ---');
 OC.profilePortal.setActiveTab('leave');

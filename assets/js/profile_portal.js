@@ -256,6 +256,27 @@ OC.profilePortal = (function () {
     ]);
   }
 
+  function formatMonthName(ym) {
+    try {
+      var parts = ym.split('-');
+      var y = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10) - 1;
+      var d = new Date(y, m, 1);
+      return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    } catch (e) {
+      return ym;
+    }
+  }
+
+  function shiftMonth(ym, delta) {
+    var parts = ym.split('-');
+    var y = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10) + delta;
+    if (m < 1) { y -= 1; m = 12; }
+    else if (m > 12) { y += 1; m = 1; }
+    return y + '-' + (m < 10 ? '0' + m : m);
+  }
+
   /* ---- 2. My Attendance Tab View (Photo 4) -------------------------------- */
   function renderAttendanceTab(user, rerender) {
     var allAtt = OC.store.state.attendance || [];
@@ -263,11 +284,14 @@ OC.profilePortal = (function () {
     var todayStr = new Date().toISOString().slice(0, 10);
     var todayLog = myLogs.find(function (a) { return a.date === todayStr; });
 
-    // Calculate stats
+    // Calculate stats for the currently selected month
     var currentMonthLogs = myLogs.filter(function (a) { return a.date && a.date.indexOf(selectedMonth) === 0; });
     var daysLogged = currentMonthLogs.length;
     var lateCount = currentMonthLogs.filter(function (a) { return a.status === 'Late'; }).length;
     var fyLates = myLogs.filter(function (a) { return a.status === 'Late'; }).length;
+
+    var monthTitle = formatMonthName(selectedMonth);
+    var currentMonthStr = todayStr.slice(0, 7);
 
     function handlePunch() {
       if (todayLog && todayLog.punch_in && todayLog.punch_out) {
@@ -276,6 +300,8 @@ OC.profilePortal = (function () {
       }
 
       var nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      selectedMonth = currentMonthStr; // Auto switch view to current active month
+
       OC.store.mutate({
         actor: user.id,
         action: 'attendance.punch',
@@ -295,10 +321,10 @@ OC.profilePortal = (function () {
             status: isLate ? 'Late' : 'Present',
             note: 'Auto Quick Punch In'
           });
-          OC.ui.toast('Punch In recorded successfully at ' + nowTime + ' ✅');
+          OC.ui.toast('Punch In recorded with date ' + todayStr + ' at ' + nowTime + ' ✅');
         } else if (!existing.punch_out) {
           existing.punch_out = nowTime;
-          OC.ui.toast('Punch Out recorded successfully at ' + nowTime + ' 🏁');
+          OC.ui.toast('Punch Out recorded with date ' + todayStr + ' at ' + nowTime + ' 🏁');
         }
       });
       rerender();
@@ -308,6 +334,51 @@ OC.profilePortal = (function () {
     var punchBtnLabel = isComplete
       ? '🔒 Completed (' + todayLog.punch_in + ' - ' + todayLog.punch_out + ')'
       : (!todayLog ? '⏱️ Quick Punch In' : '🏁 Quick Punch Out (' + todayLog.punch_in + ')');
+
+    var monthNavControls = h('div', { class: 'row', style: 'gap:8px;align-items:center;flex-wrap:wrap;' }, [
+      h('button', {
+        class: 'btn small',
+        type: 'button',
+        title: 'Previous Month',
+        style: 'font-weight:600;padding:4px 10px;display:inline-flex;align-items:center;gap:4px;',
+        onClick: function () {
+          selectedMonth = shiftMonth(selectedMonth, -1);
+          rerender();
+        }
+      }, ['◀ Prev']),
+      h('input', {
+        type: 'month',
+        value: selectedMonth,
+        style: 'padding:4px 8px;font-size:12.5px;font-weight:700;border-radius:6px;background:var(--card-bg-alt, rgba(15,23,42,0.6));color:var(--ink, #fff);border:1px solid var(--border, rgba(56,189,248,0.25));',
+        onChange: function (e) {
+          if (e.target && e.target.value) {
+            selectedMonth = e.target.value;
+            rerender();
+          }
+        }
+      }),
+      h('button', {
+        class: 'btn small',
+        type: 'button',
+        title: 'Next Month',
+        style: 'font-weight:600;padding:4px 10px;display:inline-flex;align-items:center;gap:4px;',
+        onClick: function () {
+          selectedMonth = shiftMonth(selectedMonth, 1);
+          rerender();
+        }
+      }, ['Next ▶']),
+      (selectedMonth !== currentMonthStr)
+        ? h('button', {
+            class: 'btn small',
+            type: 'button',
+            style: 'font-size:11px;padding:3px 9px;background:rgba(56,189,248,0.15);color:var(--cyan,#38bdf8);border:1px solid rgba(56,189,248,0.3);font-weight:600;',
+            onClick: function () {
+              selectedMonth = currentMonthStr;
+              rerender();
+            }
+          }, ['Today / This Month'])
+        : null
+    ]);
 
     return h('div', { class: 'portal-view-content' }, [
       h('div', { class: 'portal-header-box' }, [
@@ -331,12 +402,12 @@ OC.profilePortal = (function () {
       /* 3 Metric Stat Cards matching Photo 4 */
       h('div', { class: 'portal-stats-row' }, [
         h('div', { class: 'portal-stat-card' }, [
-          h('div', { class: 'portal-stat-label' }, 'Days Logged'),
+          h('div', { class: 'portal-stat-label' }, 'Days Logged (' + monthTitle + ')'),
           h('div', { class: 'portal-stat-value' }, daysLogged + ' Days'),
           h('div', { class: 'portal-stat-sub' }, 'In ' + selectedMonth)
         ]),
         h('div', { class: 'portal-stat-card' }, [
-          h('div', { class: 'portal-stat-label' }, 'Late Count (Sep)'),
+          h('div', { class: 'portal-stat-label' }, 'Late Count (' + monthTitle + ')'),
           h('div', { class: 'portal-stat-value' + (lateCount > 0 ? ' alert' : '') }, lateCount + ' Days'),
           h('div', { class: 'portal-stat-sub' }, 'Limit before deduction: 3 Days')
         ]),
@@ -347,13 +418,14 @@ OC.profilePortal = (function () {
         ])
       ]),
 
-      /* Table: Daily Attendance Logs matching Photo 4 */
+      /* Table: Daily Attendance Logs with Month Navigator */
       h('div', { class: 'portal-table-container' }, [
-        h('div', { class: 'portal-table-head' }, [
+        h('div', { class: 'portal-table-head', style: 'flex-wrap:wrap;gap:12px;' }, [
           h('div', { style: 'display:flex;align-items:center;gap:10px;' }, [
-            h('h3', {}, 'Daily Attendance Logs (' + selectedMonth + ')'),
+            h('h3', {}, 'Daily Attendance Logs (' + monthTitle + ')'),
             h('span', { class: 'chip count' }, currentMonthLogs.length + ' entries')
-          ])
+          ]),
+          monthNavControls
         ]),
         h('div', { class: 'tablewrap' }, [
           h('table', {}, [
@@ -381,7 +453,7 @@ OC.profilePortal = (function () {
               : [
                   h('tr', {}, [
                     h('td', { colspan: '5', style: 'text-align:center;padding:28px;color:var(--text-secondary);' },
-                      'No punch logs recorded for ' + selectedMonth + '. Click the "Quick Punch In" button above to record your attendance today.')
+                      'No punch logs recorded for ' + monthTitle + ' (' + selectedMonth + '). Use the month buttons above to switch months or click "Quick Punch In" for today.')
                   ])
                 ]
             )

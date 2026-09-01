@@ -193,6 +193,39 @@ OC.store = (function () {
               }
             });
           }
+          if (state && Array.isArray(state.attendance) && state.attendance.length > 0) {
+            serverState.attendance = serverState.attendance || [];
+            state.attendance.forEach(function (la) {
+              if (!serverState.attendance.some(function (sa) { return sa.id === la.id; })) {
+                serverState.attendance.unshift(la);
+                needsPush = true;
+              }
+            });
+          }
+          if (state && Array.isArray(state.leaves) && state.leaves.length > 0) {
+            serverState.leaves = serverState.leaves || [];
+            state.leaves.forEach(function (ll) {
+              if (!serverState.leaves.some(function (sl) { return sl.id === ll.id; })) {
+                serverState.leaves.unshift(ll);
+                needsPush = true;
+              }
+            });
+          }
+          if (state && Array.isArray(state.users) && state.users.length > 0) {
+            serverState.users = serverState.users || [];
+            state.users.forEach(function (lu) {
+              var su = serverState.users.find(function (u) { return u.id === lu.id; });
+              if (su) {
+                if (lu.office_details && !su.office_details) { su.office_details = lu.office_details; needsPush = true; }
+                if (lu.personal_details && !su.personal_details) { su.personal_details = lu.personal_details; needsPush = true; }
+                if (lu.emergency_contacts && !su.emergency_contacts) { su.emergency_contacts = lu.emergency_contacts; needsPush = true; }
+                if (lu.bank_details && !su.bank_details) { su.bank_details = lu.bank_details; needsPush = true; }
+                if (lu.avatar && !su.avatar) { su.avatar = lu.avatar; needsPush = true; }
+                if (lu.scheduled_in && !su.scheduled_in) { su.scheduled_in = lu.scheduled_in; needsPush = true; }
+                if (lu.scheduled_out && !su.scheduled_out) { su.scheduled_out = lu.scheduled_out; needsPush = true; }
+              }
+            });
+          }
 
           var prevRaw = JSON.stringify(state);
           var nextRaw = JSON.stringify(serverState);

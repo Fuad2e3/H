@@ -14,65 +14,77 @@ OC.people = (function () {
 
   function me() { return OC.store.user(OC.store.session()); }
 
-  function invite() {
+  function invite(onSuccess) {
     var h = OC.ui.h;
     var user = me();
-    var name = h('input', { type: 'text', placeholder: 'full name' });
-    var email = h('input', { type: 'text', placeholder: 'name@originate.example' });
-    var title = h('input', { type: 'text', placeholder: 'job title' });
+    var email = h('input', { type: 'email', placeholder: 'name@originate.example' });
 
-    var depts = user.admin ? OC.store.state.departments
-      : OC.store.state.departments.filter(function (d) { return OC.can.isHead(user, d.id); });
-    var deptSelect = OC.ui.select(depts.map(function (d) { return { value: d.id, label: d.name }; }), depts[0] && depts[0].id);
-    var levelSelect = OC.ui.select([], '');
-
-    function refreshLevels() {
-      var d = OC.store.department(deptSelect.value);
-      OC.ui.clear(levelSelect);
-      (d ? d.levels : []).forEach(function (lv) {
-        levelSelect.appendChild(h('option', { value: lv }, lv));
-      });
-      levelSelect.value = d ? d.levels[d.levels.length - 1] : '';   /* least privilege (8.2) */
+    var levelOptions = [
+      { value: 'member', label: 'Member' },
+      { value: 'lead', label: 'Lead' },
+      { value: 'head', label: 'Department Head' }
+    ];
+    if (user && user.admin) {
+      levelOptions.push({ value: 'admin', label: 'System Admin' });
     }
-    deptSelect.addEventListener('change', refreshLevels);
-    refreshLevels();
+
+    var levelSelect = OC.ui.select(levelOptions, 'member');
 
     OC.ui.modal({
       title: 'Invite someone',
       content: h('div', {}, [
-        OC.ui.field('Name', name, { required: true }),
-        OC.ui.field('Email', email, { required: true, hint: 'Receives a single-use link that expires after 72 hours (6.1).' }),
-        OC.ui.field('Title', title),
-        OC.ui.field('Department', deptSelect, { required: true }),
-        OC.ui.field('Starting level', levelSelect, { required: true, hint: 'New accounts default to the narrowest level in the department (8.2).' })
+        OC.ui.field('Email', email, { required: true, hint: 'Receives a single-use 72-hour invite link and password.' }),
+        OC.ui.field('Starting level', levelSelect, { required: true, hint: 'Role and permission level for this account (Department and profile can be configured later).' })
       ]),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
         {
           label: 'Send invite', primary: true, onClick: function (close) {
-            if (!name.value.trim()) return 'Enter a name.';
-            if (!/.+@.+\..+/.test(email.value)) return 'Enter a valid email address.';
+            var rawEmail = email.value.trim().toLowerCase();
+            if (!/.+@.+\..+/.test(rawEmail)) return 'Enter a valid email address.';
+
+            var prefix = rawEmail.split('@')[0].replace(/[._-]/g, ' ').trim();
+            var derivedName = prefix.replace(/\b\w/g, function (c) { return c.toUpperCase(); }) || 'Invited Member';
+            var chosenLevel = levelSelect.value || 'member';
+            var isAdmin = chosenLevel === 'admin';
+
             var inv = OC.store.issueInvite(user.id, {
-              email: email.value.trim(),
-              name: name.value.trim(),
-              department: deptSelect.value,
-              level: levelSelect.value
+              email: rawEmail,
+              name: derivedName,
+              department: '',
+              level: chosenLevel
             });
+
+            var defaultTitle = isAdmin ? 'System Admin'
+              : (chosenLevel === 'head' ? 'Department Head'
+              : (chosenLevel === 'lead' ? 'Team Lead' : 'Team Member'));
+
             var account = {
-              id: OC.store.uid('u'), name: name.value.trim(), email: email.value.trim(),
-              title: title.value.trim() || 'Team member', admin: false, status: 'invited',
-              departments: [{ department: deptSelect.value, level: levelSelect.value }],
+              id: OC.store.uid('u'),
+              name: derivedName,
+              email: rawEmail,
+              title: defaultTitle,
+              admin: isAdmin,
+              status: 'invited',
+              departments: [],
               prefs: { push: true, email: true, discord: false },
               invite: inv
             };
+
             OC.store.mutate({
-              actor: user.id, action: 'user.invite', target: account.name,
-              detail: (OC.store.department(deptSelect.value) || {}).name + ' as ' + levelSelect.value
+              actor: user.id,
+              action: 'user.invite',
+              target: account.email,
+              detail: 'Invited as ' + chosenLevel.toUpperCase() + ' (department & profile can be assigned later)'
             }, function () {
               OC.store.state.users.push(account);
             });
+
             dispatchInviteEmail(account, false);
             close();
+            if (typeof onSuccess === 'function') {
+              try { onSuccess(account); } catch (e) {}
+            }
             showInviteSuccessModal(account);
           }
         }
@@ -86,13 +98,16 @@ OC.people = (function () {
     var link = base + path + '#claim=' + (account.invite ? account.invite.token : '');
     var pass = account.invite ? account.invite.passcode : '';
     var deptObj = OC.store.department(account.departments && account.departments[0] ? account.departments[0].department : '');
-    var deptName = deptObj ? deptObj.name : 'Operations';
-    var levelName = account.departments && account.departments[0] ? account.departments[0].level : 'Member';
+    var deptName = deptObj ? deptObj.name : 'Originate Command';
+    var levelName = (account.departments && account.departments[0] && account.departments[0].level)
+      ? account.departments[0].level
+      : (account.invite && account.invite.level ? account.invite.level : (account.admin ? 'Admin' : 'Member'));
+    var levelCap = levelName.charAt(0).toUpperCase() + levelName.slice(1);
 
     var fullText = [
-      'Hello ' + account.name + ',',
+      'Hello ' + (account.name || 'there') + ',',
       '',
-      'You have been invited to join the Originate Command portal (' + deptName + ' · ' + levelName + ').',
+      'You have been invited to join the Originate Command portal (' + (deptObj ? deptName + ' · ' : '') + levelCap + ').',
       '',
       '📧 Gmail: ' + account.email,
       '🔑 72-Hour Password: ' + pass,
@@ -203,7 +218,10 @@ OC.people = (function () {
 
   function dispatchInviteEmail(account, isResend) {
     var deptObj = OC.store.department(account.departments && account.departments[0] ? account.departments[0].department : '');
-    var levelName = account.departments && account.departments[0] ? account.departments[0].level : 'Member';
+    var deptName = deptObj ? deptObj.name : 'Originate Command';
+    var levelName = (account.departments && account.departments[0] && account.departments[0].level)
+      ? account.departments[0].level
+      : (account.invite && account.invite.level ? account.invite.level : (account.admin ? 'Admin' : 'Member'));
     var base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:7000';
 
     OC.ui.toast('📧 Dispatching auto-email to ' + account.email + '...');

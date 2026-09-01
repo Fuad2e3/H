@@ -197,7 +197,9 @@ OC.activities = (function () {
                       return h('span', { class: 'chip custom', style: 'margin-right:4px' },
                         (OC.store.department(m.department) || {}).name + ' · ' + m.level);
                     })
-                  : h('span', { class: 'muted' }, 'leadership tier, every department')),
+                  : (u.admin
+                      ? h('span', { class: 'muted' }, 'leadership tier, every department')
+                      : h('span', { class: 'muted' }, 'No department (customize in edit)'))),
                 h('td', { class: 'mono' }, u.status || 'active'),
                 canEditAnyAccount ? h('td', { style: 'text-align:right;' }, [
                   (OC.can && OC.can.editAccount && OC.can.editAccount(user, u))

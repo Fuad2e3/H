@@ -59,7 +59,16 @@ OC.can = (function () {
   function roleLabel(user) {
     if (!user) return 'Unknown';
     if (user.admin) return 'System Admin';
-    if (!user.departments.length) return 'No department';
+    if (!user.departments || !user.departments.length) {
+      if (user.invite && user.invite.level) {
+        var lvl = user.invite.level;
+        if (lvl === 'head') return 'Department Head';
+        if (lvl === 'lead') return 'Lead';
+        if (lvl === 'admin') return 'System Admin';
+        return 'Member';
+      }
+      return 'Member';
+    }
     var best = null;
     user.departments.forEach(function (m) {
       var r = rank(m.department, m.level);

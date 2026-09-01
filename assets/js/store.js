@@ -253,11 +253,11 @@ OC.store = (function () {
     } catch (_) {}
   }
 
-  // 🔄 Recurring 5-second Auto-Refresh Loop
+  // 🔄 Recurring 2-second Live Auto-Refresh Loop
   if (typeof setInterval === 'function' && isHttp()) {
     var syncTimer = setInterval(function () {
       syncWithServer();
-    }, 5000);
+    }, 2000);
     if (syncTimer && typeof syncTimer.unref === 'function') {
       syncTimer.unref();
     }

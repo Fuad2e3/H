@@ -3050,9 +3050,9 @@ dialog.modal.fallback {
   justify-content: center;
 }
 .portal-quick-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--ink, #ffffff);
+  background: var(--card-bg-alt, rgba(15, 23, 42, 0.06));
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.2));
+  color: var(--ink, #0f172a);
   font-size: 11px;
   font-weight: 600;
   padding: 2px 6px;

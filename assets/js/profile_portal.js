@@ -18,8 +18,16 @@ OC.profilePortal = (function () {
   var targetUserId = null;
   function activeUser() { return (targetUserId ? OC.store.user(targetUserId) : null) || me(); }
 
+  function getLocalDateStr() {
+    var d = new Date();
+    var y = d.getFullYear();
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return y + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+  }
+
   var activeTab = 'profile'; /* 'profile' | 'attendance' | 'leave' */
-  var selectedMonth = '2026-09';
+  var selectedMonth = getLocalDateStr().slice(0, 7);
 
   /* ---- Defaults generator for user profile sections ---------------------- */
   function getUserProfile(user) {
@@ -355,7 +363,7 @@ OC.profilePortal = (function () {
   function renderAttendanceTab(user, rerender) {
     var allAtt = OC.store.state.attendance || [];
     var myLogs = allAtt.filter(function (a) { return a.user_id === user.id; });
-    var todayStr = new Date().toISOString().slice(0, 10);
+    var todayStr = getLocalDateStr();
     var todayLog = myLogs.find(function (a) { return a.date === todayStr; });
 
     var loggedInUser = me();
@@ -363,14 +371,15 @@ OC.profilePortal = (function () {
     var schedIn = (user.office_details && user.office_details.scheduled_in) || user.scheduled_in || '10:00 AM';
     var schedOut = (user.office_details && user.office_details.scheduled_out) || user.scheduled_out || '06:30 PM';
 
+    var currentMonthStr = todayStr.slice(0, 7);
+    if (!selectedMonth) selectedMonth = currentMonthStr;
+    var monthTitle = formatMonthName(selectedMonth);
+
     // Calculate stats for the currently selected month
     var currentMonthLogs = myLogs.filter(function (a) { return a.date && a.date.indexOf(selectedMonth) === 0; });
     var daysLogged = currentMonthLogs.length;
     var lateCount = currentMonthLogs.filter(function (a) { return a.status === 'Late'; }).length;
     var fyLates = myLogs.filter(function (a) { return a.status === 'Late'; }).length;
-
-    var monthTitle = formatMonthName(selectedMonth);
-    var currentMonthStr = todayStr.slice(0, 7);
 
     function openAdminScheduleModal() {
       var inInput = h('input', { type: 'text', value: schedIn, placeholder: 'e.g. 10:00 AM', style: 'font-weight:700;' });
@@ -425,7 +434,9 @@ OC.profilePortal = (function () {
     }
 
     function handlePunch() {
-      if (todayLog && todayLog.punch_in && todayLog.punch_out) {
+      var latestAtt = OC.store.state.attendance || [];
+      var currentLog = latestAtt.find(function (a) { return a.user_id === user.id && a.date === todayStr; });
+      if (currentLog && currentLog.punch_in && currentLog.punch_out) {
         OC.ui.toast('🔒 Your attendance for today is already completed and locked.', true);
         return;
       }
@@ -434,7 +445,7 @@ OC.profilePortal = (function () {
       selectedMonth = currentMonthStr; // Auto switch view to current active month
 
       OC.store.mutate({
-        actor: user.id,
+        actor: (loggedInUser ? loggedInUser.id : user.id),
         action: 'attendance.punch',
         target: user.name,
         detail: 'Punched at ' + nowTime

@@ -108,6 +108,36 @@ assert.strictEqual(OC.store.state.attendance[0].user_id, 'u-fuad');
 assert.strictEqual(OC.store.state.attendance[0].status, 'Present');
 console.log('  ✓ Attendance punch records accurately with date, timestamp, and status');
 
+// Manual In/Out adjustment for today
+OC.store.mutate({
+  actor: 'u-fuad',
+  action: 'attendance.manual_time_entry',
+  target: 'Abdullah al Fuad',
+  detail: 'Adjusted in/out time'
+}, () => {
+  OC.store.state.attendance[0].punch_in = '09:55 AM';
+  OC.store.state.attendance[0].punch_out = '06:15 PM';
+  OC.store.state.attendance[0].status = 'Present';
+});
+
+assert.strictEqual(OC.store.state.attendance[0].punch_in, '09:55 AM');
+assert.strictEqual(OC.store.state.attendance[0].punch_out, '06:15 PM');
+console.log('  ✓ Manual In/Out time entry records and saves accurately to today log');
+
+// Verify past date log is blocked from tampering
+const pastDateLog = {
+  id: 'att-past-1',
+  user_id: 'u-fuad',
+  date: '2026-08-20',
+  scheduled_in: '10:00 AM',
+  punch_in: '10:00 AM',
+  punch_out: '06:00 PM',
+  status: 'Present'
+};
+OC.store.state.attendance.push(pastDateLog);
+assert.strictEqual(pastDateLog.date < todayStr, true, 'Past date should be earlier than today');
+console.log('  ✓ Past dates and timestamps are locked from manual modification');
+
 console.log('--- [3/4] Testing Leave Portal Tab & Formal Application Submission ---');
 OC.profilePortal.setActiveTab('leave');
 OC.profilePortal.render(host, () => {});

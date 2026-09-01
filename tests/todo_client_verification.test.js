@@ -68,10 +68,10 @@ const sampleClient2 = { id: 'c-2', name: 'Acme Corp' };
 const sampleClient3 = { id: 'c-3', client_id: '0100', name: 'Apex Ltd' };
 const sampleClient4 = { id: 'c-4', client_code: 'XYZ', name: 'Zeta Corp' };
 
-assert.strictEqual(OC.ui.clientLabel(sampleClient1), '0583 - TFR - Tafor Niba');
+assert.strictEqual(OC.ui.clientLabel(sampleClient1), 'TFR');
 assert.strictEqual(OC.ui.clientLabel(sampleClient2), 'Acme Corp');
-assert.strictEqual(OC.ui.clientLabel(sampleClient3), '0100 - Apex Ltd');
-assert.strictEqual(OC.ui.clientLabel(sampleClient4), 'XYZ - Zeta Corp');
+assert.strictEqual(OC.ui.clientLabel(sampleClient3), 'Apex Ltd');
+assert.strictEqual(OC.ui.clientLabel(sampleClient4), 'XYZ');
 console.log('  ✓ clientLabel formats all combinations cleanly');
 
 // 2. Check clientChip
@@ -79,8 +79,8 @@ console.log('2. Testing clientChip');
 OC.store.state.clients = [sampleClient1, sampleClient2, sampleClient3];
 const chipNode = OC.ui.clientChip('c-1');
 assert.strictEqual(chipNode.className, 'chip client');
-assert.strictEqual(chipNode.children[0].text, '0583 - TFR - Tafor Niba');
-console.log('  ✓ clientChip displays "0583 - TFR - Tafor Niba"');
+assert.strictEqual(chipNode.children[0].text, 'TFR');
+console.log('  ✓ clientChip displays "TFR"');
 
 // 3. Verify Todo cards have NO reactions-bar and NO comment thread
 console.log('3. Testing Todo rendering (no comments, no reactions)');

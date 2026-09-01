@@ -277,22 +277,17 @@ OC.can = (function () {
      time and set the ordered hierarchy it uses (3.4, 4.1) */
   function manageDepartments(user) { return !!user && user.admin; }
 
-  /* System Admin may edit/delete any user; Department Head may edit/delete members in their own department(s) */
+  /* System Admin may edit any account; other persons can only see and edit their own account */
   function canEditAccount(actor, targetAccount) {
     if (!actor || !targetAccount) return false;
     if (actor.admin) return true;
-    if (targetAccount.admin) return false; // Head cannot edit System Admin
-    var headDepts = (actor.departments || []).filter(function (m) { return m.level === 'head' || rankOf(actor, m.department) === 0; }).map(function (m) { return m.department; });
-    if (!headDepts.length) return false;
-    return (targetAccount.departments || []).some(function (m) {
-      return headDepts.indexOf(m.department) > -1;
-    });
+    return actor.id === targetAccount.id;
   }
 
   function canDeleteAccount(actor, targetAccount) {
     if (!actor || !targetAccount) return false;
     if (actor.id === targetAccount.id) return false; // Cannot delete self
-    return canEditAccount(actor, targetAccount);
+    return Boolean(actor.admin);
   }
 
   /* System Admin, Department Head, todo creator, or assignee may edit a todo */

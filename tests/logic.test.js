@@ -166,10 +166,11 @@ ok('manageDepartment: member no', C.manageDepartment(u('u-tanvir'), 'd-outreach'
 ok('invite: head yes', C.invite(u('u-nadia')));
 ok('invite: member no', C.invite(u('u-tanvir')), false);
 ok('editAccount: admin can edit any member', C.editAccount(u('u-shohag'), u('u-rifat')));
-ok('editAccount: head can edit member in own dept', C.editAccount(u('u-nadia'), u('u-rifat')));
-ok('editAccount: head cannot edit system admin', C.editAccount(u('u-nadia'), u('u-shohag')), false);
+ok('editAccount: user can edit self', C.editAccount(u('u-rifat'), u('u-rifat')));
+ok('editAccount: non-admin cannot edit other person', C.editAccount(u('u-nadia'), u('u-rifat')), false);
 ok('editAccount: member cannot edit peer', C.editAccount(u('u-rifat'), u('u-mim')), false);
 ok('deleteAccount: admin can delete member', C.deleteAccount(u('u-shohag'), u('u-rifat')));
+ok('deleteAccount: non-admin cannot delete member', C.deleteAccount(u('u-nadia'), u('u-rifat')), false);
 ok('deleteAccount: cannot delete self', C.deleteAccount(u('u-shohag'), u('u-shohag')), false);
 ok('audit: admin only', [C.seeAudit(u('u-shohag')), C.seeAudit(u('u-nadia'))], [true, false]);
 ok('postInstruction is open to everyone', people.every(id => C.postInstruction(u(id))));

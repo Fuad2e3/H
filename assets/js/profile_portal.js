@@ -716,8 +716,22 @@ OC.profilePortal = (function () {
         });
       }
 
+      // Reset form inputs after successful submission
+      clInput.value = '0';
+      elInput.value = '0';
+      slInput.value = '0';
+      wpInput.value = '0';
+      reasonInput.value = '';
+
       OC.ui.toast('🎉 Leave application submitted & sent to ' + (mgrUser ? mgrUser.name : 'Manager') + ' for approval.');
       rerender();
+
+      setTimeout(function () {
+        var section = document.getElementById('my-submitted-leaves-section');
+        if (section && typeof section.scrollIntoView === 'function') {
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 60);
     }
 
     function approveLeave(app) {
@@ -957,7 +971,7 @@ OC.profilePortal = (function () {
       ]),
 
       /* Table: My Submitted Leave Applications */
-      h('div', { class: 'portal-table-container', style: 'margin-top:24px;' }, [
+      h('div', { id: 'my-submitted-leaves-section', class: 'portal-table-container', style: 'margin-top:24px;' }, [
         h('div', { class: 'portal-table-head' }, [
           h('h3', {}, 'My Submitted Leave Applications'),
           h('span', { class: 'chip count' }, myLeaves.length + ' applications')

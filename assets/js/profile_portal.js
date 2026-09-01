@@ -77,10 +77,14 @@ OC.profilePortal = (function () {
 
     var inputs = {};
     var formElements = fields.map(function (f) {
+      if (f.element) {
+        inputs[f.key] = f.element;
+        return OC.ui.field(f.label, f.element, { hint: f.hint, required: f.required });
+      }
       var val = targetObj[f.key] || '';
       var input = h('input', { type: f.type || 'text', value: val, placeholder: f.placeholder || '' });
       inputs[f.key] = input;
-      return OC.ui.field(f.label, input, { hint: f.hint });
+      return OC.ui.field(f.label, input, { hint: f.hint, required: f.required });
     });
 
     OC.ui.modal({
@@ -92,19 +96,35 @@ OC.profilePortal = (function () {
           label: 'Save Changes', primary: true, onClick: function (close) {
             var updated = {};
             fields.forEach(function (f) {
-              updated[f.key] = inputs[f.key].value.trim() || 'N/A';
+              var el = inputs[f.key];
+              var val = el ? (el.value !== undefined ? el.value.trim() : '') : '';
+              updated[f.key] = val || 'N/A';
             });
 
             OC.store.mutate({
-              actor: user.id,
+              actor: me().id,
               action: 'user.update_profile_section',
               target: user.name,
               detail: 'Updated ' + title
             }, function () {
               var targetUser = OC.store.user(user.id);
               if (sectionKey === 'office') {
-                if (targetUser) targetUser.office_details = updated;
+                if (targetUser) {
+                  targetUser.office_details = updated;
+                  if (updated.scheduled_in) targetUser.scheduled_in = updated.scheduled_in;
+                  if (updated.scheduled_out) targetUser.scheduled_out = updated.scheduled_out;
+                  if (updated.department !== undefined) {
+                    if (updated.department && updated.department !== 'N/A') {
+                      targetUser.departments = [{ department: updated.department, level: updated.level || 'member' }];
+                    } else if (me().admin) {
+                      targetUser.departments = [];
+                    }
+                  }
+                }
                 user.office_details = updated;
+                if (updated.scheduled_in) user.scheduled_in = updated.scheduled_in;
+                if (updated.scheduled_out) user.scheduled_out = updated.scheduled_out;
+                if (targetUser) user.departments = targetUser.departments;
               } else if (sectionKey === 'personal') {
                 if (targetUser) targetUser.personal_details = updated;
                 user.personal_details = updated;
@@ -197,6 +217,32 @@ OC.profilePortal = (function () {
     var loggedInUser = me();
     var isSysAdmin = Boolean(loggedInUser && loggedInUser.admin);
 
+    var currentDept = (user.departments && user.departments[0]) ? user.departments[0].department : '';
+    var currentLevel = (user.departments && user.departments[0]) ? user.departments[0].level : '';
+
+    var deptOptions = [{ value: '', label: 'None (Independent)' }].concat(
+      (OC.store.state.departments || []).map(function (d) { return { value: d.id, label: d.name }; })
+    );
+
+    var deptSelect = OC.ui.select(deptOptions, currentDept);
+    var levelSelect = OC.ui.select([], '');
+
+    function refreshLevels() {
+      var d = OC.store.department(deptSelect.value);
+      OC.ui.clear(levelSelect);
+      if (!d) {
+        levelSelect.appendChild(h('option', { value: '' }, 'N/A'));
+        return;
+      }
+      d.levels.forEach(function (lv) {
+        var opt = h('option', { value: lv }, lv);
+        if (lv === currentLevel) opt.selected = true;
+        levelSelect.appendChild(opt);
+      });
+    }
+    deptSelect.addEventListener('change', refreshLevels);
+    refreshLevels();
+
     var officeEditFields = [
       { key: 'office_phone', label: 'Office Phone', placeholder: 'e.g. 017xxxxxxxx' },
       { key: 'lastpass_email', label: 'Lastpass / Work Email', placeholder: 'work@example.com' },
@@ -205,6 +251,8 @@ OC.profilePortal = (function () {
 
     if (isSysAdmin) {
       officeEditFields.unshift(
+        { key: 'department', label: 'Department (System Admin Only)', element: deptSelect, hint: 'Assign departmental unit' },
+        { key: 'level', label: 'Department Level (System Admin Only)', element: levelSelect, hint: 'Assign departmental tier / role' },
         { key: 'scheduled_in', label: 'Scheduled In-Time (System Admin Only)', placeholder: 'e.g. 10:00 AM', hint: 'Employee standard arrival check-in time' },
         { key: 'scheduled_out', label: 'Scheduled Out-Time (System Admin Only)', placeholder: 'e.g. 06:30 PM', hint: 'Employee standard departure time' },
         { key: 'date_of_joining', label: 'Date of Joining (System Admin Only)', placeholder: 'e.g. 23-Jul-2026' },
@@ -213,7 +261,14 @@ OC.profilePortal = (function () {
       );
     }
 
+    var deptRowVal = (user.departments && user.departments.length)
+      ? user.departments.map(function (m) {
+          return (OC.store.department(m.department) || {}).name + ' · ' + m.level;
+        }).join(', ')
+      : (user.admin ? 'Leadership Tier · System Admin' : 'None (Independent)');
+
     var card1 = cardWrapper('file', 'OFFICE & IT CREDENTIALS', 'office', officeEditFields, [
+      infoRow('Department & Level:', deptRowVal),
       infoRow('Scheduled In-Time:', prof.office.scheduled_in || '10:00 AM'),
       infoRow('Scheduled Out-Time:', prof.office.scheduled_out || '06:30 PM'),
       infoRow('Date of Joining:', prof.office.date_of_joining),

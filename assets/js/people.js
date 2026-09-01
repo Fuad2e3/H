@@ -17,6 +17,10 @@ OC.people = (function () {
   function invite(onSuccess) {
     var h = OC.ui.h;
     var user = me();
+    if (!user || (!user.admin && !OC.can.headOfAny(user))) {
+      OC.ui.toast('Access Denied: Only System Admin and Department Heads may send invitations (6.1).', true);
+      return;
+    }
     var email = h('input', { type: 'email', placeholder: 'name@originate.example' });
 
     var levelOptions = [
@@ -291,6 +295,10 @@ OC.people = (function () {
 
   function resend(account) {
     var user = me();
+    if (!user || (!user.admin && !OC.can.headOfAny(user))) {
+      OC.ui.toast('Access Denied: Only System Admin and Department Heads can resend invitations.', true);
+      return;
+    }
     OC.store.mutate({ actor: user.id, action: 'user.invite.resend', target: account.name,
                       detail: 'new single use link and 72-hr password' }, function () {
       account.invite = OC.store.issueInvite(user.id);

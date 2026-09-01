@@ -19,9 +19,9 @@ OC.app = (function () {
 
   var ROUTES = [
     { id: 'dashboard', label: 'Dashboard', view: function () { return OC.dashboard; } },
-    { id: 'board', label: 'Board', view: function () { return OC.board; } },
-    { id: 'clients', label: 'Clients Portal', view: function () { return OC.clients; } },
-    { id: 'activities', label: 'Management', view: function () { return OC.activities || OC.groups || OC.people; } }
+    { id: 'board', label: 'Notice Board', view: function () { return OC.board; } },
+    { id: 'activities', label: 'Management', view: function () { return OC.activities || OC.groups || OC.people; } },
+    { id: 'clients', label: 'Clients Portal', view: function () { return OC.clients; } }
   ];
 
   /* ---- theme ------------------------------------------------------------ */

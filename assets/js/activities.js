@@ -122,8 +122,19 @@ OC.activities = (function () {
                         OC.people.editDepartment(d);
                       }
                     }
-                  }, 'Edit department')
-                ])
+                  }, 'Edit department'),
+                  (user && user.admin)
+                    ? h('button', {
+                        class: 'btn small primary', type: 'button',
+                        style: 'background:#2563eb;border-color:#2563eb;color:#fff;font-weight:600;',
+                        onClick: function () {
+                          if (OC.people && OC.people.addPersonToDepartment) {
+                            OC.people.addPersonToDepartment(d, function () { render(host, rerender); });
+                          }
+                        }
+                      }, [OC.icon('plus'), 'Add person'])
+                    : null
+                ].filter(Boolean))
               : null,
             h('div', { class: 'stack' }, members.length ? members.map(function (u) {
               return h('div', { class: 'row', style: 'font-size:13.5px;align-items:center;' }, [

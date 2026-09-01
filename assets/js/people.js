@@ -508,6 +508,79 @@ OC.people = (function () {
     });
   }
 
+  function addPersonToDepartment(dept, onAdded) {
+    var h = OC.ui.h;
+    var user = me();
+    if (!user || !user.admin) {
+      OC.ui.toast('Access Denied: Only System Admin may add members to departments.', true);
+      return;
+    }
+
+    var allUsers = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
+    if (!allUsers.length) allUsers = (OC.store.state.users || []).slice();
+
+    var userOptions = allUsers.map(function (u) {
+      var currentLevel = OC.can.levelIn(u, dept.id);
+      var currentLabel = currentLevel ? ' (Current: ' + currentLevel + ')' : '';
+      return { value: u.id, label: u.name + ' <' + u.email + '>' + currentLabel };
+    });
+
+    var userSelect = OC.ui.select(userOptions, userOptions[0] ? userOptions[0].value : '');
+
+    var levelOptions = (dept.levels || ['head', 'member']).map(function (lv, idx) {
+      return { value: lv, label: (idx + 1) + '. ' + lv.charAt(0).toUpperCase() + lv.slice(1) + (idx === 0 ? ' (Department Head)' : '') };
+    });
+
+    var defaultLevel = (dept.levels && dept.levels.length > 1) ? dept.levels[1] : (dept.levels[0] || 'member');
+    var levelSelect = OC.ui.select(levelOptions, defaultLevel);
+
+    OC.ui.modal({
+      title: 'Add Person to ' + dept.name,
+      content: h('div', {}, [
+        h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:14px;' },
+          'Select an employee and assign their authority level in ' + dept.name + '. Only System Admin can add members.'),
+        OC.ui.field('Select Employee / Person *', userSelect, { required: true }),
+        OC.ui.field('Assign Level in Department *', levelSelect, { required: true, hint: 'Rank 1 is Department Head; lower ranks are Members (3.4).' })
+      ]),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } },
+        {
+          label: 'Add to Department', primary: true, onClick: function (close) {
+            var selectedUserId = userSelect.value || (userOptions[0] ? userOptions[0].value : '');
+            var selectedLevel = levelSelect.value || defaultLevel;
+            var targetUser = OC.store.user(selectedUserId);
+            if (!targetUser) return 'Please select a valid user.';
+
+            OC.store.mutate({
+              actor: user.id,
+              action: 'department.member.assign',
+              target: targetUser.name,
+              detail: 'Assigned ' + targetUser.name + ' to ' + dept.name + ' as ' + selectedLevel
+            }, function () {
+              targetUser.departments = targetUser.departments || [];
+              var existingIdx = -1;
+              for (var i = 0; i < targetUser.departments.length; i++) {
+                if (targetUser.departments[i].department === dept.id) {
+                  existingIdx = i;
+                  break;
+                }
+              }
+              if (existingIdx > -1) {
+                targetUser.departments[existingIdx].level = selectedLevel;
+              } else {
+                targetUser.departments.push({ department: dept.id, level: selectedLevel });
+              }
+            });
+
+            OC.ui.toast('✅ Added ' + targetUser.name + ' to ' + dept.name + ' as ' + selectedLevel + '.');
+            close();
+            if (typeof onAdded === 'function') onAdded();
+          }
+        }
+      ]
+    });
+  }
+
   function editClient(client) {
     var h = OC.ui.h;
     var user = me();
@@ -779,8 +852,15 @@ OC.people = (function () {
           })),
           OC.can.manageDepartments(user)
             ? h('div', { class: 'row', style: 'margin-bottom:10px;gap:8px;' }, [
-                h('button', { class: 'btn small', type: 'button', onClick: function () { editDepartment(d); } }, 'Edit department')
-              ])
+                h('button', { class: 'btn small', type: 'button', onClick: function () { editDepartment(d); } }, 'Edit department'),
+                (user && user.admin)
+                  ? h('button', {
+                      class: 'btn small primary', type: 'button',
+                      style: 'background:#2563eb;border-color:#2563eb;color:#fff;font-weight:600;',
+                      onClick: function () { addPersonToDepartment(d, function () { render(host); }); }
+                    }, [OC.icon('plus'), 'Add person'])
+                  : null
+              ].filter(Boolean))
             : null,
           h('div', { class: 'stack' }, members.length ? members.map(function (u) {
             return h('div', { class: 'row', style: 'font-size:13.5px;align-items:center;' }, [
@@ -861,6 +941,7 @@ OC.people = (function () {
     newDepartment: newDepartment,
     editPrefs: editPrefs,
     editDepartment: editDepartment,
+    addPersonToDepartment: addPersonToDepartment,
     editClient: editClient,
     editAccount: editAccount,
     getApiEndpoint: getApiEndpoint,

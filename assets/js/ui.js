@@ -1361,8 +1361,66 @@ OC.ui = (function () {
     };
   }
 
+  /* ---- loud notification sound synthesizer (Web Audio API) -------------- */
+  function playNotificationSound(type) {
+    try {
+      if (typeof window === 'undefined') return;
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      var ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      var now = ctx.currentTime;
+      var isAlert = (type === 'alert' || type === 'warn' || type === 'danger');
+
+      // Create dual-tone harmonics for a crisp, punchy loud chime
+      var osc1 = ctx.createOscillator();
+      var osc2 = ctx.createOscillator();
+      var gain = ctx.createGain();
+
+      // Peak volume at 0.90 for high audibility
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.90, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + (isAlert ? 0.65 : 0.55));
+
+      if (isAlert) {
+        osc1.type = 'triangle';
+        osc2.type = 'sine';
+        osc1.frequency.setValueAtTime(880, now);
+        osc1.frequency.exponentialRampToValueAtTime(587.33, now + 0.35);
+        osc2.frequency.setValueAtTime(659.25, now);
+        osc2.frequency.exponentialRampToValueAtTime(440, now + 0.35);
+      } else {
+        // Multi-frequency chime sequence (D5 -> A5 -> D6)
+        osc1.type = 'sine';
+        osc2.type = 'triangle';
+        osc1.frequency.setValueAtTime(587.33, now); // D5
+        osc1.frequency.setValueAtTime(880, now + 0.12); // A5
+        osc1.frequency.setValueAtTime(1174.66, now + 0.24); // D6
+
+        osc2.frequency.setValueAtTime(293.66, now); // D4
+        osc2.frequency.setValueAtTime(440, now + 0.12);
+        osc2.frequency.setValueAtTime(587.33, now + 0.24);
+      }
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + (isAlert ? 0.65 : 0.55));
+      osc2.stop(now + (isAlert ? 0.65 : 0.55));
+    } catch (e) {
+      // Ignore initial browser interaction restrictions
+    }
+  }
+
   /* ---- toasts ----------------------------------------------------------- */
   function toast(message, warn) {
+    playNotificationSound(warn ? 'warn' : 'chime');
     var host = document.querySelector('.toasts');
     if (!host) {
       host = h('div', { class: 'toasts' });
@@ -1384,6 +1442,7 @@ OC.ui = (function () {
     field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
     assigneePicker: assigneePicker, deptPicker: deptPicker,
     tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
-    modal: modal, confirm: confirm, toast: toast, debounce: debounce
+    modal: modal, confirm: confirm, toast: toast, debounce: debounce,
+    playNotificationSound: playNotificationSound
   };
 })();

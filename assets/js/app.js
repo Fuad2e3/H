@@ -58,15 +58,21 @@ OC.app = (function () {
   }
 
   function raisePush() {
-    if (!pushSupported() || Notification.permission !== 'granted') return;
     var user = OC.store.user(OC.store.session());
-    if (!user || !user.prefs.push) return;
     var mine = myNotifications();
     if (!mine.length) return;
     var newest = mine[0];
     if (lastSeenNotification === null) { lastSeenNotification = newest.id; return; }
     if (newest.id === lastSeenNotification || newest.read) return;
     lastSeenNotification = newest.id;
+
+    // Play loud notification sound chime
+    if (OC.ui && OC.ui.playNotificationSound) {
+      OC.ui.playNotificationSound();
+    }
+
+    if (!pushSupported() || Notification.permission !== 'granted') return;
+    if (!user || !user.prefs.push) return;
     try {
       new Notification('Originate Command', { body: newest.text, tag: newest.id });
     } catch (e) { }

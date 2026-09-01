@@ -24,13 +24,15 @@ OC.profilePortal = (function () {
   /* ---- Defaults generator for user profile sections ---------------------- */
   function getUserProfile(user) {
     if (!user) return {};
-    var empId = user.employee_id || (user.id ? user.id.replace('u-', 'EMP-').toUpperCase() : 'EMP-1188');
+    var empId = user.employee_id || 'N/A';
     var org = user.org || 'N/A';
     var joined = user.joined_date || 'N/A';
 
     var off = user.office_details || {
       date_of_joining: joined,
       probation_end_date: 'N/A',
+      scheduled_in: user.scheduled_in || '10:00 AM',
+      scheduled_out: user.scheduled_out || '06:30 PM',
       office_phone: 'N/A',
       lastpass_email: 'N/A',
       workstation_pw: 'N/A',
@@ -192,14 +194,28 @@ OC.profilePortal = (function () {
     }
 
     /* 4 Card sections matching Photo 3 */
-    var card1 = cardWrapper('file', 'OFFICE & IT CREDENTIALS', 'office', [
-      { key: 'date_of_joining', label: 'Date of Joining', placeholder: 'e.g. 23-Jul-2026' },
-      { key: 'probation_end_date', label: 'Probation End Date', placeholder: 'e.g. 31-Aug-2026' },
+    var loggedInUser = me();
+    var isSysAdmin = Boolean(loggedInUser && loggedInUser.admin);
+
+    var officeEditFields = [
       { key: 'office_phone', label: 'Office Phone', placeholder: 'e.g. 017xxxxxxxx' },
       { key: 'lastpass_email', label: 'Lastpass / Work Email', placeholder: 'work@example.com' },
-      { key: 'workstation_pw', label: 'PC Password / Account', placeholder: 'Workstation credentials' },
-      { key: 'salary_venture', label: 'Salary Venture / Org', placeholder: 'e.g. MUNSHE IT' }
-    ], [
+      { key: 'workstation_pw', label: 'PC Password / Account', placeholder: 'Workstation credentials' }
+    ];
+
+    if (isSysAdmin) {
+      officeEditFields.unshift(
+        { key: 'scheduled_in', label: 'Scheduled In-Time (System Admin Only)', placeholder: 'e.g. 10:00 AM', hint: 'Employee standard arrival check-in time' },
+        { key: 'scheduled_out', label: 'Scheduled Out-Time (System Admin Only)', placeholder: 'e.g. 06:30 PM', hint: 'Employee standard departure time' },
+        { key: 'date_of_joining', label: 'Date of Joining (System Admin Only)', placeholder: 'e.g. 23-Jul-2026' },
+        { key: 'probation_end_date', label: 'Probation End Date (System Admin Only)', placeholder: 'e.g. 31-Aug-2026' },
+        { key: 'salary_venture', label: 'Salary Venture / Org (System Admin Only)', placeholder: 'e.g. MUNSHE IT' }
+      );
+    }
+
+    var card1 = cardWrapper('file', 'OFFICE & IT CREDENTIALS', 'office', officeEditFields, [
+      infoRow('Scheduled In-Time:', prof.office.scheduled_in || '10:00 AM'),
+      infoRow('Scheduled Out-Time:', prof.office.scheduled_out || '06:30 PM'),
       infoRow('Date of Joining:', prof.office.date_of_joining),
       infoRow('Probation End Date:', prof.office.probation_end_date),
       infoRow('Office Phone:', prof.office.office_phone),
@@ -287,6 +303,11 @@ OC.profilePortal = (function () {
     var todayStr = new Date().toISOString().slice(0, 10);
     var todayLog = myLogs.find(function (a) { return a.date === todayStr; });
 
+    var loggedInUser = me();
+    var isSysAdmin = Boolean(loggedInUser && loggedInUser.admin);
+    var schedIn = (user.office_details && user.office_details.scheduled_in) || user.scheduled_in || '10:00 AM';
+    var schedOut = (user.office_details && user.office_details.scheduled_out) || user.scheduled_out || '06:30 PM';
+
     // Calculate stats for the currently selected month
     var currentMonthLogs = myLogs.filter(function (a) { return a.date && a.date.indexOf(selectedMonth) === 0; });
     var daysLogged = currentMonthLogs.length;
@@ -295,6 +316,58 @@ OC.profilePortal = (function () {
 
     var monthTitle = formatMonthName(selectedMonth);
     var currentMonthStr = todayStr.slice(0, 7);
+
+    function openAdminScheduleModal() {
+      var inInput = h('input', { type: 'text', value: schedIn, placeholder: 'e.g. 10:00 AM', style: 'font-weight:700;' });
+      var outInput = h('input', { type: 'text', value: schedOut, placeholder: 'e.g. 06:30 PM', style: 'font-weight:700;' });
+
+      OC.ui.modal({
+        title: '⚙️ Set Scheduled In/Out Times (System Admin Only)',
+        content: h('div', { class: 'form-body', style: 'display:flex;flex-direction:column;gap:12px;' }, [
+          h('div', { class: 'callout info', style: 'font-size:12.5px;padding:10px 14px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);border-radius:6px;' },
+            'System Admin Policy: Configure expected work hours and late thresholds for ' + user.name + '.'
+          ),
+          OC.ui.field('Scheduled In-Time *', inInput, { hint: 'Standard expected arrival time (e.g. 10:00 AM)' }),
+          OC.ui.field('Scheduled Out-Time *', outInput, { hint: 'Standard expected departure time (e.g. 06:30 PM)' })
+        ]),
+        actions: [
+          { label: 'Cancel', onClick: function (close) { close(); } },
+          {
+            label: 'Save Schedule Settings',
+            primary: true,
+            onClick: function (close) {
+              var newIn = inInput.value.trim() || '10:00 AM';
+              var newOut = outInput.value.trim() || '06:30 PM';
+
+              OC.store.mutate({
+                actor: loggedInUser.id,
+                action: 'user.update_schedule',
+                target: user.name,
+                detail: 'Set scheduled hours: ' + newIn + ' - ' + newOut
+              }, function () {
+                var targetUser = OC.store.user(user.id);
+                if (targetUser) {
+                  targetUser.scheduled_in = newIn;
+                  targetUser.scheduled_out = newOut;
+                  if (!targetUser.office_details) targetUser.office_details = {};
+                  targetUser.office_details.scheduled_in = newIn;
+                  targetUser.office_details.scheduled_out = newOut;
+                }
+                user.scheduled_in = newIn;
+                user.scheduled_out = newOut;
+                if (!user.office_details) user.office_details = {};
+                user.office_details.scheduled_in = newIn;
+                user.office_details.scheduled_out = newOut;
+              });
+
+              OC.ui.toast('Scheduled In/Out times updated successfully! ✅');
+              rerender();
+              close();
+            }
+          }
+        ]
+      });
+    }
 
     function handlePunch() {
       if (todayLog && todayLog.punch_in && todayLog.punch_out) {
@@ -318,7 +391,7 @@ OC.profilePortal = (function () {
             id: OC.store.uid('att'),
             user_id: user.id,
             date: todayStr,
-            scheduled_in: '10:00 AM',
+            scheduled_in: schedIn,
             punch_in: nowTime,
             punch_out: null,
             status: isLate ? 'Late' : 'Present',
@@ -388,10 +461,17 @@ OC.profilePortal = (function () {
         h('div', {}, [
           h('h2', { class: 'portal-view-title' }, [OC.icon('clock') || '🕒', ' My Attendance Record']),
           h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-            'Punch machine & self-checkin logs for ' + user.name + ' (' + (user.employee_id || 'EMP-1188') + '). Standard Scheduled In-Time: 10:00 AM.'
+            'Punch machine & checkin logs for ' + user.name + (user.employee_id ? ' (' + user.employee_id + ')' : '') + '. Standard Scheduled In-Time: ' + schedIn + '.'
           )
         ]),
-        h('div', { class: 'row', style: 'gap:10px;align-items:center;' }, [
+        h('div', { class: 'row', style: 'gap:10px;align-items:center;flex-wrap:wrap;' }, [
+          isSysAdmin ? h('button', {
+            class: 'btn small secondary',
+            type: 'button',
+            style: 'font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;',
+            title: 'System Admin: Set standard scheduled in/out work hours',
+            onClick: openAdminScheduleModal
+          }, ['⚙️ Set In/Out Time (Admin)']) : null,
           h('button', {
             class: 'btn primary',
             type: 'button',
@@ -399,7 +479,7 @@ OC.profilePortal = (function () {
             style: 'font-weight:700;padding:10px 22px;' + (isComplete ? 'opacity:0.6;cursor:not-allowed;' : ''),
             onClick: handlePunch
           }, [punchBtnLabel])
-        ])
+        ].filter(Boolean))
       ]),
 
       /* 3 Metric Stat Cards matching Photo 4 */
@@ -923,7 +1003,7 @@ OC.profilePortal = (function () {
       h('div', { style: 'display:flex;align-items:center;gap:10px;' }, [
         h('span', { style: 'font-size:18px;' }, '👤'),
         h('div', {}, [
-          h('div', { style: 'font-weight:700;font-size:14px;color:var(--cyan, #38bdf8);' }, 'Managing Employee Portal: ' + user.name + ' (' + (user.employee_id || 'EMP-1188') + ')'),
+          h('div', { style: 'font-weight:700;font-size:14px;color:var(--cyan, #38bdf8);' }, 'Managing Employee Portal: ' + user.name + (user.employee_id ? ' (' + user.employee_id + ')' : '')),
           h('div', { class: 'muted', style: 'font-size:12px;' }, 'Viewing and managing details as Administrator / Team Lead.')
         ])
       ]),

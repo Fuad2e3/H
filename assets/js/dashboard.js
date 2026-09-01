@@ -172,9 +172,9 @@ OC.dashboard = (function () {
     });
     var clients = Object.keys(clientIds).map(OC.store.client).filter(Boolean);
 
-    var empId = user.employee_id || (user.id ? user.id.replace('u-', 'EMP-').toUpperCase() : 'EMP-1188');
-    var orgName = user.org || 'MUNSHE IT';
-    var joinedDate = user.joined_date || '23-Jul-2026';
+    var empId = user.employee_id || 'N/A';
+    var orgName = user.org || 'N/A';
+    var joinedDate = user.joined_date || 'N/A';
     var deptNames = (user.departments && user.departments.length)
       ? user.departments.map(function (m) { return (OC.store.department(m.department) || {}).name; }).join(', ')
       : '';

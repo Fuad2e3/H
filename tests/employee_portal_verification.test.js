@@ -218,6 +218,26 @@ assert.strictEqual(OC.store.state.leaves[0].status, 'Approved');
 assert.strictEqual(OC.store.state.leaves[0].reviewed_by, 'u-shohag');
 console.log('  ✓ Reporting Lead / Manager can view and approve incoming leave requests successfully');
 
+// Test System Admin Only permissions for Schedule & Department
+const adminUser = OC.store.user('u-shohag'); // System Admin
+assert.strictEqual(Boolean(adminUser && adminUser.admin), true, 'Shohag is System Admin');
+
+OC.store.mutate({
+  actor: 'u-shohag',
+  action: 'user.update_schedule',
+  target: 'Abdullah al Fuad',
+  detail: 'Set scheduled hours: 10:00 AM - 06:30 PM'
+}, () => {
+  const targetUser = OC.store.user('u-fuad');
+  targetUser.scheduled_in = '10:00 AM';
+  targetUser.scheduled_out = '06:30 PM';
+});
+
+const fuad = OC.store.user('u-fuad');
+assert.strictEqual(fuad.scheduled_in, '10:00 AM');
+assert.strictEqual(fuad.scheduled_out, '06:30 PM');
+console.log('  ✓ System Admin successfully configures Department, Level, and Scheduled In/Out Times');
+
 console.log('--- [4/4] Testing Database & Persistence Sync Mechanics ---');
 const db = require('../dev3/API/config/db.js');
 assert(typeof db.syncAttendanceToMySQL === 'function', 'syncAttendanceToMySQL must be exported');

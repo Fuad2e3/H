@@ -553,15 +553,15 @@ OC.app = (function () {
     var user = customUser || OC.store.user(OC.store.session());
     if (!user) return;
 
-    var empIdDefault = user.employee_id || (user.id ? user.id.replace('u-', 'EMP-').toUpperCase() : 'EMP-1188');
-    var orgDefault = user.org || 'MUNSHE IT';
-    var joinedDefault = user.joined_date || '23-Jul-2026';
+    var empIdDefault = user.employee_id || '';
+    var orgDefault = user.org || '';
+    var joinedDefault = user.joined_date || '';
 
     var nameInput = h('input', { type: 'text', value: user.name });
-    var empIdInput = h('input', { type: 'text', value: empIdDefault, placeholder: 'EMP-1188' });
+    var empIdInput = h('input', { type: 'text', value: empIdDefault, placeholder: 'e.g. EMP-101' });
     var titleInput = h('input', { type: 'text', value: user.title || '', placeholder: 'e.g. Intern, Full Stack Developer, System Admin' });
-    var orgInput = h('input', { type: 'text', value: orgDefault, placeholder: 'MUNSHE IT' });
-    var joinedInput = h('input', { type: 'text', value: joinedDefault, placeholder: '23-Jul-2026' });
+    var orgInput = h('input', { type: 'text', value: orgDefault, placeholder: 'e.g. MUNSHE IT' });
+    var joinedInput = h('input', { type: 'text', value: joinedDefault, placeholder: 'e.g. DD-Mon-YYYY' });
     var uploader = OC.ui.photoUploader(user.avatar, user.name);
 
     OC.ui.modal({
@@ -569,10 +569,10 @@ OC.app = (function () {
       content: h('div', {}, [
         OC.ui.field('Profile photo', uploader.node, { hint: 'Upload a custom photo from your device or paste an image URL.' }),
         OC.ui.field('Full name', nameInput, { required: true }),
-        OC.ui.field('Employee ID / Badge code', empIdInput, { hint: 'Badge shown on your profile card (e.g. EMP-1188).' }),
+        OC.ui.field('Employee ID / Badge code', empIdInput, { hint: 'Badge shown on your profile card (e.g. EMP-101).' }),
         OC.ui.field('Position / Job title', titleInput, { hint: 'Displayed on your profile header & across the workspace.' }),
-        OC.ui.field('Organization / Company', orgInput, { hint: 'Organization shown in join details (e.g. MUNSHE IT).' }),
-        OC.ui.field('Joined date', joinedInput, { hint: 'e.g. 23-Jul-2026' }),
+        OC.ui.field('Organization / Company', orgInput, { hint: 'Organization shown in join details.' }),
+        OC.ui.field('Joined date', joinedInput, { hint: 'e.g. DD-Mon-YYYY' }),
         OC.ui.field('Email address', h('input', { type: 'email', value: user.email, disabled: true }), { hint: 'Assigned login email.' })
       ]),
       actions: [

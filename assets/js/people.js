@@ -660,13 +660,17 @@ OC.people = (function () {
       OC.ui.field('Profile photo', uploader.node, { hint: 'Custom profile picture or photo URL.' }),
       OC.ui.field('Full name', name, { required: true }),
       OC.ui.field('Email address', email, { required: true }),
-      OC.ui.field('Job title', title),
-      OC.ui.field('Department', deptSelect),
-      OC.ui.field('Department level', levelSelect),
-      OC.ui.field('Status', statusSelect)
+      OC.ui.field('Job title', title)
     ];
 
-    if (user.admin && account.id !== user.id) {
+    if (user && user.admin) {
+      fields.push(OC.ui.field('Department (System Admin Only)', deptSelect));
+      fields.push(OC.ui.field('Department level (System Admin Only)', levelSelect));
+    }
+
+    fields.push(OC.ui.field('Status', statusSelect));
+
+    if (user && user.admin && account.id !== user.id) {
       fields.push(h('label', { class: 'checkline', style: 'margin-top:12px;' }, [isAdmin, ' Grant System Admin superuser access']));
     }
 

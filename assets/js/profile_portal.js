@@ -22,39 +22,39 @@ OC.profilePortal = (function () {
   function getUserProfile(user) {
     if (!user) return {};
     var empId = user.employee_id || (user.id ? user.id.replace('u-', 'EMP-').toUpperCase() : 'EMP-1188');
-    var org = user.org || 'MUNSHE IT';
-    var joined = user.joined_date || '23-Jul-2026';
+    var org = user.org || 'N/A';
+    var joined = user.joined_date || 'N/A';
 
     var off = user.office_details || {
       date_of_joining: joined,
-      probation_end_date: '31-Aug-2026',
+      probation_end_date: 'N/A',
       office_phone: 'N/A',
-      lastpass_email: user.email || 'N/A',
-      workstation_pw: 'Upwork',
+      lastpass_email: 'N/A',
+      workstation_pw: 'N/A',
       salary_venture: org
     };
 
     var per = user.personal_details || {
-      dob: '18-Dec-2002',
-      blood_group: 'O+',
-      personal_phone: '01902780443',
-      personal_email: user.email || 'fuadkalaroa2002@gmail.com',
-      nid: '2863159758',
-      marital_status: 'Single'
+      dob: 'N/A',
+      blood_group: 'N/A',
+      personal_phone: 'N/A',
+      personal_email: 'N/A',
+      nid: 'N/A',
+      marital_status: 'N/A'
     };
 
     var emg = user.emergency_contacts || {
-      primary_name: 'Md. Jahidur Rahman (Father)',
-      primary_phone: '01740864762',
-      fathers_name: 'Md. Jahidur Rahman',
-      mothers_name: 'Mst. Mosewara Khatun'
+      primary_name: 'N/A',
+      primary_phone: 'N/A',
+      fathers_name: 'N/A',
+      mothers_name: 'N/A'
     };
 
     var bnk = user.bank_details || {
-      bank_name: 'NRBC Bank',
-      account_name: user.name || 'Md. Abdullah Al Fuad',
+      bank_name: 'N/A',
+      account_name: 'N/A',
       account_number: 'N/A',
-      highest_degree: 'BSc (CSE)'
+      highest_degree: 'N/A'
     };
 
     return { empId: empId, org: org, joined: joined, office: off, personal: per, emergency: emg, bank: bnk };
@@ -190,12 +190,12 @@ OC.profilePortal = (function () {
 
     /* 4 Card sections matching Photo 3 */
     var card1 = cardWrapper('file', 'OFFICE & IT CREDENTIALS', 'office', [
-      { key: 'date_of_joining', label: 'Date of Joining', placeholder: '23-Jul-2026' },
-      { key: 'probation_end_date', label: 'Probation End Date', placeholder: '31-Aug-2026' },
-      { key: 'office_phone', label: 'Office Phone' },
-      { key: 'lastpass_email', label: 'Lastpass / Work Email' },
-      { key: 'workstation_pw', label: 'PC Password / Account' },
-      { key: 'salary_venture', label: 'Salary Venture / Org', placeholder: 'MUNSHE IT' }
+      { key: 'date_of_joining', label: 'Date of Joining', placeholder: 'e.g. 23-Jul-2026' },
+      { key: 'probation_end_date', label: 'Probation End Date', placeholder: 'e.g. 31-Aug-2026' },
+      { key: 'office_phone', label: 'Office Phone', placeholder: 'e.g. 017xxxxxxxx' },
+      { key: 'lastpass_email', label: 'Lastpass / Work Email', placeholder: 'work@example.com' },
+      { key: 'workstation_pw', label: 'PC Password / Account', placeholder: 'Workstation credentials' },
+      { key: 'salary_venture', label: 'Salary Venture / Org', placeholder: 'e.g. MUNSHE IT' }
     ], [
       infoRow('Date of Joining:', prof.office.date_of_joining),
       infoRow('Probation End Date:', prof.office.probation_end_date),
@@ -206,12 +206,12 @@ OC.profilePortal = (function () {
     ]);
 
     var card2 = cardWrapper('user', 'PERSONAL DETAILS', 'personal', [
-      { key: 'dob', label: 'Date of Birth', placeholder: '18-Dec-2002' },
-      { key: 'blood_group', label: 'Blood Group', placeholder: 'O+' },
-      { key: 'personal_phone', label: 'Personal Phone', placeholder: '01902780443' },
-      { key: 'personal_email', label: 'Personal Email' },
-      { key: 'nid', label: 'NID Number', placeholder: '2863159758' },
-      { key: 'marital_status', label: 'Marital Status', placeholder: 'Single' }
+      { key: 'dob', label: 'Date of Birth', placeholder: 'DD-Mon-YYYY' },
+      { key: 'blood_group', label: 'Blood Group', placeholder: 'e.g. O+, A+' },
+      { key: 'personal_phone', label: 'Personal Phone', placeholder: '01xxxxxxxxx' },
+      { key: 'personal_email', label: 'Personal Email', placeholder: 'user@example.com' },
+      { key: 'nid', label: 'NID Number', placeholder: 'National ID number' },
+      { key: 'marital_status', label: 'Marital Status', placeholder: 'Single / Married' }
     ], [
       infoRow('Date of Birth:', prof.personal.dob),
       infoRow('Blood Group:', prof.personal.blood_group),
@@ -222,25 +222,25 @@ OC.profilePortal = (function () {
     ]);
 
     var card3 = cardWrapper('bell', 'EMERGENCY CONTACTS', 'emergency', [
-      { key: 'primary_name', label: 'Primary Contact & Relation', placeholder: 'Md. Jahidur Rahman (Father)' },
-      { key: 'primary_phone', label: 'Primary Phone', placeholder: '01740864762' },
-      { key: 'fathers_name', label: "Father's Name", placeholder: 'Md. Jahidur Rahman' },
-      { key: 'mothers_name', label: "Mother's Name", placeholder: 'Mst. Mosewara Khatun' }
+      { key: 'primary_name', label: 'Primary Contact & Relation', placeholder: 'e.g. Name (Relation)' },
+      { key: 'primary_phone', label: 'Primary Phone', placeholder: '01xxxxxxxxx' },
+      { key: 'fathers_name', label: "Father's Name", placeholder: "Father's Name" },
+      { key: 'mothers_name', label: "Mother's Name", placeholder: "Mother's Name" }
     ], [
       h('div', { class: 'portal-emergency-highlight' }, [
         h('div', { class: 'portal-emergency-tag' }, 'PRIMARY EMERGENCY CONTACT'),
-        h('div', { class: 'portal-emergency-name' }, prof.emergency.primary_name || 'Md. Jahidur Rahman (Father)'),
-        h('div', { class: 'portal-emergency-phone' }, prof.emergency.primary_phone || '01740864762')
+        h('div', { class: 'portal-emergency-name' }, prof.emergency.primary_name && prof.emergency.primary_name !== 'N/A' ? prof.emergency.primary_name : 'Not configured yet (Click Edit to configure)'),
+        h('div', { class: 'portal-emergency-phone' }, prof.emergency.primary_phone && prof.emergency.primary_phone !== 'N/A' ? prof.emergency.primary_phone : 'Phone: N/A')
       ]),
       infoRow("Father's Name:", prof.emergency.fathers_name),
       infoRow("Mother's Name:", prof.emergency.mothers_name)
     ]);
 
     var card4 = cardWrapper('credit-card', 'BANK & COMPENSATION DETAILS', 'bank', [
-      { key: 'bank_name', label: 'Bank / MFS Name', placeholder: 'NRBC Bank / bKash' },
-      { key: 'account_name', label: 'Account Name' },
-      { key: 'account_number', label: 'Account / Wallet Number' },
-      { key: 'highest_degree', label: 'Highest Degree', placeholder: 'BSc (CSE)' }
+      { key: 'bank_name', label: 'Bank / MFS Name', placeholder: 'e.g. NRBC Bank / bKash / Nagad' },
+      { key: 'account_name', label: 'Account Name', placeholder: 'Account Holder Name' },
+      { key: 'account_number', label: 'Account / Wallet Number', placeholder: 'Account / Wallet number' },
+      { key: 'highest_degree', label: 'Highest Degree', placeholder: 'e.g. BSc / HSC' }
     ], [
       infoRow('Bank Name:', prof.bank.bank_name),
       infoRow('Account Name:', prof.bank.account_name),

@@ -42,6 +42,7 @@ const jsFiles = [
   'assets/js/groups.js',
   'assets/js/people.js',
   'assets/js/permissions.js',
+  'assets/js/profile_portal.js',
   'assets/js/reports.js',
   'assets/js/store.js',
   'assets/js/ui.js',

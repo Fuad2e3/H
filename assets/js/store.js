@@ -117,6 +117,8 @@ OC.store = (function () {
       todos: todos,
       instructions: instructions,
       notifications: [],
+      attendance: [],
+      leaves: [],
       audit: [
         {
           id: 'a-1',
@@ -330,6 +332,10 @@ OC.store = (function () {
           dedupedAudit.push(currA);
         }
         state.audit = dedupedAudit;
+      }
+      if (state) {
+        if (!Array.isArray(state.attendance)) { state.attendance = []; modified = true; }
+        if (!Array.isArray(state.leaves)) { state.leaves = []; modified = true; }
       }
       if (modified) write();
     }

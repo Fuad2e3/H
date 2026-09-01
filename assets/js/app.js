@@ -700,6 +700,7 @@ OC.app = (function () {
   }
 
   function currentView() {
+    if (route === 'profile' || route === 'employee-portal') return OC.profilePortal || OC.dashboard;
     if (route === 'groups' || route === 'people' || route === 'reports') return (OC.activities || OC.groups || OC.people);
     for (var i = 0; i < ROUTES.length; i++) if (ROUTES[i].id === route) return ROUTES[i].view();
     return OC.dashboard;
@@ -752,6 +753,8 @@ OC.app = (function () {
         checkClaimToken();
       } else if (hash === 'groups' || hash === 'people' || hash === 'reports') {
         route = 'activities';
+      } else if (hash === 'profile' || hash === 'employee-portal') {
+        route = 'profile';
       } else if (hash && ROUTES.some(function (r) { return r.id === hash; })) {
         route = hash;
       }
@@ -762,6 +765,8 @@ OC.app = (function () {
           checkClaimToken();
         } else if ((id === 'groups' || id === 'people' || id === 'reports') && route !== 'activities') {
           go('activities');
+        } else if ((id === 'profile' || id === 'employee-portal') && route !== 'profile') {
+          go('profile');
         } else if (id && ROUTES.some(function (r) { return r.id === id; }) && id !== route) {
           go(id);
         }

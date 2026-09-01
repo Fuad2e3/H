@@ -192,12 +192,12 @@ OC.dashboard = (function () {
       class: 'user-profile-banner',
       role: 'button',
       tabIndex: 0,
-      title: 'Click to edit your profile, employee ID, photo, and details',
+      title: 'Click to open Employee Portal, Attendance, Leave Management & Profile Details',
       onClick: function () {
-        if (OC.app && OC.app.openProfileModal) {
+        if (OC.app && OC.app.go) {
+          OC.app.go('profile');
+        } else if (OC.app && OC.app.openProfileModal) {
           OC.app.openProfileModal(user, rerender);
-        } else if (OC.people && OC.people.editAccount) {
-          OC.people.editAccount(user);
         }
       }
     }, [

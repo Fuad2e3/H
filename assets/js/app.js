@@ -653,9 +653,7 @@ OC.app = (function () {
       ]),
       h('div', {
         class: 'who push',
-        style: 'display:flex;align-items:center;gap:10px;cursor:pointer;',
-        title: 'Click to edit profile & photo',
-        onClick: openProfileModal
+        style: 'display:flex;align-items:center;gap:10px;'
       }, [
         user.avatar
           ? h('span', { class: 'mark-tint mark-avatar', style: 'width:28px;height:28px;overflow:hidden;border-radius:6px;display:inline-block;' }, [

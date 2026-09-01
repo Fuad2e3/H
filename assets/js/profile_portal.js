@@ -635,8 +635,8 @@ OC.profilePortal = (function () {
     var totalRem = remCL + remEL + remSL;
 
     // Form inputs
-    var fromInput = h('input', { type: 'date', value: new Date().toISOString().slice(0, 10) });
-    var toInput = h('input', { type: 'date', value: new Date().toISOString().slice(0, 10) });
+    var fromInput = h('input', { type: 'date', value: getLocalDateStr() });
+    var toInput = h('input', { type: 'date', value: getLocalDateStr() });
     var managerSelect = OC.ui.select(
       OC.store.state.users.filter(function (u) { return u.admin || (u.id !== user.id); }).map(function (u) {
         return { value: u.id, label: u.name + ' (' + (u.title || 'Lead') + ')' };
@@ -799,7 +799,7 @@ OC.profilePortal = (function () {
 
     /* Check for incoming leave requests where current user is the Manager or Admin */
     var incomingLeaves = allLeaves.filter(function (a) {
-      return a.manager_id === user.id || user.role === 'admin';
+      return a.manager_id === user.id || Boolean(user.admin) || Boolean(loggedInUser && loggedInUser.admin);
     });
     var pendingIncoming = incomingLeaves.filter(function (a) { return a.status === 'Pending'; });
 
@@ -817,17 +817,17 @@ OC.profilePortal = (function () {
       h('div', { class: 'portal-stats-row' }, [
         h('div', { class: 'portal-stat-card' }, [
           h('div', { class: 'portal-stat-label' }, 'Casual Leave (CL)'),
-          h('div', { class: 'portal-stat-value success' }, usedCL + ' / ' + totalCL + ' Left'),
+          h('div', { class: 'portal-stat-value success' }, remCL + ' / ' + totalCL + ' Left'),
           h('div', { class: 'portal-stat-sub' }, 'Used: ' + usedCL + ' Days')
         ]),
         h('div', { class: 'portal-stat-card' }, [
           h('div', { class: 'portal-stat-label' }, 'Earned Leave (EL)'),
-          h('div', { class: 'portal-stat-value info' }, usedEL + ' / ' + totalEL + ' Left'),
+          h('div', { class: 'portal-stat-value info' }, remEL + ' / ' + totalEL + ' Left'),
           h('div', { class: 'portal-stat-sub' }, 'Used: ' + usedEL + ' Days')
         ]),
         h('div', { class: 'portal-stat-card' }, [
           h('div', { class: 'portal-stat-label' }, 'Sick Leave (SL)'),
-          h('div', { class: 'portal-stat-value warn' }, usedSL + ' / ' + totalSL + ' Left'),
+          h('div', { class: 'portal-stat-value warn' }, remSL + ' / ' + totalSL + ' Left'),
           h('div', { class: 'portal-stat-sub' }, 'Used: ' + usedSL + ' Days')
         ]),
         h('div', { class: 'portal-stat-card' }, [

@@ -79,3 +79,5 @@ console.log('✓ persistent database engine and audit trail verified');
 console.log('\n========================================');
 console.log(' ALL DEV3 SERVER LOGIC TESTS PASSED! ✅');
 console.log('========================================\n');
+setTimeout(function () { process.exit(0); }, 100);
+

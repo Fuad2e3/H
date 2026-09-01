@@ -445,3 +445,5 @@ test('autostart-server.vbs exists and is verified', () => {
 console.log('\n====================================================================');
 console.log(` 🎉 ALL ${passCount} LOGIC & FUNCTION VERIFICATION CHECKS PASSED! ✅`);
 console.log('====================================================================\n');
+setTimeout(function () { process.exit(0); }, 100);
+

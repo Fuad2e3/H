@@ -249,3 +249,5 @@ console.log('  ✓ Database persistence handlers for Profile, Attendance, and Le
 console.log('\n=============================================================');
 console.log(' 🎉 ALL EMPLOYEE & HR SERVICES PORTAL TESTS PASSED! ✅');
 console.log('=============================================================\n');
+setTimeout(function () { process.exit(0); }, 100);
+

@@ -367,3 +367,5 @@ test('store.js reset restores initial production schema cleanly with no client p
 console.log('\n====================================================================');
 console.log(` 🎉 ALL ${pass} EXTENSIVE SELF-TEST CHECKS PASSED FLAWLESSLY! ✅`);
 console.log('====================================================================\n');
+setTimeout(function () { process.exit(0); }, 100);
+

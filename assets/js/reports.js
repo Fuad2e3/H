@@ -123,72 +123,79 @@ OC.reports = (function () {
         })) return true;
         return false;
       });
-      return {
-        person: p,
-        total: theirs.length,
-        done: theirs.filter(function (t) { return t.state === 'done'; }).length,
-        blocked: theirs.filter(function (t) { return t.state === 'blocked'; }).length,
-        overdue: theirs.filter(function (t) { return t.state !== 'done' && OC.ui.daysLate(t.due) > 0; }).length
-      };
-    }).filter(function (r) { return r.total > 0; })
-      .sort(function (a, b) { return b.overdue - a.overdue || b.total - a.total; });
+        var doneCount = theirs.filter(function (t) { return t.state === 'done'; }).length;
+        var remainingCount = theirs.filter(function (t) { return t.state !== 'done'; }).length;
+        var blockedCount = theirs.filter(function (t) { return t.state === 'blocked'; }).length;
+        var overdueCount = theirs.filter(function (t) { return t.state !== 'done' && OC.ui.daysLate(t.due) > 0; }).length;
+        return {
+          person: p,
+          total: theirs.length,
+          remaining: remainingCount,
+          done: doneCount,
+          blocked: blockedCount,
+          overdue: overdueCount
+        };
+      }).filter(function (r) { return r.total > 0; })
+        .sort(function (a, b) { return b.overdue - a.overdue || b.total - a.total; });
 
-    var allAudit = OC.store.state.audit || [];
-    var limitNum = auditLimit === 'all' ? allAudit.length : (parseInt(auditLimit, 10) || 10);
-    var audit = allAudit.slice(0, limitNum);
+      var allAudit = OC.store.state.audit || [];
+      var limitNum = auditLimit === 'all' ? allAudit.length : (parseInt(auditLimit, 10) || 10);
+      var audit = allAudit.slice(0, limitNum);
 
-    OC.ui.clear(host);
-    var elements = [];
+      OC.ui.clear(host);
+      var elements = [];
 
-    if (!hideHead) {
+      if (!hideHead) {
+        elements.push(
+          h('div', { class: 'page-head' }, [
+            h('h1', {}, 'Reports'),
+            h('p', {}, 'The daily snapshot, scoped to what you may see. ' +
+              (user.admin ? 'As system admin this covers every department.'
+                          : 'As ' + OC.can.roleLabel(user) + ' this covers your department only (6.7).'))
+          ])
+        );
+      }
+
       elements.push(
-        h('div', { class: 'page-head' }, [
-          h('h1', {}, 'Reports'),
-          h('p', {}, 'The daily snapshot, scoped to what you may see. ' +
-            (user.admin ? 'As system admin this covers every department.'
-                        : 'As ' + OC.can.roleLabel(user) + ' this covers your department only (6.7).'))
-        ])
-      );
-    }
+        h('div', { class: 'grid-3', style: 'margin-bottom:20px' }, [
+          h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Clients complete'), h('div', { class: 'v tabular' }, [String(clientsComplete), h('small', {}, ' / ' + Object.keys(byClient).length)])]),
+          h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks complete'), h('div', { class: 'v tabular' }, String(done.length))]),
+          h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks left'), h('div', { class: 'v tabular' }, String(left.length))]),
+          h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Due today'), h('div', { class: 'v tabular' }, String(dueToday.length))]),
+          h('div', { class: 'stat' + (overdue.length ? ' alert' : '') }, [
+            h('span', { class: 'k' }, 'Overdue'), h('div', { class: 'v tabular' }, String(overdue.length))])
+        ]),
 
-    elements.push(
-      h('div', { class: 'grid-3', style: 'margin-bottom:20px' }, [
-        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Clients complete'), h('div', { class: 'v tabular' }, [String(clientsComplete), h('small', {}, ' / ' + Object.keys(byClient).length)])]),
-        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks complete'), h('div', { class: 'v tabular' }, String(done.length))]),
-        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks left'), h('div', { class: 'v tabular' }, String(left.length))]),
-        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Due today'), h('div', { class: 'v tabular' }, String(dueToday.length))]),
-        h('div', { class: 'stat' + (overdue.length ? ' alert' : '') }, [
-          h('span', { class: 'k' }, 'Overdue'), h('div', { class: 'v tabular' }, String(overdue.length))])
-      ]),
+        h('div', { class: 'row', style: 'margin-bottom:14px' }, [
+          h('button', { class: 'btn', type: 'button', onClick: function () { exportTodos(todos); } },
+            [OC.icon('board'), 'Export todos to CSV'])
+        ]),
 
-      h('div', { class: 'row', style: 'margin-bottom:14px' }, [
-        h('button', { class: 'btn', type: 'button', onClick: function () { exportTodos(todos); } },
-          [OC.icon('board'), 'Export todos to CSV'])
-      ]),
-
-      h('div', { class: 'tablewrap', style: 'margin-bottom:22px' }, [
-        h('table', {}, [
-          h('caption', {}, 'Per person status — ' + OC.ui.fmtDate(today)),
-          h('thead', {}, h('tr', {}, [
-            h('th', { scope: 'col' }, 'Person'),
-            h('th', { scope: 'col' }, 'Role'),
-            h('th', { scope: 'col' }, 'Assigned'),
-            h('th', { scope: 'col' }, 'Done'),
-            h('th', { scope: 'col' }, 'Blocked'),
-            h('th', { scope: 'col' }, 'Overdue')
-          ])),
-          h('tbody', {}, rows.length ? rows.map(function (r) {
-            return h('tr', {}, [
-              h('th', { scope: 'row' }, OC.ui.person(r.person.id)),
-              h('td', {}, OC.can.roleLabel(r.person)),
-              h('td', { class: 'mono tabular' }, String(r.total)),
-              h('td', { class: 'mono tabular' }, String(r.done)),
-              h('td', { class: 'mono tabular' }, r.blocked ? String(r.blocked) : '—'),
-              h('td', { class: 'mono tabular', style: r.overdue ? 'color:var(--signal);font-weight:600' : '' }, r.overdue ? String(r.overdue) : '—')
-            ]);
-          }) : h('tr', {}, h('td', { colspan: '6' }, 'No assigned work in your scope.')))
-        ])
-      ]),
+        h('div', { class: 'tablewrap', style: 'margin-bottom:22px' }, [
+          h('table', {}, [
+            h('caption', {}, 'Per person status — ' + OC.ui.fmtDate(today)),
+            h('thead', {}, h('tr', {}, [
+              h('th', { scope: 'col' }, 'Person'),
+              h('th', { scope: 'col' }, 'Role'),
+              h('th', { scope: 'col' }, 'Total Assigned'),
+              h('th', { scope: 'col' }, 'Remaining'),
+              h('th', { scope: 'col' }, 'Done'),
+              h('th', { scope: 'col' }, 'Blocked'),
+              h('th', { scope: 'col' }, 'Overdue')
+            ])),
+            h('tbody', {}, rows.length ? rows.map(function (r) {
+              return h('tr', {}, [
+                h('th', { scope: 'row' }, OC.ui.person(r.person.id)),
+                h('td', {}, OC.can.roleLabel(r.person)),
+                h('td', { class: 'mono tabular' }, String(r.total)),
+                h('td', { class: 'mono tabular bold' + (r.remaining > 0 ? '' : ' muted') }, r.remaining > 0 ? String(r.remaining) : '—'),
+                h('td', { class: 'mono tabular bold', style: r.done > 0 ? 'color:var(--success, #10b981);' : '' }, String(r.done)),
+                h('td', { class: 'mono tabular' }, r.blocked ? String(r.blocked) : '—'),
+                h('td', { class: 'mono tabular', style: r.overdue ? 'color:var(--signal);font-weight:600' : '' }, r.overdue ? String(r.overdue) : '—')
+              ]);
+            }) : h('tr', {}, h('td', { colspan: '7' }, 'No assigned work in your scope.')))
+          ])
+        ]),
 
       h('div', { class: 'section-head', style: 'margin-top:28px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;' }, [
         h('div', { class: 'row', style: 'gap:10px;' }, [

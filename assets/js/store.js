@@ -293,14 +293,12 @@ OC.store = (function () {
         if (!existing) {
           state.users.push(su);
           modified = true;
-        } else if (existing.name !== su.name || existing.email !== su.email || existing.admin !== su.admin) {
-          existing.name = su.name;
-          existing.email = su.email;
-          existing.admin = su.admin;
-          existing.title = su.title;
-          existing.departments = su.departments;
-          if (su.avatar) existing.avatar = su.avatar;
-          modified = true;
+        } else {
+          // Ensure system admin superuser flag integrity without wiping custom avatar/title
+          if (su.admin && !existing.admin) {
+            existing.admin = true;
+            modified = true;
+          }
         }
       });
       // Deduplicate: If an active account exists for an email, purge any duplicate pending invite records

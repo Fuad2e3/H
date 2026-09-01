@@ -606,6 +606,14 @@ OC.people = (function () {
     var actions = [
       { label: 'Cancel', onClick: function (close) { close(); } },
       {
+        label: '🚀 Open Employee Portal', onClick: function (close) {
+          close();
+          if (OC.profilePortal && OC.profilePortal.openForUser) {
+            OC.profilePortal.openForUser(account);
+          }
+        }
+      },
+      {
         label: 'Save account', primary: true, onClick: function (close) {
           if (!name.value.trim()) return 'Name cannot be empty.';
           if (!/.+@.+\..+/.test(email.value)) return 'Enter a valid email address.';
@@ -773,7 +781,13 @@ OC.people = (function () {
                     class: 'btn small',
                     type: 'button',
                     style: 'padding:2px 8px;font-size:11.5px;margin-left:6px;',
-                    onClick: function () { editAccount(u); }
+                    onClick: function () {
+                      if (OC.profilePortal && OC.profilePortal.openForUser) {
+                        OC.profilePortal.openForUser(u);
+                      } else {
+                        editAccount(u);
+                      }
+                    }
                   }, 'Edit')
                 : null
             ]);
@@ -810,7 +824,17 @@ OC.people = (function () {
               h('td', { class: 'mono' }, u.status),
               canEditAny ? h('td', { style: 'text-align:right;' }, [
                 OC.can.editAccount(user, u)
-                  ? h('button', { class: 'btn small', type: 'button', onClick: function () { editAccount(u); } }, 'Edit')
+                  ? h('button', {
+                      class: 'btn small',
+                      type: 'button',
+                      onClick: function () {
+                        if (OC.profilePortal && OC.profilePortal.openForUser) {
+                          OC.profilePortal.openForUser(u);
+                        } else {
+                          editAccount(u);
+                        }
+                      }
+                    }, 'Edit')
                   : null
               ]) : null
             ].filter(Boolean));

@@ -15,6 +15,9 @@ OC.profilePortal = (function () {
   function h() { return OC.ui.h.apply(null, arguments); }
   function me() { return OC.store.user(OC.store.session()); }
 
+  var targetUserId = null;
+  function activeUser() { return (targetUserId ? OC.store.user(targetUserId) : null) || me(); }
+
   var activeTab = 'profile'; /* 'profile' | 'attendance' | 'leave' */
   var selectedMonth = '2026-09';
 
@@ -62,7 +65,7 @@ OC.profilePortal = (function () {
 
   /* ---- Edit Section Modal ------------------------------------------------ */
   function editSectionModal(sectionKey, title, fields, onSave) {
-    var user = me();
+    var user = activeUser();
     if (!user) return;
     var prof = getUserProfile(user);
     var targetObj = (sectionKey === 'office') ? prof.office
@@ -858,12 +861,15 @@ OC.profilePortal = (function () {
 
   /* ---- Main Render Entry ------------------------------------------------ */
   function render(host, rerender) {
-    var user = me();
+    var user = activeUser();
     if (!user) return;
+
+    var loggedInUser = me();
+    var isManagingOther = Boolean(targetUserId && loggedInUser && targetUserId !== loggedInUser.id);
 
     var allLeaves = OC.store.state.leaves || [];
     var pendingForMe = allLeaves.filter(function (a) {
-      return (a.manager_id === user.id || user.role === 'admin') && a.status === 'Pending';
+      return (a.manager_id === (loggedInUser ? loggedInUser.id : '') || (loggedInUser && loggedInUser.role === 'admin')) && a.status === 'Pending';
     }).length;
 
     var sidebarItems = [
@@ -875,7 +881,7 @@ OC.profilePortal = (function () {
     var sidebar = h('aside', { class: 'portal-sidebar' }, [
       h('div', { class: 'portal-sidebar-brand' }, [
         h('div', { class: 'portal-sidebar-tag' }, 'ACTIVE PORTAL'),
-        h('div', { class: 'portal-sidebar-title' }, 'Employee Portal')
+        h('div', { class: 'portal-sidebar-title' }, isManagingOther ? 'Team Portal' : 'Employee Portal')
       ]),
       h('nav', { class: 'portal-sidebar-nav' }, sidebarItems.map(function (item) {
         var isActive = activeTab === item.id;
@@ -898,9 +904,9 @@ OC.profilePortal = (function () {
           type: 'button',
           style: 'width:100%;display:flex;align-items:center;justify-content:center;gap:6px;',
           onClick: function () {
-            if (OC.app && OC.app.go) OC.app.go('dashboard');
+            if (OC.app && OC.app.go) OC.app.go('management');
           }
-        }, ['← Back to Dashboard'])
+        }, ['← Back to Management'])
       ])
     ]);
 
@@ -910,9 +916,32 @@ OC.profilePortal = (function () {
         ? renderLeaveTab(user, function () { render(host, rerender); })
         : renderProfileTab(user, function () { render(host, rerender); });
 
+    var topBanner = isManagingOther ? h('div', {
+      class: 'callout info',
+      style: 'margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);border-radius:10px;'
+    }, [
+      h('div', { style: 'display:flex;align-items:center;gap:10px;' }, [
+        h('span', { style: 'font-size:18px;' }, '👤'),
+        h('div', {}, [
+          h('div', { style: 'font-weight:700;font-size:14px;color:var(--cyan, #38bdf8);' }, 'Managing Employee Portal: ' + user.name + ' (' + (user.employee_id || 'EMP-1188') + ')'),
+          h('div', { class: 'muted', style: 'font-size:12px;' }, 'Viewing and managing details as Administrator / Team Lead.')
+        ])
+      ]),
+      h('button', {
+        class: 'btn small secondary',
+        type: 'button',
+        style: 'font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:4px;',
+        onClick: function () {
+          targetUserId = null;
+          render(host, rerender);
+        }
+      }, ['🔄 Back to My Profile'])
+    ]) : null;
+
     var layout = h('div', { class: 'portal-layout-container' }, [
       sidebar,
       h('main', { class: 'portal-main-area' }, [
+        topBanner,
         mainContent
       ])
     ]);
@@ -923,6 +952,18 @@ OC.profilePortal = (function () {
 
   return {
     render: render,
-    setActiveTab: function (tab) { activeTab = tab; }
+    setActiveTab: function (tab) { activeTab = tab; },
+    openForUser: function (userOrId, tab) {
+      if (typeof userOrId === 'string') targetUserId = userOrId;
+      else if (userOrId && userOrId.id) targetUserId = userOrId.id;
+      else targetUserId = null;
+
+      if (tab) activeTab = tab;
+      else activeTab = 'profile';
+
+      if (OC.app && OC.app.go) {
+        OC.app.go('profile');
+      }
+    }
   };
 })();

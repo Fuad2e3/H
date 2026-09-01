@@ -135,7 +135,9 @@ OC.activities = (function () {
                       class: 'btn small', type: 'button',
                       style: 'padding:2px 8px;font-size:11.5px;margin-left:6px;',
                       onClick: function () {
-                        if (OC.people && OC.people.editAccount) {
+                        if (OC.profilePortal && OC.profilePortal.openForUser) {
+                          OC.profilePortal.openForUser(u);
+                        } else if (OC.people && OC.people.editAccount) {
                           OC.people.editAccount(u);
                         }
                       }
@@ -206,7 +208,9 @@ OC.activities = (function () {
                     ? h('button', {
                         class: 'btn small', type: 'button',
                         onClick: function () {
-                          if (OC.people && OC.people.editAccount) {
+                          if (OC.profilePortal && OC.profilePortal.openForUser) {
+                            OC.profilePortal.openForUser(u);
+                          } else if (OC.people && OC.people.editAccount) {
                             OC.people.editAccount(u);
                           }
                         }

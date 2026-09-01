@@ -557,16 +557,109 @@ OC.profilePortal = (function () {
         OC.store.state.leaves.unshift(appObj);
       });
 
-      OC.ui.toast('🎉 Leave application submitted & recorded in database.');
+      // Dispatch in-app notification to the assigned Reporting Lead / Manager
+      if (OC.store.notify && appObj.manager_id && appObj.manager_id !== user.id) {
+        OC.store.notify(appObj.manager_id, {
+          type: 'leave.request',
+          title: '📋 New Leave Request: ' + user.name,
+          body: user.name + ' applied for ' + totalApplied + ' days leave (' + appObj.from_date + ' to ' + appObj.to_date + '). Click to review and approve/reject.',
+          link: '#profile'
+        });
+      }
+
+      OC.ui.toast('🎉 Leave application submitted & sent to ' + (mgrUser ? mgrUser.name : 'Manager') + ' for approval.');
       rerender();
     }
+
+    function approveLeave(app) {
+      var applicant = OC.store.user(app.user_id);
+      OC.store.mutate({
+        actor: user.id,
+        action: 'leave.approve',
+        target: applicant ? applicant.name : app.user_id,
+        detail: 'Approved leave for ' + app.from_date + ' to ' + app.to_date
+      }, function () {
+        app.status = 'Approved';
+        app.reviewed_by = user.id;
+        app.reviewed_by_name = user.name;
+        app.reviewed_at = new Date().toISOString();
+      });
+
+      if (OC.store.notify && app.user_id) {
+        OC.store.notify(app.user_id, {
+          type: 'leave.approved',
+          title: '🎉 Leave Approved!',
+          body: 'Your leave application for ' + app.from_date + ' to ' + app.to_date + ' has been APPROVED by ' + user.name + '.',
+          link: '#profile'
+        });
+      }
+
+      OC.ui.toast('Leave application approved successfully! ✅');
+      rerender();
+    }
+
+    function rejectLeave(app) {
+      var applicant = OC.store.user(app.user_id);
+      var reasonBox = h('textarea', { rows: '3', placeholder: 'Optional reason or feedback for rejection...' });
+
+      OC.ui.modal({
+        title: 'Reject Leave Application',
+        content: h('div', { class: 'form-body', style: 'display:flex;flex-direction:column;gap:12px;' }, [
+          h('p', { style: 'font-size:13.5px;margin:0;' },
+            'Are you sure you want to reject the leave application from ' + (applicant ? applicant.name : 'this employee') + ' for ' + app.from_date + ' to ' + app.to_date + '?'
+          ),
+          OC.ui.field('Rejection Reason / Feedback (Optional)', reasonBox)
+        ]),
+        actions: [
+          { label: 'Cancel', onClick: function (close) { close(); } },
+          {
+            label: 'Confirm Rejection',
+            danger: true,
+            onClick: function (close) {
+              var rejReason = reasonBox.value.trim();
+              OC.store.mutate({
+                actor: user.id,
+                action: 'leave.reject',
+                target: applicant ? applicant.name : app.user_id,
+                detail: 'Rejected leave for ' + app.from_date + ' to ' + app.to_date + (rejReason ? ' (' + rejReason + ')' : '')
+              }, function () {
+                app.status = 'Rejected';
+                app.rejection_reason = rejReason;
+                app.reviewed_by = user.id;
+                app.reviewed_by_name = user.name;
+                app.reviewed_at = new Date().toISOString();
+              });
+
+              if (OC.store.notify && app.user_id) {
+                OC.store.notify(app.user_id, {
+                  type: 'leave.rejected',
+                  title: '❌ Leave Request Rejected',
+                  body: 'Your leave application for ' + app.from_date + ' to ' + app.to_date + ' was Rejected by ' + user.name + (rejReason ? ': ' + rejReason : '.'),
+                  link: '#profile'
+                });
+              }
+
+              OC.ui.toast('Leave application has been rejected.');
+              rerender();
+              close();
+            }
+          }
+        ]
+      });
+    }
+
+    /* Check for incoming leave requests where current user is the Manager or Admin */
+    var incomingLeaves = allLeaves.filter(function (a) {
+      return a.manager_id === user.id || user.role === 'admin';
+    });
+    var pendingIncoming = incomingLeaves.filter(function (a) { return a.status === 'Pending'; });
 
     return h('div', { class: 'portal-view-content' }, [
       h('div', { class: 'portal-header-box' }, [
         h('div', {}, [
           h('h2', { class: 'portal-view-title' }, [OC.icon('send') || '✈️', ' Leave Portal & Formal Applications']),
           h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-            'Apply for leave, track real-time credit balances, and print official HR leave forms for ' + user.name + '.'
+            'Apply for leave, track real-time credit balances, and review team approval requests for ' + user.name + '.'
           )
         ])
       ]),
@@ -594,6 +687,73 @@ OC.profilePortal = (function () {
           h('div', { class: 'portal-stat-sub' }, 'Without Pay: ' + usedWP + ' Days')
         ])
       ]),
+
+      /* Manager / Approver Section: Incoming Leave Requests */
+      incomingLeaves.length > 0 ? h('div', { class: 'portal-table-container', style: 'margin-bottom:24px;border:1px solid rgba(56,189,248,0.3);background:rgba(15,23,42,0.4);' }, [
+        h('div', { class: 'portal-table-head', style: 'background:rgba(56,189,248,0.08);' }, [
+          h('div', { style: 'display:flex;align-items:center;gap:10px;' }, [
+            h('h3', { style: 'color:var(--cyan, #38bdf8);margin:0;' }, '📥 Incoming Leave Requests for My Approval'),
+            pendingIncoming.length > 0
+              ? h('span', { class: 'chip alert', style: 'font-weight:700;' }, pendingIncoming.length + ' Pending Action')
+              : h('span', { class: 'chip success' }, 'All Reviewed')
+          ])
+        ]),
+        h('div', { class: 'tablewrap' }, [
+          h('table', {}, [
+            h('thead', {}, h('tr', {}, [
+              h('th', { scope: 'col' }, 'EMPLOYEE'),
+              h('th', { scope: 'col' }, 'SUBMITTED'),
+              h('th', { scope: 'col' }, 'PERIOD (FROM - TO)'),
+              h('th', { scope: 'col' }, 'DAYS BREAKDOWN'),
+              h('th', { scope: 'col' }, 'REASON'),
+              h('th', { scope: 'col' }, 'STATUS'),
+              h('th', { scope: 'col' }, 'ACTIONS')
+            ])),
+            h('tbody', {}, incomingLeaves.map(function (app) {
+              var applicant = OC.store.user(app.user_id);
+              var stClass = (app.status === 'Approved') ? 'chip success'
+                : (app.status === 'Rejected') ? 'chip alert'
+                : 'chip warning';
+              var breakdown = [];
+              if (app.cl_days > 0) breakdown.push(app.cl_days + ' CL');
+              if (app.el_days > 0) breakdown.push(app.el_days + ' EL');
+              if (app.sl_days > 0) breakdown.push(app.sl_days + ' SL');
+              if (app.wp_days > 0) breakdown.push(app.wp_days + ' WP');
+
+              var actionCell = (app.status === 'Pending')
+                ? h('div', { class: 'row', style: 'gap:6px;' }, [
+                    h('button', {
+                      class: 'btn small primary',
+                      type: 'button',
+                      style: 'background:#10b981;border-color:#10b981;font-weight:700;padding:4px 10px;font-size:11.5px;',
+                      title: 'Approve this leave request',
+                      onClick: function () { approveLeave(app); }
+                    }, ['✅ Accept']),
+                    h('button', {
+                      class: 'btn small danger',
+                      type: 'button',
+                      style: 'font-weight:600;padding:4px 10px;font-size:11.5px;',
+                      title: 'Reject this leave request',
+                      onClick: function () { rejectLeave(app); }
+                    }, ['❌ Reject'])
+                  ])
+                : h('span', { class: 'chip', style: 'font-size:11px;' },
+                    (app.status === 'Approved' ? '✅ Approved' : '❌ Rejected') + (app.reviewed_by_name ? ' by ' + app.reviewed_by_name : '')
+                  );
+
+              return h('tr', {}, [
+                h('td', { class: 'bold' }, applicant ? applicant.name : app.user_id),
+                h('td', { class: 'mono muted' }, app.submitted_at ? app.submitted_at.slice(0, 10) : 'Today'),
+                h('td', { class: 'mono bold' }, app.from_date + ' → ' + app.to_date),
+                h('td', {}, breakdown.join(', ') || '1 Day'),
+                h('td', { class: 'muted', style: 'max-width:220px;' }, app.reason),
+                h('td', {}, h('span', { class: stClass }, app.status || 'Pending')),
+                h('td', {}, actionCell)
+              ]);
+            }))
+          ])
+        ])
+      ]) : null,
 
       /* Application Form */
       h('div', { class: 'portal-form-container' }, [
@@ -701,10 +861,15 @@ OC.profilePortal = (function () {
     var user = me();
     if (!user) return;
 
+    var allLeaves = OC.store.state.leaves || [];
+    var pendingForMe = allLeaves.filter(function (a) {
+      return (a.manager_id === user.id || user.role === 'admin') && a.status === 'Pending';
+    }).length;
+
     var sidebarItems = [
       { id: 'profile', label: 'Employee Profile', icon: 'user' },
       { id: 'attendance', label: 'My Attendance', icon: 'clock' },
-      { id: 'leave', label: 'Leave Portal', icon: 'send' }
+      { id: 'leave', label: 'Leave Portal', icon: 'send', badge: pendingForMe > 0 ? pendingForMe : null }
     ];
 
     var sidebar = h('aside', { class: 'portal-sidebar' }, [
@@ -722,8 +887,9 @@ OC.profilePortal = (function () {
             render(host, rerender);
           }
         }, [
-          h('span', { class: 'portal-nav-icon' }, OC.icon(item.icon) || '•'),
-          h('span', { class: 'portal-nav-label' }, item.label)
+          h('span', { class: 'portal-nav-icon' }, [OC.icon(item.icon) || '•']),
+          h('span', { class: 'portal-nav-label' }, item.label),
+          item.badge ? h('span', { class: 'chip alert', style: 'margin-left:auto;font-size:10px;padding:2px 6px;' }, item.badge) : null
         ]);
       })),
       h('div', { class: 'portal-sidebar-footer' }, [

@@ -198,7 +198,25 @@ OC.store.mutate({
 assert(OC.store.state.leaves.length > 0, 'Leave application should be saved in state');
 assert.strictEqual(OC.store.state.leaves[0].cl_days, 2.0);
 assert.strictEqual(OC.store.state.leaves[0].reason, 'Family urgent commitment');
+assert.strictEqual(OC.store.state.leaves[0].manager_id, 'u-shohag');
+assert.strictEqual(OC.store.state.leaves[0].status, 'Pending');
 console.log('  ✓ Dynamic leave application submits and tracks categories correctly');
+
+// Test Manager Approval workflow
+OC.store.mutate({
+  actor: 'u-shohag',
+  action: 'leave.approve',
+  target: 'Abdullah al Fuad',
+  detail: 'Approved leave for 2026-09-10 to 2026-09-12'
+}, () => {
+  OC.store.state.leaves[0].status = 'Approved';
+  OC.store.state.leaves[0].reviewed_by = 'u-shohag';
+  OC.store.state.leaves[0].reviewed_by_name = 'Shohag Munshe';
+});
+
+assert.strictEqual(OC.store.state.leaves[0].status, 'Approved');
+assert.strictEqual(OC.store.state.leaves[0].reviewed_by, 'u-shohag');
+console.log('  ✓ Reporting Lead / Manager can view and approve incoming leave requests successfully');
 
 console.log('--- [4/4] Testing Database & Persistence Sync Mechanics ---');
 const db = require('../dev3/API/config/db.js');

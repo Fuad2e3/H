@@ -549,20 +549,30 @@ OC.app = (function () {
   }
 
   /* ---- profile settings modal with photo upload ------------------------ */
-  function openProfileModal() {
-    var user = OC.store.user(OC.store.session());
+  function openProfileModal(customUser, onSave) {
+    var user = customUser || OC.store.user(OC.store.session());
     if (!user) return;
 
+    var empIdDefault = user.employee_id || (user.id ? user.id.replace('u-', 'EMP-').toUpperCase() : 'EMP-1188');
+    var orgDefault = user.org || 'MUNSHE IT';
+    var joinedDefault = user.joined_date || '23-Jul-2026';
+
     var nameInput = h('input', { type: 'text', value: user.name });
-    var titleInput = h('input', { type: 'text', value: user.title || '' });
+    var empIdInput = h('input', { type: 'text', value: empIdDefault, placeholder: 'EMP-1188' });
+    var titleInput = h('input', { type: 'text', value: user.title || '', placeholder: 'e.g. Intern, Full Stack Developer, System Admin' });
+    var orgInput = h('input', { type: 'text', value: orgDefault, placeholder: 'MUNSHE IT' });
+    var joinedInput = h('input', { type: 'text', value: joinedDefault, placeholder: '23-Jul-2026' });
     var uploader = OC.ui.photoUploader(user.avatar, user.name);
 
     OC.ui.modal({
-      title: 'My Profile & Avatar Photo',
+      title: 'Edit My Profile & ID Card',
       content: h('div', {}, [
         OC.ui.field('Profile photo', uploader.node, { hint: 'Upload a custom photo from your device or paste an image URL.' }),
         OC.ui.field('Full name', nameInput, { required: true }),
-        OC.ui.field('Job title', titleInput, { hint: 'Displayed next to your name across the workspace.' }),
+        OC.ui.field('Employee ID / Badge code', empIdInput, { hint: 'Badge shown on your profile card (e.g. EMP-1188).' }),
+        OC.ui.field('Position / Job title', titleInput, { hint: 'Displayed on your profile header & across the workspace.' }),
+        OC.ui.field('Organization / Company', orgInput, { hint: 'Organization shown in join details (e.g. MUNSHE IT).' }),
+        OC.ui.field('Joined date', joinedInput, { hint: 'e.g. 23-Jul-2026' }),
         OC.ui.field('Email address', h('input', { type: 'email', value: user.email, disabled: true }), { hint: 'Assigned login email.' })
       ]),
       actions: [
@@ -573,24 +583,36 @@ OC.app = (function () {
             if (!newName) return 'Name cannot be empty.';
             var newAvatar = uploader.getValue();
             var newTitle = titleInput.value.trim();
+            var newEmpId = empIdInput.value.trim() || empIdDefault;
+            var newOrg = orgInput.value.trim() || orgDefault;
+            var newJoined = joinedInput.value.trim() || joinedDefault;
 
             OC.store.mutate({
               actor: user.id,
               action: 'user.update_profile',
               target: newName,
-              detail: 'Updated profile details & avatar photo'
+              detail: 'Updated profile details, employee badge & avatar photo'
             }, function () {
               var targetUser = OC.store.user(user.id);
               if (targetUser) {
                 targetUser.name = newName;
                 targetUser.title = newTitle;
                 targetUser.avatar = newAvatar;
+                targetUser.employee_id = newEmpId;
+                targetUser.org = newOrg;
+                targetUser.joined_date = newJoined;
               }
               user.name = newName;
               user.title = newTitle;
               user.avatar = newAvatar;
+              user.employee_id = newEmpId;
+              user.org = newOrg;
+              user.joined_date = newJoined;
 
-              OC.ui.toast('Profile photo & details updated.');
+              OC.ui.toast('Profile card & details updated successfully.');
+              if (typeof onSave === 'function') {
+                try { onSave(); } catch (e) {}
+              }
               render();
               close();
             });
@@ -756,6 +778,7 @@ OC.app = (function () {
     start: start,
     go: go,
     logout: logout,
+    openProfileModal: openProfileModal,
     renderLogin: function () {
       var root = typeof document !== 'undefined' ? document.getElementById('root') : null;
       if (root) renderLoginScreen(root);

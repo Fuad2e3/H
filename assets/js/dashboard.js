@@ -172,14 +172,62 @@ OC.dashboard = (function () {
     });
     var clients = Object.keys(clientIds).map(OC.store.client).filter(Boolean);
 
+    var empId = user.employee_id || (user.id ? user.id.replace('u-', 'EMP-').toUpperCase() : 'EMP-1188');
+    var orgName = user.org || 'MUNSHE IT';
+    var joinedDate = user.joined_date || '23-Jul-2026';
+    var deptNames = (user.departments && user.departments.length)
+      ? user.departments.map(function (m) { return (OC.store.department(m.department) || {}).name; }).join(', ')
+      : '';
+    
+    var roleLine = user.title || (user.admin ? 'System Admin' : OC.can.roleLabel(user));
+    if (deptNames) {
+      roleLine += ' • ' + deptNames;
+    } else if (user.admin) {
+      roleLine += ' • Operations';
+    }
+    
+    var joinLine = 'Joined ' + joinedDate + ' (' + orgName + ')';
+
+    var profileBanner = h('div', {
+      class: 'user-profile-banner',
+      role: 'button',
+      tabIndex: 0,
+      title: 'Click to edit your profile, employee ID, photo, and details',
+      onClick: function () {
+        if (OC.app && OC.app.openProfileModal) {
+          OC.app.openProfileModal(user, rerender);
+        } else if (OC.people && OC.people.editAccount) {
+          OC.people.editAccount(user);
+        }
+      }
+    }, [
+      h('div', { class: 'user-profile-banner-left' }, [
+        h('div', { class: 'user-profile-avatar-wrap' }, [
+          user.avatar
+            ? h('img', { src: user.avatar, alt: user.name })
+            : h('div', { class: 'user-profile-avatar-placeholder' }, OC.ui.initials(user.name))
+        ]),
+        h('div', { class: 'user-profile-info' }, [
+          h('div', { class: 'user-profile-title-row' }, [
+            h('span', { class: 'user-profile-name' }, user.name),
+            h('span', { class: 'user-profile-badge' }, empId)
+          ]),
+          h('div', { class: 'user-profile-role-line' }, roleLine),
+          h('div', { class: 'user-profile-meta-line' }, joinLine)
+        ])
+      ]),
+      h('div', { class: 'user-profile-right' }, [
+        h('div', { class: 'user-profile-status-badge' }, [
+          h('div', { class: 'user-profile-status-label' }, 'OFFICIAL EMAIL'),
+          h('div', { class: 'user-profile-status-val' }, 'Verified Portal Active')
+        ]),
+        h('div', { class: 'user-profile-edit-hint' }, ['✏️ Edit Profile'])
+      ])
+    ]);
+
     OC.ui.clear(host);
     OC.ui.append(host, [
-      h('div', { class: 'page-head' }, [
-        h('h1', {}, 'Good to see you, ' + user.name.split(' ')[0]),
-        h('p', {}, OC.can.roleLabel(user) + ' · ' + (user.departments.length
-          ? user.departments.map(function (m) { return (OC.store.department(m.department) || {}).name + ' (' + m.level + ')'; }).join(' · ')
-          : 'leadership tier, every department'))
-      ]),
+      profileBanner,
 
       h('div', { class: 'stats' }, [
         h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'My open todos'), h('div', { class: 'v tabular' }, String(allTodos.length))]),

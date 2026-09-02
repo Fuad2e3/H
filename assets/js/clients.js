@@ -149,7 +149,11 @@ OC.clients = (function () {
     });
 
     var clientInstructions = OC.store.state.instructions.filter(function (ins) {
-      return ins.client === client.id || (Array.isArray(ins.tags) && ins.tags.indexOf(client.client_code) > -1);
+      if (!ins || ins.archived) return false;
+      var matches = ins.client === client.id ||
+        (Array.isArray(ins.clients) && ins.clients.indexOf(client.id) > -1) ||
+        (client.client_code && Array.isArray(ins.tags) && ins.tags.indexOf(client.client_code) > -1);
+      return matches && (OC.can && OC.can.seeInstruction ? OC.can.seeInstruction(user, ins) : true);
     });
 
     var openTaskCount = clientTodos.filter(function (t) { return !t.archived && t.state !== 'done'; }).length;
@@ -426,7 +430,11 @@ OC.clients = (function () {
             style: 'font-weight:700;',
             onClick: function () {
               if (OC.board && OC.board.newInstruction) {
-                OC.board.newInstruction({ client: client.id, clients: [client.id] }, function () {
+                OC.board.newInstruction({
+                  client: client.id,
+                  clients: [client.id],
+                  tags: client.client_code ? [client.client_code] : []
+                }, function () {
                   renderClientPortal(host, client, onBack);
                 });
               }

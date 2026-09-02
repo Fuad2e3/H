@@ -433,6 +433,7 @@ OC.clients = (function () {
                 OC.board.newInstruction({
                   client: client.id,
                   clients: [client.id],
+                  client_only: true,
                   tags: client.client_code ? [client.client_code] : []
                 }, function () {
                   renderClientPortal(host, client, onBack);

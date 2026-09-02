@@ -48,7 +48,7 @@ OC.dashboard = (function () {
   function myInstructions(user) {
     if (!user || !Array.isArray(OC.store.state.instructions)) return [];
     return OC.store.state.instructions
-      .filter(function (n) { return !n.archived && OC.can.seeInstruction(user, n); })
+      .filter(function (n) { return !n.archived && !n.client_only && OC.can.seeInstruction(user, n); })
       .sort(function (a, b) {
         var aRead = Array.isArray(a.read_by) ? a.read_by : [];
         var bRead = Array.isArray(b.read_by) ? b.read_by : [];

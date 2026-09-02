@@ -958,7 +958,8 @@ OC.board = (function () {
               department: primaryDept, departments: selectedDepts,
               tags: tags.resolve(),
               posted_at: new Date().toISOString(), read_by: [user.id],
-              archived: false, linked_todo: null, comments: []
+              archived: false, linked_todo: null, comments: [],
+              client_only: !!preset.client_only
             };
 
             OC.store.mutate({ actor: user.id, action: 'instruction.post', target: note.body.slice(0, 48), detail: 'tagged ' + (OC.store.client(note.client) || {}).name }, function () {

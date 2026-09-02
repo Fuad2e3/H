@@ -301,11 +301,12 @@ test('permissions.js: Role computation, visibility, assignment matrix, and permi
   assert.strictEqual(OC.can.canDeleteComment(tanvir, commentObj, todo), true);
   assert.strictEqual(OC.can.canDeleteComment(nadia, commentObj, todo), true); // Head
 
-  // Group Permissions
+  // Group Permissions (Edit, Archive, Delete strictly System Admin only)
   const group = OC.store.state.groups[0];
-  assert.strictEqual(OC.can.canEditGroup(shohag, group), true);
-  assert.strictEqual(OC.can.canEditGroup(nadia, group), true); // Head of Any
-  assert.strictEqual(OC.can.canDeleteGroup(shohag, group), true); // Creator / Admin
+  assert.strictEqual(OC.can.canEditGroup(shohag, group), true); // System Admin
+  assert.strictEqual(OC.can.canEditGroup(nadia, group), false); // Non-admin cannot edit/archive
+  assert.strictEqual(OC.can.canDeleteGroup(shohag, group), true); // System Admin
+  assert.strictEqual(OC.can.canDeleteGroup(nadia, group), false); // Non-admin cannot delete
   assert.strictEqual(OC.can.canPostGroupMessage(rifat, group), true); // Member
   assert.strictEqual(OC.can.canPostGroupMessage(tanvir, group), false); // Not in group
 });

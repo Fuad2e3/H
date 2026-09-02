@@ -275,12 +275,12 @@ OC.can = (function () {
 
   function canEditGroup(user, group) {
     if (!user || !group) return false;
-    return user.admin || group.created_by === user.id || headOfAny(user);
+    return !!user.admin;
   }
 
   function canDeleteGroup(user, group) {
     if (!user || !group) return false;
-    return user.admin || group.created_by === user.id;
+    return !!user.admin;
   }
 
   function canEditGroupMessage(user, msg, group) {

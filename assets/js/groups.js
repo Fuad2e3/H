@@ -820,6 +820,25 @@ OC.groups = (function () {
     }
   }
 
+  function getChannelLastRead(userId, groupId) {
+    if (!userId || !groupId) return 0;
+    if (typeof localStorage === 'undefined') return 0;
+    try {
+      var v = localStorage.getItem('oc_group_read_' + userId + '_' + groupId);
+      return v !== null ? (parseInt(v, 10) || 0) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setChannelLastRead(userId, groupId, count) {
+    if (!userId || !groupId) return;
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem('oc_group_read_' + userId + '_' + groupId, String(count || 0));
+    } catch (e) {}
+  }
+
   /* ---- render (Discord Two-Column Layout) -------------------------------- */
   function render(host, rerender, hideHead) {
     var h = OC.ui.h;
@@ -853,6 +872,9 @@ OC.groups = (function () {
     }
 
     var activeGroup = activeChatGroupId ? OC.store.group(activeChatGroupId) : null;
+    if (activeGroup) {
+      setChannelLastRead(user.id, activeGroup.id, (activeGroup.messages || []).length);
+    }
 
     var activeCount = allGroups.filter(function (g) { return g.status === 'active'; }).length;
     var myCount = allGroups.filter(function (g) { return (g.members || []).indexOf(user.id) > -1; }).length;
@@ -903,7 +925,15 @@ OC.groups = (function () {
       /* Channel Items List */
       h('div', { class: 'discord-channels-list' }, visible.length ? visible.map(function (g) {
         var isSelected = (activeChatGroupId === g.id);
-        var msgCount = (g.messages || []).length;
+        var totalMsgs = (g.messages || []).length;
+        if (isSelected) {
+          setChannelLastRead(user.id, g.id, totalMsgs);
+        }
+        var lastRead = getChannelLastRead(user.id, g.id);
+        var unreadCount = 0;
+        if (!isSelected && totalMsgs > 0 && lastRead !== null) {
+          unreadCount = Math.max(0, totalMsgs - lastRead);
+        }
         var canEdit = OC.can.canEditGroup(user, g);
         var canDel = OC.can.canDeleteGroup(user, g);
 
@@ -911,6 +941,7 @@ OC.groups = (function () {
           class: 'discord-channel-pill' + (isSelected ? ' active' : ''),
           onClick: function () {
             activeChatGroupId = g.id;
+            setChannelLastRead(user.id, g.id, (g.messages || []).length);
             render(host, rerender, hideHead);
           }
         }, [
@@ -920,7 +951,7 @@ OC.groups = (function () {
             g.status === 'active' ? h('span', { style: 'font-size:8px;color:#23A55A;' }, '🟢') : null
           ]),
           h('div', { class: 'row', style: 'align-items:center;gap:6px;' }, [
-            msgCount > 0 ? h('span', { class: 'discord-channel-badge' }, String(msgCount)) : null,
+            unreadCount > 0 ? h('span', { class: 'discord-channel-badge' }, String(unreadCount)) : null,
             h('div', { class: 'discord-channel-actions', onClick: function (e) { e.stopPropagation(); } }, [
               canEdit ? h('button', {
                 class: 'discord-channel-tool-btn',

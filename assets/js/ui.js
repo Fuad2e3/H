@@ -551,63 +551,74 @@ OC.ui = (function () {
             h('div', { class: 'comment-body-text' }, c.body)
           ]);
         }),
-        h('div', { class: 'comment-form' }, [
-          body,
-          h('button', {
-            class: 'btn small primary', type: 'button', onClick: function () {
-              if (!body.value.trim()) return;
-              var text = body.value.trim();
-              OC.store.mutate({
-                actor: user ? user.id : OC.store.session(), action: kind + '.comment',
-                target: item.title || (item.body ? item.body.slice(0, 40) : item.id), detail: text
-              }, function () {
-                OC.store.comment(kind, item.id, text, user ? user.id : OC.store.session());
-              });
+        (function () {
+          function submitComment() {
+            var text = body.value.trim();
+            if (!text) return;
+            OC.store.mutate({
+              actor: user ? user.id : OC.store.session(), action: kind + '.comment',
+              target: item.title || (item.body ? item.body.slice(0, 40) : item.id), detail: text
+            }, function () {
+              OC.store.comment(kind, item.id, text, user ? user.id : OC.store.session());
+            });
 
-              // Targeted notification: Send ONLY to concerned owner, assignee, and thread participants
-              var targets = [];
-              if (kind === 'todo') {
-                if (item.created_by) targets.push(item.created_by);
-                if (Array.isArray(item.assignees)) {
-                  item.assignees.forEach(function (aid) {
-                    if (aid.indexOf('user:') === 0) targets.push(aid.slice(5));
-                    else if (aid.indexOf('group:') === 0) {
-                      var g = OC.store.group(aid.slice(6));
-                      if (g && g.members) targets = targets.concat(g.members);
-                    } else {
-                      targets.push(aid);
-                    }
-                  });
-                }
-                if (item.assignee_type === 'user' && item.assignee) targets.push(item.assignee);
-                else if (item.assignee_type === 'group' && item.assignee) {
-                  var g = OC.store.group(item.assignee);
-                  if (g && g.members) targets = targets.concat(g.members);
-                }
-              } else if (kind === 'instruction') {
-                if (item.author) targets.push(item.author);
+            // Targeted notification: Send ONLY to concerned owner, assignee, and thread participants
+            var targets = [];
+            if (kind === 'todo') {
+              if (item.created_by) targets.push(item.created_by);
+              if (Array.isArray(item.assignees)) {
+                item.assignees.forEach(function (aid) {
+                  if (aid.indexOf('user:') === 0) targets.push(aid.slice(5));
+                  else if (aid.indexOf('group:') === 0) {
+                    var g = OC.store.group(aid.slice(6));
+                    if (g && g.members) targets = targets.concat(g.members);
+                  } else {
+                    targets.push(aid);
+                  }
+                });
               }
-              (item.comments || []).forEach(function (c) {
-                if (c.author) targets.push(c.author);
-              });
-
-              var curUid = user ? user.id : OC.store.session();
-              var curName = user ? user.name : 'Someone';
-              targets = targets.filter(function (uid, idx, arr) {
-                return uid && uid !== curUid && arr.indexOf(uid) === idx;
-              });
-
-              if (targets.length) {
-                var itemTitle = kind === 'todo' ? item.title : (item.body ? item.body.slice(0, 35) + '…' : 'instruction');
-                OC.store.notify(targets, curName + ' commented on ' + (kind === 'todo' ? 'task: "' + itemTitle + '"' : 'instruction: "' + itemTitle + '"'), item.id);
+              if (item.assignee_type === 'user' && item.assignee) targets.push(item.assignee);
+              else if (item.assignee_type === 'group' && item.assignee) {
+                var g = OC.store.group(item.assignee);
+                if (g && g.members) targets = targets.concat(g.members);
               }
-
-              body.value = '';
-              if (onChange) onChange();
-              else OC.store.emit();
+            } else if (kind === 'instruction') {
+              if (item.author) targets.push(item.author);
             }
-          }, 'Post')
-        ])
+            (item.comments || []).forEach(function (c) {
+              if (c.author) targets.push(c.author);
+            });
+
+            var curUid = user ? user.id : OC.store.session();
+            var curName = user ? user.name : 'Someone';
+            targets = targets.filter(function (uid, idx, arr) {
+              return uid && uid !== curUid && arr.indexOf(uid) === idx;
+            });
+
+            if (targets.length) {
+              var itemTitle = kind === 'todo' ? item.title : (item.body ? item.body.slice(0, 35) + '…' : 'instruction');
+              OC.store.notify(targets, curName + ' commented on ' + (kind === 'todo' ? 'task: "' + itemTitle + '"' : 'instruction: "' + itemTitle + '"'), item.id);
+            }
+
+            body.value = '';
+            if (onChange) onChange();
+            else OC.store.emit();
+          }
+
+          body.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              submitComment();
+            }
+          });
+
+          return h('div', { class: 'comment-form' }, [
+            body,
+            h('button', {
+              class: 'btn small primary', type: 'button', onClick: submitComment
+            }, 'Post')
+          ]);
+        })()
       ])
     ]);
     return wrap;

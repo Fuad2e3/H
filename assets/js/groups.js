@@ -379,33 +379,42 @@ OC.groups = (function () {
         });
       }
 
+      function submitGroupMessage() {
+        if (!OC.can.canPostGroupMessage(user, currentGroup)) {
+          OC.ui.toast('Access restricted: Only assigned group members can post messages.', true);
+          return;
+        }
+        var val = msgInput.value.trim();
+        if (!val) return;
+        OC.store.mutate({
+          actor: user.id, action: 'group.message', target: currentGroup.name, detail: val.slice(0, 35)
+        }, function () {
+          OC.store.addGroupMessage(currentGroup.id, val, user.id);
+        });
+
+        // Targeted notification: Send ONLY to other members of this group
+        var otherMembers = (currentGroup.members || []).filter(function (id) { return id !== user.id; });
+        if (otherMembers.length) {
+          OC.store.notify(otherMembers, user.name + ' posted in ' + currentGroup.name + ': "' + val.slice(0, 35) + (val.length > 35 ? '…' : '') + '"', currentGroup.id);
+        }
+
+        msgInput.value = '';
+        renderMessages();
+        if (onDone) onDone();
+        setTimeout(function () { msgsList.scrollTop = msgsList.scrollHeight; }, 50);
+      }
+
+      msgInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          submitGroupMessage();
+        }
+      });
+
       var form = h('div', { class: 'comment-form', style: 'margin-top:10px;' }, [
         msgInput,
         h('button', {
-          class: 'btn small primary', type: 'button', onClick: function () {
-            if (!OC.can.canPostGroupMessage(user, currentGroup)) {
-              OC.ui.toast('Access restricted: Only assigned group members can post messages.', true);
-              return;
-            }
-            var val = msgInput.value.trim();
-            if (!val) return;
-            OC.store.mutate({
-              actor: user.id, action: 'group.message', target: currentGroup.name, detail: val.slice(0, 35)
-            }, function () {
-              OC.store.addGroupMessage(currentGroup.id, val, user.id);
-            });
-
-            // Targeted notification: Send ONLY to other members of this group
-            var otherMembers = (currentGroup.members || []).filter(function (id) { return id !== user.id; });
-            if (otherMembers.length) {
-              OC.store.notify(otherMembers, user.name + ' posted in ' + currentGroup.name + ': "' + val.slice(0, 35) + (val.length > 35 ? '…' : '') + '"', currentGroup.id);
-            }
-
-            msgInput.value = '';
-            renderMessages();
-            if (onDone) onDone();
-            setTimeout(function () { msgsList.scrollTop = msgsList.scrollHeight; }, 50);
-          }
+          class: 'btn small primary', type: 'button', onClick: submitGroupMessage
         }, 'Send')
       ]);
 

@@ -2033,23 +2033,47 @@ dialog.modal::backdrop {
   color: var(--text-secondary);
 }
 
-/* ---- group chat & workspace -------------------------------------------- */
+/* ---- dedicated group chat modal & workspace (fitted, zero outer scroll) ---- */
+dialog.modal.modal-chat {
+  width: min(720px, 95vw);
+  height: min(85vh, 700px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+dialog.modal.modal-chat .modal-body.chat-modal-body {
+  padding: 0;
+  max-height: none;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .group-chat-container {
   display: flex;
   flex-direction: column;
-  gap: var(--s3);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 .group-chat-header {
-  padding: 10px 14px;
+  padding: 10px 16px;
   background: var(--card-bg-alt);
-  border: 1px solid var(--rule);
-  border-radius: var(--r1);
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 .group-chat-messages {
-  max-height: min(48vh, 380px);
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
@@ -2057,10 +2081,18 @@ dialog.modal::backdrop {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 8px 4px 12px;
+  padding: 14px 16px;
   transform: translateZ(0);
   will-change: scroll-position;
   contain: content;
+}
+.group-chat-input-bar {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  background: var(--card-bg-alt);
+  border-top: 1px solid var(--rule);
+  margin-top: 0;
+  border-radius: 0;
 }
 .group-msg-item {
   background: var(--card-bg-alt);

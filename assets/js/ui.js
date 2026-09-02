@@ -892,7 +892,9 @@ OC.ui = (function () {
 
   /* ---- modal ------------------------------------------------------------ */
   function modal(opts) {
-    var dlg = h('dialog', { class: 'modal' });
+    opts = opts || {};
+    var dlgClass = 'modal' + (opts.className ? ' ' + opts.className : '');
+    var dlg = h('dialog', { class: dlgClass });
     var backdrop = null;
     var escapeHandler = null;
     var errorBox = h('div', { class: 'error', style: 'display:none;' });
@@ -926,9 +928,10 @@ OC.ui = (function () {
 
     dlg.appendChild(h('div', { class: 'modal-head' }, [
       h('h2', {}, opts.title),
-      h('button', { class: 'iconbtn push', type: 'button', 'aria-label': 'Close', onClick: close }, 'Close')
+      h('button', { class: 'iconbtn push', type: 'button', 'aria-label': 'Close', onClick: close }, '✕')
     ]));
-    dlg.appendChild(h('div', { class: 'modal-body' }, [errorBox, opts.content]));
+    var bodyClass = 'modal-body' + (opts.bodyClass ? ' ' + opts.bodyClass : '');
+    dlg.appendChild(h('div', { class: bodyClass }, [errorBox, opts.content]));
     if (actions.length) dlg.appendChild(h('div', { class: 'modal-foot' }, actions));
 
     /* Enter anywhere but a textarea runs the primary action. Without this a

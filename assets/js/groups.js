@@ -822,7 +822,7 @@ OC.groups = (function () {
         }
       });
 
-      var form = h('div', { class: 'comment-form', style: 'margin-top:10px;' }, [
+      var form = h('div', { class: 'comment-form group-chat-input-bar' }, [
         replyingBadgeWrap,
         mediaPreviewWrap,
         mediaFileInput,
@@ -867,10 +867,10 @@ OC.groups = (function () {
 
     OC.ui.modal({
       title: '💬 ' + group.name + ' — Workspace & Chat',
+      className: 'modal-chat',
+      bodyClass: 'chat-modal-body',
       content: chatHost,
-      actions: [
-        { label: 'Close', onClick: function (close) { close(); } }
-      ]
+      actions: []
     });
 
     var msgsEl = chatHost.querySelector('.group-chat-messages');

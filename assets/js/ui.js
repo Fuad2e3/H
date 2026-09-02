@@ -461,17 +461,226 @@ OC.ui = (function () {
     return wrap;
   }
 
+  /* ---- @ mention autocomplete, parsing & reply helpers ------------------- */
+  function extractMentionedUserIds(text) {
+    if (!text) return [];
+    var allUsers = (OC.store.state && OC.store.state.users) || [];
+    var mentioned = [];
+    allUsers.forEach(function (u) {
+      if (!u || !u.name) return;
+      var pattern = '@' + u.name.toLowerCase();
+      if (text.toLowerCase().indexOf(pattern) > -1) {
+        if (mentioned.indexOf(u.id) === -1) mentioned.push(u.id);
+      }
+    });
+    return mentioned;
+  }
+
+  function formatMentions(text) {
+    if (!text) return text;
+    var allUsers = (OC.store.state && OC.store.state.users) || [];
+    var parts = [];
+    var regex = /@([A-Za-z0-9\s._-]+?)(?=[.,!?\s]|$)/g;
+    var lastIdx = 0;
+    var match;
+    while ((match = regex.exec(text)) !== null) {
+      var matchedName = match[1].trim();
+      var foundUser = allUsers.find(function (u) {
+        return u.name.toLowerCase() === matchedName.toLowerCase();
+      });
+      if (foundUser) {
+        if (match.index > lastIdx) {
+          parts.push(text.slice(lastIdx, match.index));
+        }
+        parts.push(h('span', {
+          class: 'mention-tag',
+          title: foundUser.name + ' (' + (foundUser.title || (OC.can && OC.can.roleLabel ? OC.can.roleLabel(foundUser) : 'Member')) + ')'
+        }, '@' + foundUser.name));
+        lastIdx = match.index + match[0].length;
+      }
+    }
+    if (lastIdx < text.length) {
+      parts.push(text.slice(lastIdx));
+    }
+    return parts.length ? parts : text;
+  }
+
+  function attachMentionAutocomplete(inputElement, allowedUsers, onMentionSelected) {
+    var pop = null;
+    var activeIdx = 0;
+    var filtered = [];
+
+    function closePop() {
+      if (pop) {
+        pop.remove();
+        pop = null;
+      }
+    }
+
+    function getMentionQuery() {
+      var val = inputElement.value || '';
+      var selStart = inputElement.selectionStart || val.length;
+      var textBefore = val.slice(0, selStart);
+      var lastAt = textBefore.lastIndexOf('@');
+      if (lastAt === -1) return null;
+      if (lastAt > 0 && !/\s/.test(textBefore.charAt(lastAt - 1))) return null;
+      var query = textBefore.slice(lastAt + 1);
+      if (/\n/.test(query) || query.length > 25) return null;
+      return { query: query.toLowerCase(), atPos: lastAt, selStart: selStart };
+    }
+
+    function renderPop(match) {
+      var all = allowedUsers || ((OC.store.state && OC.store.state.users) || []).filter(function (u) { return u.status === 'active'; });
+      filtered = all.filter(function (u) {
+        if (!match.query) return true;
+        return u.name.toLowerCase().indexOf(match.query) > -1 || (u.email && u.email.toLowerCase().indexOf(match.query) > -1);
+      }).slice(0, 6);
+
+      if (!filtered.length) {
+        closePop();
+        return;
+      }
+
+      if (!pop) {
+        pop = h('div', { class: 'mention-autocomplete-pop' });
+        if (inputElement.parentNode) {
+          inputElement.parentNode.style.position = 'relative';
+          inputElement.parentNode.appendChild(pop);
+        }
+      }
+      clear(pop);
+
+      filtered.forEach(function (u, i) {
+        var item = h('div', {
+          class: 'mention-pop-item' + (i === activeIdx ? ' active' : ''),
+          onClick: function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            selectUser(u, match);
+          }
+        }, [
+          mark(u.id),
+          h('div', { class: 'mention-pop-info' }, [
+            h('span', { class: 'mention-pop-name' }, u.name),
+            h('span', { class: 'mention-pop-role' }, u.title || (OC.can && OC.can.roleLabel ? OC.can.roleLabel(u) : 'Member'))
+          ])
+        ]);
+        pop.appendChild(item);
+      });
+    }
+
+    function selectUser(u, match) {
+      var val = inputElement.value || '';
+      var before = val.slice(0, match.atPos);
+      var after = val.slice(match.selStart);
+      var insert = '@' + u.name + ' ';
+      inputElement.value = before + insert + after;
+      var newPos = before.length + insert.length;
+      inputElement.focus();
+      if (inputElement.setSelectionRange) {
+        inputElement.setSelectionRange(newPos, newPos);
+      }
+      closePop();
+      if (typeof onMentionSelected === 'function') onMentionSelected(u);
+    }
+
+    inputElement.addEventListener('input', function () {
+      var match = getMentionQuery();
+      if (match) {
+        activeIdx = 0;
+        renderPop(match);
+      } else {
+        closePop();
+      }
+    });
+
+    inputElement.addEventListener('keydown', function (e) {
+      if (!pop || !filtered.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIdx = (activeIdx + 1) % filtered.length;
+        renderPop(getMentionQuery());
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIdx = (activeIdx - 1 + filtered.length) % filtered.length;
+        renderPop(getMentionQuery());
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        if (filtered[activeIdx]) {
+          e.preventDefault();
+          selectUser(filtered[activeIdx], getMentionQuery());
+        }
+      } else if (e.key === 'Escape') {
+        closePop();
+      }
+    });
+
+    document.addEventListener('click', function (e) {
+      if (pop && !pop.contains(e.target) && e.target !== inputElement) {
+        closePop();
+      }
+    });
+
+    return {
+      close: closePop,
+      openMentionMenu: function () {
+        inputElement.focus();
+        if (inputElement.value && !inputElement.value.endsWith(' ')) {
+          inputElement.value += ' @';
+        } else {
+          inputElement.value += '@';
+        }
+        var match = getMentionQuery();
+        if (match) {
+          activeIdx = 0;
+          renderPop(match);
+        }
+      }
+    };
+  }
+
   /* ---- comment thread (5.0, Comment) ------------------------------------- */
   function commentThread(kind, item, onChange) {
     var user = OC.store.user(OC.store.session());
     if (!OC.can.canSeeComments(user, item)) return null;
 
     var label = 'Comment on ' + (item.title || String(item.body).slice(0, 40));
-    var body = h('input', { type: 'text', placeholder: 'add a comment...', 'aria-label': label });
+    var body = h('input', { type: 'text', placeholder: 'add a comment or type @ to mention...', 'aria-label': label });
     var count = (item.comments || []).length;
     var deptNames = (Array.isArray(item.departments) && item.departments.length)
       ? item.departments.map(function (did) { return (OC.store.department(did) || {}).name || did; }).join(', ')
       : ((OC.store.department(item.department) || {}).name || 'Department');
+
+    var replyingBadgeWrap = h('div', { style: 'display:none;' });
+    var replyingToUser = null;
+
+    function setReplyContext(targetAuthor) {
+      replyingToUser = targetAuthor;
+      clear(replyingBadgeWrap);
+      if (targetAuthor) {
+        replyingBadgeWrap.style.display = 'block';
+        replyingBadgeWrap.appendChild(h('div', { class: 'replying-badge' }, [
+          h('span', {}, '↳ Replying to ' + targetAuthor.name),
+          h('button', {
+            type: 'button',
+            class: 'replying-cancel-btn',
+            title: 'Cancel reply',
+            onClick: function (e) {
+              e.preventDefault();
+              setReplyContext(null);
+            }
+          }, '✕')
+        ]));
+        var prefix = '@' + targetAuthor.name + ' ';
+        if (body.value.indexOf(prefix) !== 0) {
+          body.value = prefix + body.value;
+        }
+      } else {
+        replyingBadgeWrap.style.display = 'none';
+      }
+      body.focus();
+    }
+
+    var mentionHelper = attachMentionAutocomplete(body, null, function (mentionedUser) {});
 
     var wrap = h('details', { class: 'thread' }, [
       h('summary', {}, [
@@ -486,13 +695,23 @@ OC.ui = (function () {
         (item.comments || []).map(function (c) {
           var canEdit = OC.can && OC.can.canEditComment ? OC.can.canEditComment(user, c, item) : (user && (user.admin || c.author === user.id));
           var canDel = OC.can && OC.can.canDeleteComment ? OC.can.canDeleteComment(user, c, item) : (user && (user.admin || c.author === user.id));
+          var commentAuthorUser = OC.store.user(c.author);
 
           return h('div', { class: 'comment' }, [
             h('div', { class: 'comment-by' }, [
               person(c.author, 'strong'),
               h('span', {}, fmtWhen(c.posted_at)),
               c.edited_at ? h('span', { class: 'comment-edited-tag', style: 'font-size:9.5px;opacity:0.7;' }, '(edited)') : null,
-              (canEdit || canDel) ? h('div', { class: 'comment-tools push' }, [
+              h('div', { class: 'comment-tools push' }, [
+                h('button', {
+                  class: 'btn-inline',
+                  type: 'button',
+                  title: 'Reply to this comment',
+                  onClick: function (e) {
+                    e.preventDefault();
+                    setReplyContext(commentAuthorUser || { id: c.author, name: c.author });
+                  }
+                }, 'Reply'),
                 canEdit ? h('button', {
                   class: 'btn-inline',
                   type: 'button',
@@ -546,9 +765,9 @@ OC.ui = (function () {
                     });
                   }
                 }, 'Delete') : null
-              ].filter(Boolean)) : null
+              ].filter(Boolean))
             ]),
-            h('div', { class: 'comment-body-text' }, c.body)
+            h('div', { class: 'comment-body-text' }, formatMentions(c.body))
           ]);
         }),
         (function () {
@@ -562,7 +781,7 @@ OC.ui = (function () {
               OC.store.comment(kind, item.id, text, user ? user.id : OC.store.session());
             });
 
-            // Targeted notification: Send ONLY to concerned owner, assignee, and thread participants
+            // Targeted notification: Send to owner, assignee, thread participants & ALL @mentioned users
             var targets = [];
             if (kind === 'todo') {
               if (item.created_by) targets.push(item.created_by);
@@ -589,6 +808,10 @@ OC.ui = (function () {
               if (c.author) targets.push(c.author);
             });
 
+            // Add explicitly mentioned users
+            var mentionedIds = extractMentionedUserIds(text);
+            targets = targets.concat(mentionedIds);
+
             var curUid = user ? user.id : OC.store.session();
             var curName = user ? user.name : 'Someone';
             targets = targets.filter(function (uid, idx, arr) {
@@ -601,6 +824,7 @@ OC.ui = (function () {
             }
 
             body.value = '';
+            setReplyContext(null);
             if (onChange) onChange();
             else OC.store.emit();
           }
@@ -613,10 +837,19 @@ OC.ui = (function () {
           });
 
           return h('div', { class: 'comment-form' }, [
-            body,
-            h('button', {
-              class: 'btn small primary', type: 'button', onClick: submitComment
-            }, 'Post')
+            replyingBadgeWrap,
+            h('div', { class: 'comment-form-row' }, [
+              body,
+              h('button', {
+                class: 'mention-btn-trigger',
+                type: 'button',
+                title: 'Mention team member (@)',
+                onClick: function () { mentionHelper.openMentionMenu(); }
+              }, '@'),
+              h('button', {
+                class: 'btn small primary', type: 'button', onClick: submitComment
+              }, 'Post')
+            ])
           ]);
         })()
       ])
@@ -1453,6 +1686,7 @@ OC.ui = (function () {
     field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
     assigneePicker: assigneePicker, deptPicker: deptPicker,
     tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
+    formatMentions: formatMentions, extractMentionedUserIds: extractMentionedUserIds, attachMentionAutocomplete: attachMentionAutocomplete,
     modal: modal, confirm: confirm, toast: toast, debounce: debounce,
     playNotificationSound: playNotificationSound
   };

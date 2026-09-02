@@ -196,7 +196,41 @@ OC.groups = (function () {
     }
 
     var chatHost = h('div', { class: 'group-chat-container' });
-    var msgInput = h('input', { type: 'text', placeholder: 'Write a message in ' + group.name + '...', 'aria-label': 'Group message' });
+    var msgInput = h('input', { type: 'text', placeholder: 'Write a message in ' + group.name + ' or type @ to mention...', 'aria-label': 'Group message' });
+    var replyingBadgeWrap = h('div', { style: 'display:none;' });
+    var replyingToUser = null;
+
+    function setReplyContext(targetAuthor) {
+      replyingToUser = targetAuthor;
+      OC.ui.clear(replyingBadgeWrap);
+      if (targetAuthor) {
+        replyingBadgeWrap.style.display = 'block';
+        replyingBadgeWrap.appendChild(h('div', { class: 'replying-badge' }, [
+          h('span', {}, '↳ Replying to ' + targetAuthor.name),
+          h('button', {
+            type: 'button',
+            class: 'replying-cancel-btn',
+            title: 'Cancel reply',
+            onClick: function (e) {
+              e.preventDefault();
+              setReplyContext(null);
+            }
+          }, '✕')
+        ]));
+        var prefix = '@' + targetAuthor.name + ' ';
+        if (msgInput.value.indexOf(prefix) !== 0) {
+          msgInput.value = prefix + msgInput.value;
+        }
+      } else {
+        replyingBadgeWrap.style.display = 'none';
+      }
+      msgInput.focus();
+    }
+
+    var groupMemberUsers = (group.members || []).map(OC.store.user).filter(Boolean);
+    var mentionHelper = OC.ui.attachMentionAutocomplete
+      ? OC.ui.attachMentionAutocomplete(msgInput, groupMemberUsers.length ? groupMemberUsers : null, function (u) {})
+      : null;
 
     function renderMessages() {
       OC.ui.clear(chatHost);
@@ -235,6 +269,7 @@ OC.groups = (function () {
         currentGroup.messages.forEach(function (m) {
           var canEdit = OC.can.canEditGroupMessage(user, m, currentGroup);
           var canDel = OC.can.canDeleteGroupMessage(user, m, currentGroup);
+          var msgAuthorUser = OC.store.user(m.author);
 
           // Build reaction bar for this message
           var msgReactionsWrap = h('div', { class: 'reactions-bar', style: 'margin-top:4px;' });
@@ -248,16 +283,15 @@ OC.groups = (function () {
             }
             var list = (m.reactions && m.reactions[emoji]) || [];
             var had = list.indexOf(user.id) > -1;
+
             OC.store.mutate({
-              actor: user.id, action: 'group.react', target: currentGroup.name,
-              detail: emoji + ' on message by ' + OC.ui.personName(m.author)
+              actor: user.id, action: 'group.message.react', target: currentGroup.name, detail: emoji
             }, function () {
               OC.store.reactGroupMessage(currentGroup.id, m.id, emoji, user.id);
             });
 
-            // Notify message author if reacting (not self)
-            if (!had && m.author && m.author !== user.id) {
-              OC.store.notify([m.author], user.name + ' reacted ' + emoji + ' in ' + currentGroup.name, currentGroup.id);
+            if (!had && m.author !== user.id) {
+              OC.store.notify([m.author], user.name + ' reacted ' + emoji + ' to your message in ' + currentGroup.name, currentGroup.id);
             }
 
             renderMessages();
@@ -265,37 +299,38 @@ OC.groups = (function () {
           }
 
           rxKeys.forEach(function (emoji) {
-            var uids = m.reactions[emoji] || [];
-            if (!uids.length) return;
-            var isReacted = uids.indexOf(user.id) > -1;
-            var names = uids.map(function (uid) { var u = OC.store.user(uid); return u ? u.name : uid; }).join(', ');
-            var pill = h('button', {
+            var users = m.reactions[emoji] || [];
+            if (!users.length) return;
+            var active = users.indexOf(user.id) > -1;
+            var names = users.map(OC.ui.personName).join(', ');
+            var btn = h('button', {
+              class: 'reaction-btn' + (active ? ' active' : ''),
               type: 'button',
-              class: 'reaction-pill' + (isReacted ? ' active' : ''),
-              title: (names ? names + ' reacted with ' : 'Reacted with ') + emoji,
+              title: names,
               onClick: function (e) {
                 e.preventDefault();
-                e.stopPropagation();
                 toggleMsgReact(emoji);
               }
             }, [
               h('span', { class: 'emoji' }, emoji),
-              h('span', { class: 'count' }, String(uids.length))
+              h('span', { class: 'count' }, String(users.length))
             ]);
-            msgReactionsWrap.appendChild(pill);
+            msgReactionsWrap.appendChild(btn);
           });
 
           var pickerBtn = h('button', {
+            class: 'btn small add-react-btn',
             type: 'button',
-            class: 'reaction-picker-btn',
             title: 'Add reaction',
             onClick: function (e) {
               e.preventDefault();
               e.stopPropagation();
               if (pickerPop) { pickerPop.remove(); pickerPop = null; return; }
-              pickerPop = h('div', { class: 'reaction-picker-pop' }, EMOJIS.map(function (em) {
+
+              pickerPop = h('div', { class: 'reaction-picker-popover', style: 'top:-38px;' }, EMOJIS.map(function (em) {
                 return h('button', {
-                  type: 'button', class: 'reaction-emoji-btn', title: 'React ' + em,
+                  type: 'button',
+                  class: 'emoji-opt',
                   onClick: function (ev) {
                     ev.preventDefault(); ev.stopPropagation();
                     toggleMsgReact(em);
@@ -323,7 +358,16 @@ OC.groups = (function () {
               OC.ui.person(m.author, 'strong'),
               h('span', {}, OC.ui.fmtWhen(m.created_at)),
               m.edited_at ? h('span', { class: 'comment-edited-tag' }, '(edited)') : null,
-              (canEdit || canDel) ? h('div', { class: 'comment-tools push' }, [
+              h('div', { class: 'comment-tools push' }, [
+                h('button', {
+                  class: 'btn-inline',
+                  type: 'button',
+                  title: 'Reply to this message',
+                  onClick: function (e) {
+                    e.preventDefault();
+                    setReplyContext(msgAuthorUser || { id: m.author, name: m.author });
+                  }
+                }, 'Reply'),
                 canEdit ? h('button', {
                   class: 'btn-inline', type: 'button', title: 'Edit message',
                   onClick: function (e) {
@@ -369,9 +413,9 @@ OC.groups = (function () {
                     });
                   }
                 }, 'Delete') : null
-              ].filter(Boolean)) : null
+              ].filter(Boolean))
             ]),
-            h('div', { class: 'group-msg-text' }, m.text),
+            h('div', { class: 'group-msg-text' }, OC.ui.formatMentions ? OC.ui.formatMentions(m.text) : m.text),
             msgReactionsWrap
           ]);
 
@@ -392,13 +436,21 @@ OC.groups = (function () {
           OC.store.addGroupMessage(currentGroup.id, val, user.id);
         });
 
-        // Targeted notification: Send ONLY to other members of this group
-        var otherMembers = (currentGroup.members || []).filter(function (id) { return id !== user.id; });
-        if (otherMembers.length) {
-          OC.store.notify(otherMembers, user.name + ' posted in ' + currentGroup.name + ': "' + val.slice(0, 35) + (val.length > 35 ? '…' : '') + '"', currentGroup.id);
+        // Targeted notification: Send to group members & ALL mentioned users
+        var targets = (currentGroup.members || []).filter(function (id) { return id !== user.id; });
+        if (OC.ui.extractMentionedUserIds) {
+          var mentioned = OC.ui.extractMentionedUserIds(val).filter(function (id) { return id !== user.id; });
+          mentioned.forEach(function (mid) {
+            if (targets.indexOf(mid) === -1) targets.push(mid);
+          });
+        }
+
+        if (targets.length) {
+          OC.store.notify(targets, user.name + ' in ' + currentGroup.name + ': "' + val.slice(0, 35) + (val.length > 35 ? '…' : '') + '"', currentGroup.id);
         }
 
         msgInput.value = '';
+        setReplyContext(null);
         renderMessages();
         if (onDone) onDone();
         setTimeout(function () { msgsList.scrollTop = msgsList.scrollHeight; }, 50);
@@ -412,10 +464,21 @@ OC.groups = (function () {
       });
 
       var form = h('div', { class: 'comment-form', style: 'margin-top:10px;' }, [
-        msgInput,
-        h('button', {
-          class: 'btn small primary', type: 'button', onClick: submitGroupMessage
-        }, 'Send')
+        replyingBadgeWrap,
+        h('div', { class: 'comment-form-row' }, [
+          msgInput,
+          h('button', {
+            class: 'mention-btn-trigger',
+            type: 'button',
+            title: 'Mention team member (@)',
+            onClick: function () {
+              if (mentionHelper) mentionHelper.openMentionMenu();
+            }
+          }, '@'),
+          h('button', {
+            class: 'btn small primary', type: 'button', onClick: submitGroupMessage
+          }, 'Send')
+        ])
       ]);
 
       chatHost.appendChild(headerBox);

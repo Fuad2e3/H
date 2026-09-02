@@ -377,12 +377,12 @@ OC.clients = (function () {
 
         filteredList.length ? h('div', { style: 'display:flex;flex-direction:column;gap:10px;' }, filteredList.map(function (t) {
           var assignees = (Array.isArray(t.assignees) && t.assignees.length) ? t.assignees : (t.assigned_to ? [t.assigned_to] : []);
-          return h('div', { class: 'portal-credential-card', style: 'padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;' }, [
-            h('div', { style: 'display:flex;align-items:center;gap:12px;flex:1;' }, [
+          return h('div', { class: 'client-todo-item-row' }, [
+            h('div', { class: 'client-todo-left' }, [
               h('input', {
                 type: 'checkbox',
                 checked: t.state === 'done',
-                style: 'width:18px;height:18px;cursor:pointer;',
+                style: 'width:18px;height:18px;cursor:pointer;flex-shrink:0;',
                 onChange: function () {
                   OC.store.mutate({ actor: user.id, action: 'todo.state', target: t.title }, function () {
                     t.state = (t.state === 'done') ? 'open' : 'done';
@@ -390,16 +390,16 @@ OC.clients = (function () {
                   renderClientPortal(host, client, onBack);
                 }
               }),
-              h('div', { style: 'display:flex;flex-direction:column;gap:3px;' }, [
-                h('span', { style: 'font-weight:600;font-size:14.5px;color:var(--ink);' + (t.state === 'done' ? 'text-decoration:line-through;color:var(--text-secondary);' : '') }, t.title),
-                h('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
+              h('div', { class: 'client-todo-info' }, [
+                h('span', { class: 'client-todo-title' + (t.state === 'done' ? ' is-done' : ''), style: t.state === 'done' ? 'text-decoration:line-through;color:var(--text-secondary);' : '' }, t.title),
+                h('div', { class: 'client-todo-meta' }, [
                   h('span', { class: 'chip ' + (t.state === 'done' ? 'state-done' : 'state-open') }, t.state || 'open'),
                   t.priority ? h('span', { class: 'chip ' + (t.priority === 'urgent' ? 'signal' : 'custom') }, t.priority) : null,
                   t.due ? h('span', { class: 'muted', style: 'font-size:11.5px;' }, 'Due: ' + OC.ui.fmtDate(t.due)) : null
                 ].filter(Boolean))
               ])
             ]),
-            h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, assignees.map(function (uId) {
+            h('div', { class: 'row', style: 'gap:6px;align-items:center;flex-shrink:0;' }, assignees.map(function (uId) {
               return OC.ui.person(uId);
             }))
           ]);
@@ -432,12 +432,12 @@ OC.clients = (function () {
         ]),
 
         clientInstructions.length ? h('div', { style: 'display:flex;flex-direction:column;gap:12px;' }, clientInstructions.map(function (ins) {
-          return h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;' }, [
-            h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:8px;' }, [
+          return h('div', { class: 'client-instruction-item-card' }, [
+            h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:6px;' }, [
               h('h4', { style: 'margin:0;font-size:15px;font-weight:700;color:var(--ink);' }, ins.title || 'Instruction'),
               h('span', { class: 'muted', style: 'font-size:11.5px;' }, OC.ui.fmtWhen(ins.created_at || ins.posted_at))
             ]),
-            h('p', { style: 'font-size:14px;color:var(--text);margin:6px 0 10px;line-height:1.55;' }, ins.body),
+            h('p', { style: 'font-size:14px;color:var(--text);margin:4px 0 8px;line-height:1.55;' }, ins.body),
             h('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
               OC.ui.person(ins.author, 'strong'),
               ins.target_type ? h('span', { class: 'chip custom' }, 'Target: ' + ins.target_type) : null

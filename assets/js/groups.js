@@ -199,6 +199,7 @@ OC.groups = (function () {
 
     var chatContainer = h('div', { class: 'full-page-chat-container' });
     var msgInput = h('input', { type: 'text', placeholder: 'Write a message in ' + group.name + ' or type @ to mention...', 'aria-label': 'Group message' });
+    var msgsList = null;
     var replyingBadgeWrap = h('div', { style: 'display:none;' });
     var activeReplyTarget = null;
 

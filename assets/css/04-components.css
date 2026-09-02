@@ -2664,12 +2664,12 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   transform: translateX(-2px) !important;
 }
 .full-page-chat-header .group-channel-hash {
-  color: #949BA4;
+  color: var(--text-secondary);
   font-size: 20px;
   font-weight: 700;
 }
 .full-page-chat-header .group-channel-topic {
-  color: #949BA4 !important;
+  color: var(--text-secondary) !important;
   font-size: 13px !important;
 }
 .full-page-chat-messages {
@@ -2683,7 +2683,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   flex-direction: column;
   gap: 4px;
   padding: 14px 18px;
-  background: #313338 !important;
+  background: var(--discord-main-bg) !important;
   transform: translateZ(0);
   will-change: scroll-position;
   contain: content;
@@ -2696,39 +2696,39 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   right: 0 !important;
   z-index: 10 !important;
   padding: 10px 16px 12px !important;
-  background: #2B2D31 !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35) !important;
+  background: var(--discord-header-bg) !important;
+  border-top: 1px solid var(--rule) !important;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15) !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
 }
 .full-page-chat-input-bar .comment-form-row {
-  background: #383A40 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: var(--discord-input-bg) !important;
+  border: 1px solid var(--rule) !important;
   border-radius: 8px !important;
   padding: 4px 10px !important;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 .full-page-chat-input-bar input {
   background: transparent !important;
   border: none !important;
-  color: #DBDEE1 !important;
+  color: var(--ink) !important;
   font-size: 14px !important;
   padding: 8px 6px !important;
   outline: none !important;
   box-shadow: none !important;
 }
 .full-page-chat-input-bar input::placeholder {
-  color: #80848E !important;
+  color: var(--text-secondary) !important;
 }
 .full-page-chat-input-bar .mention-btn-trigger {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: #B5BAC1 !important;
+  background: var(--surface-alt) !important;
+  border: 1px solid var(--rule) !important;
+  color: var(--text-secondary) !important;
   border-radius: 6px !important;
   padding: 4px 8px !important;
   font-size: 14px !important;
@@ -2768,7 +2768,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   position: relative;
 }
 .group-msg-item:hover {
-  background: #2E3035 !important;
+  background: var(--discord-item-hover) !important;
   box-shadow: none !important;
 }
 .group-msg-head {
@@ -2776,16 +2776,16 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   align-items: baseline;
   gap: 8px;
   font-size: 13.5px;
-  color: #949BA4 !important;
+  color: var(--text-secondary) !important;
 }
 .group-msg-head strong,
 .group-msg-head .person {
-  color: #F2F3F5 !important;
+  color: var(--ink) !important;
   font-weight: 700 !important;
 }
 .group-msg-text {
   font-size: 14.5px !important;
-  color: #DBDEE1 !important;
+  color: var(--ink) !important;
   line-height: 1.45 !important;
   white-space: pre-wrap;
 }
@@ -2804,32 +2804,32 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   color: #5865F2 !important;
 }
 .reaction-btn {
-  background: #2B2D31 !important;
-  border: 1px solid #3F4147 !important;
-  color: #DBDEE1 !important;
+  background: var(--discord-header-bg) !important;
+  border: 1px solid var(--rule) !important;
+  color: var(--text-secondary) !important;
   border-radius: 8px !important;
   padding: 3px 8px !important;
   font-size: 12px !important;
 }
 .reaction-btn.active {
-  background: rgba(88, 101, 242, 0.22) !important;
-  border-color: #5865F2 !important;
-  color: #8096FF !important;
+  background: var(--blueprint-soft) !important;
+  border-color: var(--blueprint) !important;
+  color: var(--blueprint) !important;
 }
 .group-msg-reply-quote {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border-left: 3px solid #5865F2 !important;
+  background: var(--surface-alt) !important;
+  border-left: 3px solid var(--blueprint) !important;
   border-radius: 4px !important;
   padding: 4px 10px !important;
   margin-bottom: 4px !important;
 }
 .group-msg-reply-quote .msg-reply-quote-author {
-  color: #8096FF !important;
+  color: var(--blueprint) !important;
   font-weight: 600 !important;
   font-size: 11.5px !important;
 }
 .group-msg-reply-quote .msg-reply-quote-snippet {
-  color: #949BA4 !important;
+  color: var(--text-secondary) !important;
   font-size: 12px !important;
 }
 

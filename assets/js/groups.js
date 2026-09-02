@@ -200,6 +200,9 @@ OC.groups = (function () {
     var replyingBadgeWrap = h('div', { style: 'display:none;' });
     var replyingToUser = null;
 
+    var mediaPreviewWrap = h('div', { style: 'display:none;' });
+    var currentMediaAttachment = null;
+
     function setReplyContext(targetAuthor) {
       replyingToUser = targetAuthor;
       OC.ui.clear(replyingBadgeWrap);
@@ -225,6 +228,226 @@ OC.groups = (function () {
         replyingBadgeWrap.style.display = 'none';
       }
       msgInput.focus();
+    }
+
+    function setMediaAttachment(media) {
+      currentMediaAttachment = media;
+      OC.ui.clear(mediaPreviewWrap);
+      if (media) {
+        mediaPreviewWrap.style.display = 'block';
+        var thumb = media.type === 'image'
+          ? h('img', { class: 'chat-media-preview-thumb', src: media.url, alt: media.name })
+          : h('div', { class: 'chat-media-preview-thumb', style: 'display:flex;align-items:center;justify-content:center;background:#000;color:#fff;font-size:16px;' }, '🎬');
+
+        mediaPreviewWrap.appendChild(h('div', { class: 'chat-media-preview-bar' }, [
+          thumb,
+          h('div', { class: 'chat-media-preview-info' }, [
+            h('span', { class: 'chat-media-preview-name' }, media.name),
+            h('span', { class: 'chat-media-preview-size' }, (media.type === 'image' ? '🖼️ Optimized Image · ' : '🎬 Video · ') + media.size)
+          ]),
+          h('button', {
+            type: 'button',
+            class: 'replying-cancel-btn',
+            title: 'Remove attachment',
+            onClick: function (e) {
+              e.preventDefault();
+              setMediaAttachment(null);
+            }
+          }, '✕')
+        ]));
+      } else {
+        mediaPreviewWrap.style.display = 'none';
+      }
+    }
+
+    function optimizeAndAttachImage(file) {
+      if (file.size > 15 * 1024 * 1024) {
+        OC.ui.toast('Image must be under 15MB.', true);
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var img = new Image();
+        img.onload = function () {
+          var canvas = document.createElement('canvas');
+          var maxDim = 1200;
+          var w = img.width;
+          var h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, w, h);
+          var compressed = canvas.toDataURL('image/webp', 0.82);
+          if (!compressed || compressed.indexOf('data:image/webp') !== 0) {
+            compressed = canvas.toDataURL('image/jpeg', 0.82);
+          }
+          var approxKb = Math.round(((compressed.length * 0.75) / 1024) * 10) / 10;
+          setMediaAttachment({
+            type: 'image',
+            url: compressed,
+            name: file.name,
+            size: approxKb + ' KB'
+          });
+          OC.ui.toast('Image optimized & attached 🖼️');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function optimizeAndAttachVideo(file) {
+      if (file.size > 25 * 1024 * 1024) {
+        OC.ui.toast('Video must be under 25MB.', true);
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var approxMb = Math.round((file.size / (1024 * 1024)) * 10) / 10;
+        setMediaAttachment({
+          type: 'video',
+          url: e.target.result,
+          name: file.name,
+          size: approxMb + ' MB'
+        });
+        OC.ui.toast('Video attached 🎬');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    var mediaFileInput = h('input', {
+      type: 'file',
+      accept: 'image/*, video/mp4, video/webm, video/ogg',
+      style: 'display:none;',
+      onChange: function (e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        if (file.type.indexOf('image/') === 0) {
+          optimizeAndAttachImage(file);
+        } else if (file.type.indexOf('video/') === 0) {
+          optimizeAndAttachVideo(file);
+        } else {
+          OC.ui.toast('Supported formats: Images and Videos (MP4/WebM).', true);
+        }
+        mediaFileInput.value = '';
+      }
+    });
+
+    function openCreatePollModal() {
+      var currentGroup = OC.store.group(groupId) || group;
+      if (!OC.can.canPostGroupMessage(user, currentGroup)) {
+        OC.ui.toast('Access restricted: Only assigned group members can create polls.', true);
+        return;
+      }
+
+      var questionInput = h('input', { type: 'text', placeholder: 'Ask a question or topic...', required: true });
+      var multiCheckbox = h('input', { type: 'checkbox' });
+      var optionsContainer = h('div', { class: 'group-msg-poll-options', style: 'margin:8px 0;' });
+      var optionInputs = [];
+
+      function addOptionRow(val) {
+        if (optionInputs.length >= 8) {
+          OC.ui.toast('Maximum 8 poll options allowed.', true);
+          return;
+        }
+        var optInput = h('input', { type: 'text', placeholder: 'Option ' + (optionInputs.length + 1), value: val || '' });
+        var row = h('div', { class: 'poll-option-input-row' }, [
+          optInput,
+          optionInputs.length >= 2 ? h('button', {
+            type: 'button',
+            class: 'btn-inline danger',
+            title: 'Remove option',
+            onClick: function () {
+              var idx = optionInputs.indexOf(optInput);
+              if (idx > -1) {
+                optionInputs.splice(idx, 1);
+                row.remove();
+              }
+            }
+          }, '✕') : null
+        ]);
+        optionInputs.push(optInput);
+        optionsContainer.appendChild(row);
+      }
+
+      addOptionRow('');
+      addOptionRow('');
+
+      var addOptBtn = h('button', {
+        type: 'button',
+        class: 'btn small',
+        style: 'align-self:flex-start;',
+        onClick: function () { addOptionRow(''); }
+      }, '+ Add option');
+
+      var modalContent = h('div', { class: 'form-body' }, [
+        OC.ui.field('Poll Question', questionInput, { required: true }),
+        h('div', { style: 'margin-top:10px;' }, [
+          h('label', { style: 'font-size:12px;font-weight:600;' }, 'Options (at least 2):'),
+          optionsContainer,
+          addOptBtn
+        ]),
+        h('div', { class: 'field checkbox', style: 'margin-top:12px;display:flex;align-items:center;gap:8px;' }, [
+          multiCheckbox,
+          h('span', { style: 'font-size:12.5px;' }, 'Allow members to select multiple options')
+        ])
+      ]);
+
+      OC.ui.modal({
+        title: '📊 Create Group Poll',
+        content: modalContent,
+        actions: [
+          { label: 'Cancel', onClick: function (close) { close(); } },
+          {
+            label: 'Create Poll',
+            primary: true,
+            onClick: function (close) {
+              var qVal = questionInput.value.trim();
+              if (!qVal) return 'Poll question is required.';
+              var opts = optionInputs.map(function (inp) { return inp.value.trim(); }).filter(Boolean);
+              if (opts.length < 2) return 'Please provide at least 2 non-empty options.';
+
+              var pollData = {
+                id: 'poll-' + Date.now(),
+                question: qVal,
+                multi: multiCheckbox.checked,
+                options: opts.map(function (optText, i) {
+                  return { id: 'opt-' + (i + 1), text: optText, voters: [] };
+                }),
+                created_by: user.id,
+                created_at: new Date().toISOString()
+              };
+
+              OC.store.mutate({
+                actor: user.id, action: 'group.poll.create', target: currentGroup.name, detail: qVal.slice(0, 35)
+              }, function () {
+                OC.store.addGroupMessage(currentGroup.id, '📊 Poll: ' + qVal, user.id, { poll: pollData });
+              });
+
+              // Notify group members
+              var targets = (currentGroup.members || []).filter(function (id) { return id !== user.id; });
+              if (targets.length) {
+                OC.store.notify(targets, user.name + ' started a new poll in ' + currentGroup.name + ': "' + qVal.slice(0, 35) + '"', currentGroup.id);
+              }
+
+              OC.ui.toast('Poll created successfully! 📊');
+              renderMessages();
+              if (onDone) onDone();
+              close();
+            }
+          }
+        ]
+      });
     }
 
     var groupMemberUsers = (group.members || []).map(OC.store.user).filter(Boolean);
@@ -263,7 +486,7 @@ OC.groups = (function () {
       if (!currentGroup.messages.length) {
         msgsList.appendChild(h('div', { class: 'empty', style: 'padding:24px;text-align:center;' }, [
           OC.icon('board'),
-          h('p', { style: 'margin-top:6px;' }, 'No discussions yet. Send the first message below!')
+          h('p', { style: 'margin-top:6px;' }, 'No discussions yet. Send the first message or create a poll below!')
         ]));
       } else {
         currentGroup.messages.forEach(function (m) {
@@ -353,6 +576,91 @@ OC.groups = (function () {
           ]);
           msgReactionsWrap.appendChild(pickerBtn);
 
+          // Render attached media if present
+          var mediaNode = null;
+          if (m.media) {
+            if (m.media.type === 'image') {
+              mediaNode = h('div', {
+                class: 'group-msg-media-img',
+                title: 'Click to view full image',
+                onClick: function (e) {
+                  e.preventDefault();
+                  OC.ui.modal({
+                    title: '🖼️ ' + (m.media.name || 'Image Preview'),
+                    content: h('div', { style: 'text-align:center;' }, [
+                      h('img', { src: m.media.url, alt: m.media.name, style: 'max-width:100%;max-height:75vh;border-radius:6px;' })
+                    ]),
+                    actions: [{ label: 'Close', onClick: function (close) { close(); } }]
+                  });
+                }
+              }, [
+                h('img', { src: m.media.url, alt: m.media.name || 'Image' })
+              ]);
+            } else if (m.media.type === 'video') {
+              mediaNode = h('div', { class: 'group-msg-media-video' }, [
+                h('video', { src: m.media.url, controls: true, preload: 'metadata' })
+              ]);
+            }
+          }
+
+          // Render interactive poll if present
+          var pollNode = null;
+          if (m.poll && Array.isArray(m.poll.options)) {
+            var totalPollVotes = 0;
+            m.poll.options.forEach(function (opt) {
+              totalPollVotes += (opt.voters || []).length;
+            });
+
+            var optionNodes = m.poll.options.map(function (opt) {
+              var voters = opt.voters || [];
+              var voteCount = voters.length;
+              var hasVoted = voters.indexOf(user.id) > -1;
+              var pct = totalPollVotes > 0 ? Math.round((voteCount / totalPollVotes) * 100) : 0;
+
+              var voterNames = voters.map(OC.ui.personName).join(', ');
+
+              return h('div', {
+                class: 'group-msg-poll-opt' + (hasVoted ? ' voted' : ''),
+                title: voterNames ? 'Voted by: ' + voterNames : 'No votes yet',
+                onClick: function (e) {
+                  e.preventDefault();
+                  if (!OC.can.canPostGroupMessage(user, currentGroup)) {
+                    OC.ui.toast('Access restricted: Only assigned group members can vote.', true);
+                    return;
+                  }
+                  OC.store.mutate({
+                    actor: user.id, action: 'group.poll.vote', target: currentGroup.name, detail: opt.text
+                  }, function () {
+                    OC.store.voteGroupPoll(currentGroup.id, m.id, opt.id, user.id);
+                  });
+                  renderMessages();
+                  if (onDone) onDone();
+                }
+              }, [
+                h('div', { class: 'group-msg-poll-opt-bar', style: 'width:' + pct + '%;' }),
+                h('div', { class: 'group-msg-poll-opt-content' }, [
+                  h('span', { class: 'group-msg-poll-opt-text' }, opt.text),
+                  h('span', { class: 'group-msg-poll-opt-stats' }, voteCount + ' vote' + (voteCount === 1 ? '' : 's') + ' (' + pct + '%)' + (voterNames ? ' · ' + voterNames : ''))
+                ]),
+                h('button', {
+                  type: 'button',
+                  class: 'btn small ' + (hasVoted ? 'primary' : 'outline') + ' group-msg-poll-opt-btn'
+                }, hasVoted ? '✓ Voted' : 'Vote')
+              ]);
+            });
+
+            pollNode = h('div', { class: 'group-msg-poll' }, [
+              h('div', { class: 'group-msg-poll-head' }, [
+                h('span', { class: 'group-msg-poll-title' }, [
+                  h('span', {}, '📊'),
+                  h('span', {}, m.poll.question)
+                ]),
+                h('span', { class: 'chip count' }, totalPollVotes + ' vote' + (totalPollVotes === 1 ? '' : 's') + (m.poll.multi ? ' · Multi-choice' : ''))
+              ]),
+              h('div', { class: 'group-msg-poll-options' }, optionNodes)
+            ]);
+          }
+
           var msgItem = h('div', { class: 'group-msg-item' }, [
             h('div', { class: 'group-msg-head' }, [
               OC.ui.person(m.author, 'strong'),
@@ -416,6 +724,8 @@ OC.groups = (function () {
               ].filter(Boolean))
             ]),
             h('div', { class: 'group-msg-text' }, OC.ui.formatMentions ? OC.ui.formatMentions(m.text) : m.text),
+            mediaNode,
+            pollNode,
             msgReactionsWrap
           ]);
 
@@ -429,11 +739,18 @@ OC.groups = (function () {
           return;
         }
         var val = msgInput.value.trim();
-        if (!val) return;
+        if (!val && !currentMediaAttachment) return;
+        
+        var messageText = val || (currentMediaAttachment.type === 'image' ? '🖼️ Photo attached' : '🎬 Video attached');
+        var extra = {};
+        if (currentMediaAttachment) {
+          extra.media = currentMediaAttachment;
+        }
+
         OC.store.mutate({
-          actor: user.id, action: 'group.message', target: currentGroup.name, detail: val.slice(0, 35)
+          actor: user.id, action: 'group.message', target: currentGroup.name, detail: messageText.slice(0, 35)
         }, function () {
-          OC.store.addGroupMessage(currentGroup.id, val, user.id);
+          OC.store.addGroupMessage(currentGroup.id, messageText, user.id, extra);
         });
 
         // Targeted notification: Send to group members & ALL mentioned users
@@ -446,11 +763,12 @@ OC.groups = (function () {
         }
 
         if (targets.length) {
-          OC.store.notify(targets, user.name + ' in ' + currentGroup.name + ': "' + val.slice(0, 35) + (val.length > 35 ? '…' : '') + '"', currentGroup.id);
+          OC.store.notify(targets, user.name + ' in ' + currentGroup.name + ': "' + messageText.slice(0, 35) + (messageText.length > 35 ? '…' : '') + '"', currentGroup.id);
         }
 
         msgInput.value = '';
         setReplyContext(null);
+        setMediaAttachment(null);
         renderMessages();
         if (onDone) onDone();
         setTimeout(function () { msgsList.scrollTop = msgsList.scrollHeight; }, 50);
@@ -465,6 +783,8 @@ OC.groups = (function () {
 
       var form = h('div', { class: 'comment-form', style: 'margin-top:10px;' }, [
         replyingBadgeWrap,
+        mediaPreviewWrap,
+        mediaFileInput,
         h('div', { class: 'comment-form-row' }, [
           msgInput,
           h('button', {
@@ -475,6 +795,22 @@ OC.groups = (function () {
               if (mentionHelper) mentionHelper.openMentionMenu();
             }
           }, '@'),
+          h('button', {
+            class: 'mention-btn-trigger',
+            type: 'button',
+            title: 'Attach optimized Image / Video',
+            onClick: function () {
+              mediaFileInput.click();
+            }
+          }, '📷 Media'),
+          h('button', {
+            class: 'mention-btn-trigger',
+            type: 'button',
+            title: 'Create an interactive Poll',
+            onClick: function () {
+              openCreatePollModal();
+            }
+          }, '📊 Poll'),
           h('button', {
             class: 'btn small primary', type: 'button', onClick: submitGroupMessage
           }, 'Send')

@@ -588,7 +588,7 @@ OC.store = (function () {
       state.groups = state.groups.filter(function (g) { return g.id !== id; });
     },
 
-    addGroupMessage: function (groupId, text, authorId) {
+    addGroupMessage: function (groupId, text, authorId, extra) {
       var group = api.group(groupId);
       if (!group) return null;
       var msg = {
@@ -598,9 +598,44 @@ OC.store = (function () {
         created_at: new Date().toISOString(),
         reactions: {}
       };
+      if (extra && typeof extra === 'object') {
+        if (extra.media) msg.media = extra.media;
+        if (extra.poll) msg.poll = extra.poll;
+      }
       group.messages = group.messages || [];
       group.messages.push(msg);
       return msg;
+    },
+
+    voteGroupPoll: function (groupId, messageId, optionId, userId) {
+      var group = api.group(groupId);
+      if (!group || !group.messages) return null;
+      var msg = null;
+      for (var i = 0; i < group.messages.length; i++) {
+        if (group.messages[i].id === messageId) {
+          msg = group.messages[i];
+          break;
+        }
+      }
+      if (!msg || !msg.poll || !msg.poll.options) return null;
+      var poll = msg.poll;
+      poll.options.forEach(function (opt) {
+        opt.voters = opt.voters || [];
+        var idx = opt.voters.indexOf(userId);
+        if (opt.id === optionId) {
+          if (idx > -1) {
+            opt.voters.splice(idx, 1);
+          } else {
+            opt.voters.push(userId);
+          }
+        } else if (!poll.multi) {
+          // If single-choice poll, remove vote from other options
+          if (idx > -1) {
+            opt.voters.splice(idx, 1);
+          }
+        }
+      });
+      return poll;
     },
 
     editGroupMessage: function (groupId, messageId, newText) {

@@ -988,7 +988,7 @@ OC.ui = (function () {
     var clientCode = h('input', { type: 'text', placeholder: 'e.g. TFR, ACME' });
     var clientNumber = h('input', { type: 'text', placeholder: 'e.g. +880 1700-000000, 01712345678' });
 
-    modal({
+    (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
       title: 'Add new client',
       content: h('div', {}, [
         field('1. Client / Company name', name, { required: true, hint: 'Official client or company name for task assignment.' }),
@@ -1005,10 +1005,33 @@ OC.ui = (function () {
             var cIdVal = clientId.value.trim();
             var cCodeVal = clientCode.value.trim();
             var cNumVal = clientNumber.value.trim();
+
             var exists = OC.store.state.clients.some(function (c) {
-              return c.name.toLowerCase() === cName.toLowerCase();
+              return c.name && c.name.toLowerCase().trim() === cName.toLowerCase();
             });
             if (exists) return 'A client with this name already exists.';
+
+            if (cIdVal) {
+              var idExists = OC.store.state.clients.some(function (c) {
+                return c.client_id && c.client_id.toLowerCase().trim() === cIdVal.toLowerCase();
+              });
+              if (idExists) return 'Duplicate Client ID: "' + cIdVal + '" is already used by another client.';
+            }
+
+            if (cCodeVal) {
+              var codeExists = OC.store.state.clients.some(function (c) {
+                return c.client_code && c.client_code.toLowerCase().trim() === cCodeVal.toLowerCase();
+              });
+              if (codeExists) return 'Duplicate Client Code: "' + cCodeVal + '" is already used by another client.';
+            }
+
+            if (cNumVal) {
+              var numExists = OC.store.state.clients.some(function (c) {
+                var num = (c.client_number || c.contact || '').toLowerCase().trim();
+                return num && num === cNumVal.toLowerCase();
+              });
+              if (numExists) return 'Duplicate Client Number: "' + cNumVal + '" is already used by another client.';
+            }
 
             var newClient = {
               id: OC.store.uid('c'),

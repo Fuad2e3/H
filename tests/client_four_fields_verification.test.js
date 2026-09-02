@@ -147,14 +147,64 @@ assert.strictEqual(detailsFetched.details, updated.details, 'Client rich details
 console.log('  ✓ Client rich documentation & formatted workspace notes saved in store');
 
 // 5. Verifying MySQL Sync Handler
-console.log('\n--- [5/5] Verifying MySQL Database Synchronization Handler ---');
+console.log('\n--- [5/6] Verifying MySQL Database Synchronization Handler ---');
 const db = require('../dev3/API/config/db.js');
 assert.ok(typeof db.syncClientToMySQL === 'function', 'syncClientToMySQL must be a function');
 db.syncClientToMySQL(updated);
 console.log('  ✓ MySQL client synchronization executed without error with all fields & details');
 
+// 6. Verifying Duplicate Checks for Client ID, Code, Number, and Name
+console.log('\n--- [6/6] Verifying Duplicate Prevention (Client ID, Code, Number) ---');
+// Capture modal action handlers
+let capturedModal = null;
+const origModal = OC.ui.modal;
+OC.ui.modal = function (opts) {
+  capturedModal = opts;
+  return origModal(opts);
+};
+
+// Test newClientModal duplicate checks
+OC.ui.newClientModal();
+assert.ok(capturedModal, 'newClientModal must open modal');
+const addAction = capturedModal.actions.find(a => a.primary);
+assert.ok(addAction, 'Add client action must exist');
+
+// Attempt duplicate ID
+const inputs = [];
+function findInputs(node) {
+  if (!node) return;
+  if (node.tagName === 'INPUT') inputs.push(node);
+  if (Array.isArray(node.children)) node.children.forEach(findInputs);
+}
+findInputs(capturedModal.content);
+const [nameField, idField, codeField, numField] = inputs;
+assert.ok(nameField && idField && codeField && numField, 'Must find all 4 input fields');
+
+nameField.value = 'Brand New Corp';
+idField.value = 'CL-0999'; // Same as existing updated client
+codeField.value = 'BNC';
+numField.value = '+880 1999-000000';
+
+let err = addAction.onClick(() => {});
+assert.ok(err && err.includes('Duplicate Client ID'), 'Must reject duplicate Client ID: ' + err);
+console.log('  ✓ Duplicate Client ID rejected: "' + err + '"');
+
+// Attempt duplicate Code
+idField.value = 'CL-UNIQUE-123';
+codeField.value = 'AGT'; // Same as existing
+err = addAction.onClick(() => {});
+assert.ok(err && err.includes('Duplicate Client Code'), 'Must reject duplicate Client Code: ' + err);
+console.log('  ✓ Duplicate Client Code rejected: "' + err + '"');
+
+// Attempt duplicate Number
+codeField.value = 'BNC-OK';
+numField.value = '+880 1811-998877'; // Same as existing
+err = addAction.onClick(() => {});
+assert.ok(err && err.includes('Duplicate Client Number'), 'Must reject duplicate Client Number: ' + err);
+console.log('  ✓ Duplicate Client Number rejected: "' + err + '"');
+
 console.log('\n==========================================================================');
-console.log('  🎉 CLIENT 4-FIELDS, WORKSPACE PORTAL & REPORTS VERIFIED 100% (0 ERRORS)! ✅');
+console.log('  🎉 CLIENT 4-FIELDS, DUPLICATE CHECKS & PORTAL VERIFIED 100% (0 ERRORS)! ✅');
 console.log('==========================================================================\n');
 
 setTimeout(() => process.exit(0), 100);

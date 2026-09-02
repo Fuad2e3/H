@@ -1021,10 +1021,10 @@ OC.ui = (function () {
     (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
       title: 'Add new client',
       content: h('div', {}, [
-        field('1. Client / Company name', name, { required: true, hint: 'Official client or company name for task assignment.' }),
-        field('2. Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
+        field('1. Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
+        field('2. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' }),
         field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
-        field('4. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' })
+        field('4. Client / Company name', name, { required: true, hint: 'Official client or company name for task assignment.' })
       ]),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },

@@ -121,11 +121,11 @@ OC.clients = (function () {
     OC.ui.modal({
       title: 'Edit client: ' + currentLabel,
       content: h('div', {}, [
-        OC.ui.field('1. Client / Company name', name, { required: true }),
-        OC.ui.field('2. Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
+        OC.ui.field('1. Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
+        OC.ui.field('2. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' }),
         OC.ui.field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
-        OC.ui.field('4. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' }),
-        OC.ui.field('Status', status)
+        OC.ui.field('4. Client / Company name', name, { required: true }),
+        OC.ui.field('5. Status', status)
       ]),
       actions: actions
     });

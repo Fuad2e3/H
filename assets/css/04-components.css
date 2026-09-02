@@ -1124,15 +1124,15 @@ tbody tr:hover {
 
 /* ---- modal -------------------------------------------------------------- */
 dialog.modal {
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--r3);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: var(--r3, 16px);
   background: var(--card-bg);
   color: var(--text);
-  box-shadow: var(--sh3);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 30px rgba(37, 99, 235, 0.15);
   padding: 0;
   width: min(560px, 94vw);
   overflow: hidden;
-  animation: modal-in 75ms cubic-bezier(0, 0, 0.2, 1);
+  animation: modal-in 110ms cubic-bezier(0.16, 1, 0.3, 1);
   transform: translateZ(0);
   backface-visibility: hidden;
   will-change: transform, opacity;
@@ -1140,7 +1140,7 @@ dialog.modal {
 @keyframes modal-in {
   from {
     opacity: 0;
-    transform: scale(0.985) translateY(3px);
+    transform: scale(0.97) translateY(6px);
   }
   to {
     opacity: 1;
@@ -1148,24 +1148,25 @@ dialog.modal {
   }
 }
 dialog.modal::backdrop {
-  background: rgba(8, 12, 22, 0.65);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(8, 12, 22, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 .modal-head {
   display: flex;
   align-items: center;
   gap: var(--s3);
-  padding: var(--s3) var(--s4);
+  padding: 16px 20px;
   border-bottom: 1px solid var(--rule);
   background: linear-gradient(180deg, var(--card-bg-alt) 0%, var(--card-bg) 100%);
 }
 .modal-head h2 {
-  font-size: 17px;
+  font-size: 17.5px;
   font-weight: 700;
+  letter-spacing: -0.015em;
 }
 .modal-body {
-  padding: var(--s4);
+  padding: 20px;
   max-height: min(70vh, 620px);
   overflow-y: auto;
   overscroll-behavior-y: contain;
@@ -1176,9 +1177,9 @@ dialog.modal::backdrop {
 }
 .modal-foot {
   display: flex;
-  gap: var(--s2);
+  gap: 10px;
   justify-content: flex-end;
-  padding: var(--s3) var(--s4);
+  padding: 14px 20px;
   border-top: 1px solid var(--rule);
   background: var(--card-bg-alt);
 }
@@ -3704,6 +3705,7 @@ dialog.modal.fallback {
 .client-todo-item-row {
   background: var(--card-bg, #101c2e);
   border: 1px solid var(--border, rgba(56, 189, 248, 0.18));
+  border-left: 3.5px solid var(--blueprint, #3b82f6);
   border-radius: 10px;
   padding: 14px 18px;
   display: flex;
@@ -3713,12 +3715,14 @@ dialog.modal.fallback {
   gap: 16px;
   text-align: left;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.12s ease;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .client-todo-item-row:hover {
-  border-color: rgba(56, 189, 248, 0.4);
+  border-color: rgba(56, 189, 248, 0.45);
+  border-left-color: var(--brand-orange, #f97316);
   background: var(--card-bg-alt, #13233a);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28), 0 0 14px rgba(56, 189, 248, 0.12);
+  transform: translateY(-1px);
 }
 .client-todo-left {
   display: flex;
@@ -3738,8 +3742,9 @@ dialog.modal.fallback {
   font-size: 14.5px;
   font-weight: 600;
   color: var(--ink, #ffffff);
-  line-height: 1.3;
+  line-height: 1.35;
   text-align: left;
+  letter-spacing: -0.01em;
 }
 .client-todo-meta {
   display: flex;
@@ -3753,6 +3758,7 @@ dialog.modal.fallback {
 .client-instruction-item-card {
   background: var(--card-bg, #101c2e);
   border: 1px solid var(--border, rgba(56, 189, 248, 0.18));
+  border-left: 3.5px solid var(--purple, #8b5cf6);
   border-radius: 10px;
   padding: 16px 20px;
   display: flex;
@@ -3760,11 +3766,13 @@ dialog.modal.fallback {
   gap: 8px;
   text-align: left;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.12s ease;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .client-instruction-item-card:hover {
-  border-color: rgba(56, 189, 248, 0.4);
+  border-color: rgba(139, 92, 246, 0.45);
   background: var(--card-bg-alt, #13233a);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28), 0 0 14px rgba(139, 92, 246, 0.15);
+  transform: translateY(-1px);
 }
 
 /* Client Analytics & Graphics */

@@ -121,12 +121,7 @@ OC.dashboard = (function () {
 
     return h('article', {
       class: 'dashboard-todo-row' + (isDone ? ' is-done' : '') + (overdue ? ' is-overdue' : ''),
-      'data-id': t.id,
-      onClick: function () {
-        if (OC.board && OC.board.editTodo && OC.can && OC.can.canEditTodo && OC.can.canEditTodo(user, t)) {
-          OC.board.editTodo(t);
-        }
-      }
+      'data-id': t.id
     }, [
       checkbox,
       channelBadge,

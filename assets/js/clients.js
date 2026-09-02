@@ -240,10 +240,10 @@ OC.clients = (function () {
 
     /* 2. Sidebar Navigation Items */
     var sidebarItems = [
-      { id: 'report', label: 'Report & Analytics', icon: 'stats', emoji: '📊' },
+      { id: 'details', label: 'Details & Workspace', icon: 'edit', emoji: '📝' },
       { id: 'todos', label: 'Todos & Tasks', icon: 'check', emoji: '✅', badge: openTaskCount > 0 ? openTaskCount : null },
       { id: 'instructions', label: 'Instructions', icon: 'file', emoji: '📋', badge: clientInstructions.length > 0 ? clientInstructions.length : null },
-      { id: 'details', label: 'Details & Workspace', icon: 'edit', emoji: '📝' }
+      { id: 'report', label: 'Report & Analytics', icon: 'stats', emoji: '📊' }
     ];
 
     var sidebar = h('aside', { class: 'portal-sidebar' }, [

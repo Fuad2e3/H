@@ -700,8 +700,16 @@ OC.app = (function () {
 
   /* ---- routing ---------------------------------------------------------- */
   function go(id) {
+    if (route === id) return;
     route = id;
-    if (typeof location !== 'undefined' && location.hash.slice(1) !== id) location.hash = id;
+    if (typeof location !== 'undefined') {
+      try {
+        if (history.replaceState) history.replaceState(null, '', '#' + id);
+        else location.hash = id;
+      } catch (_) {
+        location.hash = id;
+      }
+    }
     render();
   }
 
@@ -722,6 +730,26 @@ OC.app = (function () {
       return;
     }
 
+    var existingPage = document.getElementById('page');
+    var existingNav = root.querySelector('nav.nav');
+    
+    // Fast path: if shell exists, update active nav and render page instantly with 0ms delay
+    if (existingPage && existingNav && root.contains(existingPage)) {
+      var navButtons = existingNav.querySelectorAll('button');
+      ROUTES.forEach(function (r, idx) {
+        if (navButtons[idx]) {
+          if (route === r.id) navButtons[idx].setAttribute('aria-current', 'page');
+          else navButtons[idx].removeAttribute('aria-current');
+        }
+      });
+
+      OC.ui.clear(existingPage);
+      currentView().render(existingPage, render);
+      raisePush();
+      return;
+    }
+
+    // Full mount path
     OC.ui.clear(root);
     var page = h('main', { class: 'page', id: 'page' });
     OC.ui.append(root, [topbar(), nav(), page]);

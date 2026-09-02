@@ -809,7 +809,10 @@ OC.groups = (function () {
         setMediaAttachment(null);
         renderMessages();
         if (onDone) onDone();
-        setTimeout(function () { msgsList.scrollTop = msgsList.scrollHeight; }, 50);
+        msgsList.scrollTop = msgsList.scrollHeight;
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(function () { msgsList.scrollTop = msgsList.scrollHeight; });
+        }
       }
 
       msgInput.addEventListener('keydown', function (e) {
@@ -869,6 +872,14 @@ OC.groups = (function () {
         { label: 'Close', onClick: function (close) { close(); } }
       ]
     });
+
+    var msgsEl = chatHost.querySelector('.group-chat-messages');
+    if (msgsEl) {
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(function () { msgsEl.scrollTop = msgsEl.scrollHeight; });
+      }
+    }
   }
 
   /* ---- render ----------------------------------------------------------- */

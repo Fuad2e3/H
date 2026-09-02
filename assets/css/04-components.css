@@ -1132,13 +1132,15 @@ dialog.modal {
   padding: 0;
   width: min(560px, 94vw);
   overflow: hidden;
-  animation: modal-in 130ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modal-in 75ms cubic-bezier(0, 0, 0.2, 1);
+  transform: translateZ(0);
+  backface-visibility: hidden;
   will-change: transform, opacity;
 }
 @keyframes modal-in {
   from {
     opacity: 0;
-    transform: scale(0.97) translateY(6px);
+    transform: scale(0.985) translateY(3px);
   }
   to {
     opacity: 1;
@@ -1147,8 +1149,8 @@ dialog.modal {
 }
 dialog.modal::backdrop {
   background: rgba(8, 12, 22, 0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 .modal-head {
   display: flex;
@@ -2056,6 +2058,9 @@ dialog.modal::backdrop {
   flex-direction: column;
   gap: 10px;
   padding: 8px 4px 12px;
+  transform: translateZ(0);
+  will-change: scroll-position;
+  contain: content;
 }
 .group-msg-item {
   background: var(--card-bg-alt);
@@ -2066,7 +2071,10 @@ dialog.modal::backdrop {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  transition: transform var(--t-fast), box-shadow var(--t-fast);
+  transform: translateZ(0);
+  content-visibility: auto;
+  contain-intrinsic-size: 55px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
 .group-msg-item:hover {
   box-shadow: var(--sh1);

@@ -19,7 +19,6 @@
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: -0.005em;
   line-height: 1;
   color: var(--text-secondary);
   background: var(--card-bg-alt);
@@ -89,8 +88,8 @@
 }
 /* counters stay in the mono face so digits line up column to column */
 .chip.count {
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
-  font-size: 10.5px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 11px;
   color: var(--text-secondary);
   background: var(--card-bg-alt);
   border-color: var(--rule-strong);
@@ -128,6 +127,7 @@
   line-height: 1;
   user-select: none;
   flex: none;
+  font-variant-numeric: tabular-nums;
 }
 .mark-tint.tint-blueprint {
   background: #2563EB;
@@ -348,15 +348,15 @@
 .stat .k {
   display: block;
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-secondary);
   line-height: 1.3;
 }
 .stat .v {
-  font-family: var(--font-display, 'Outfit', 'Plus Jakarta Sans', sans-serif);
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
   font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.035em;
@@ -659,7 +659,6 @@
   padding: 0 10px;
   border-radius: var(--r-pill);
   white-space: nowrap;
-  letter-spacing: -0.005em;
 }
 
 .channel-badge .channel-icon,
@@ -804,8 +803,8 @@
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--rule);
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
-  font-size: 10.5px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 11.5px;
   line-height: 1.6;
   color: var(--text-secondary);
 }
@@ -923,9 +922,9 @@ table {
 caption {
   caption-side: top;
   text-align: left;
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 11px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--ink);
   background: var(--card-bg-alt);
@@ -936,9 +935,9 @@ caption {
 thead th {
   position: sticky;
   top: 0;
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 11px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   text-align: left;
   color: var(--text-secondary);
@@ -946,6 +945,7 @@ thead th {
   padding: 11px var(--s4);
   border-bottom: 1.5px solid var(--rule-strong);
   white-space: nowrap;
+  font-weight: 700;
 }
 tbody td, tbody th {
   padding: 12px var(--s4);
@@ -1139,8 +1139,8 @@ dialog.modal::backdrop {
   color: var(--ink);
 }
 .notif .when {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10.5px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 11.5px;
   color: var(--text-secondary);
   margin-top: 3px;
 }
@@ -1156,7 +1156,7 @@ dialog.modal::backdrop {
 .appfoot p {
   border-top: 1px solid var(--rule);
   padding-top: var(--s4);
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 11px;
   color: var(--text-secondary);
   display: flex;
@@ -1447,9 +1447,10 @@ dialog.modal::backdrop {
 }
 
 .reaction-pill .count {
-  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 11px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .reaction-picker-btn {
@@ -1561,9 +1562,9 @@ dialog.modal::backdrop {
 .thread summary {
   cursor: pointer;
   list-style: none;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 11px;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-secondary);
   font-weight: 700;
@@ -1635,7 +1636,7 @@ dialog.modal::backdrop {
   display: flex;
   gap: var(--s2);
   align-items: baseline;
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 10.5px;
   color: var(--text-secondary);
   margin-bottom: 2px;
@@ -1654,7 +1655,7 @@ dialog.modal::backdrop {
   background: none;
   border: none;
   padding: 0;
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 10px;
   font-weight: 600;
   color: var(--blueprint);
@@ -1670,7 +1671,7 @@ dialog.modal::backdrop {
   color: var(--signal);
 }
 .comment-edited-tag {
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 9.5px;
   color: var(--text-secondary);
   opacity: 0.7;
@@ -2013,7 +2014,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 }
 
 .dashboard-client-name {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 11px;
   font-weight: 700;
   padding: 2px 7px;
@@ -2189,12 +2190,12 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   justify-content: space-between;
 }
 .discord-sidebar-title {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   color: var(--text-secondary, #949BA4);
   text-transform: uppercase;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2287,7 +2288,8 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 9999px;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-variant-numeric: tabular-nums;
 }
 .discord-channel-actions {
   display: flex;
@@ -2604,7 +2606,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   color: #5865F2 !important;
 }
 .reaction-btn {
@@ -2672,7 +2674,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 .chat-media-preview-size {
   font-size: 10.5px;
   color: var(--blueprint);
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-family: var(--font-mono, monospace);
 }
 
 .group-msg-media-img {
@@ -2790,7 +2792,8 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 .group-msg-poll-opt-stats {
   font-size: 11px;
   color: var(--text-secondary);
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-variant-numeric: tabular-nums;
 }
 .group-msg-poll-opt-btn {
   position: relative;
@@ -2855,7 +2858,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   background: var(--brass);
 }
 .tl-day {
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2868,9 +2871,9 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   margin-top: 0;
 }
 .tl-kind {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 10px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-secondary);
   margin-bottom: 3px;
@@ -2949,7 +2952,7 @@ dialog.modal.fallback {
   width: 22px;
   height: 22px;
   border-radius: var(--r1);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -3100,7 +3103,7 @@ dialog.modal.fallback {
   color: #FFFFFF;
   display: grid;
   place-items: center;
-  font-family: var(--font-display, 'Outfit', sans-serif);
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
   font-weight: 800;
   font-size: 20px;
   letter-spacing: -0.02em;
@@ -3108,7 +3111,7 @@ dialog.modal.fallback {
 }
 
 .portal-title {
-  font-family: var(--font-display, 'Outfit', 'Plus Jakarta Sans', sans-serif);
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -3117,10 +3120,10 @@ dialog.modal.fallback {
 }
 
 .portal-tagline {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 10px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   color: var(--text-secondary);
   text-transform: uppercase;
   margin: 0;
@@ -3325,9 +3328,9 @@ dialog.modal.fallback {
   gap: var(--s3);
   margin: var(--s4) 0 var(--s3);
   color: var(--text-secondary);
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 11px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .login-divider::before, .login-divider::after {
@@ -3369,7 +3372,7 @@ dialog.modal.fallback {
   color: var(--ink);
 }
 .login-account-btn .acc-email {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono, monospace);
   font-size: 11px;
   color: var(--text-secondary);
   margin-left: auto;
@@ -3560,11 +3563,11 @@ dialog.modal.fallback {
   margin-top: 2px;
 }
 .user-profile-meta-line {
-  font-size: 12px;
+  font-size: 12.5px;
   color: #94a3b8 !important;
   line-height: 1.3;
   margin-top: 1px;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
 }
 .user-profile-right {
   display: flex;
@@ -3668,11 +3671,11 @@ dialog.modal.fallback {
   border-bottom: 1px solid var(--rule, rgba(255, 255, 255, 0.08));
 }
 .portal-sidebar-tag {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 9.5px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--text-secondary);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 .portal-sidebar-title {
@@ -3804,11 +3807,11 @@ dialog.modal.fallback {
   font-size: 16px;
 }
 .portal-card-heading-text {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 10.5px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .portal-card-edit-btn {
@@ -3872,11 +3875,11 @@ dialog.modal.fallback {
   padding: 11px 14px;
 }
 .portal-emergency-tag {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 9.5px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 10.5px;
   font-weight: 700;
   color: var(--brand-orange);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .portal-emergency-name {
@@ -3910,14 +3913,14 @@ dialog.modal.fallback {
   box-shadow: var(--sh1);
 }
 .portal-stat-label {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-secondary);
 }
 .portal-stat-value {
-  font-family: var(--font-display, 'Outfit', sans-serif);
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
   font-size: 26px;
   font-weight: 700;
   color: var(--ink);
@@ -3931,9 +3934,10 @@ dialog.modal.fallback {
 .portal-stat-value.alert { color: var(--signal); }
 
 .portal-stat-sub {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text-secondary);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Leave Application Form (Photo 2) ---- */

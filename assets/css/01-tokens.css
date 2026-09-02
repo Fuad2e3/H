@@ -97,10 +97,18 @@
   --grad-success: linear-gradient(135deg, #10B981 0%, #059669 100%);
   --grad-bar: linear-gradient(90deg, #2563EB 0%, #F97316 50%, #8B5CF6 100%);
 
-  /* Typography Tokens */
+  /* Typography Tokens
+     One typeface carries the whole product: Plus Jakarta Sans, from the 10px
+     labels to the page titles. Headings used to run in Outfit and every small
+     label in JetBrains Mono, so a single screen could show three unrelated
+     faces. --font-display is kept as a token so call sites need not change,
+     but it now resolves to the same stack.
+     --font-mono is for content that is genuinely code or data — an address, a
+     token, a phone number — and rides the system mono stack, which needs no
+     download and is installed everywhere. */
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-display: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
 @media (prefers-color-scheme: dark) {

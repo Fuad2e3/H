@@ -153,6 +153,19 @@ OC.activities = (function () {
                         }
                       }
                     }, 'Edit')
+                  : null,
+                (user && user.admin)
+                  ? h('button', {
+                      class: 'btn small danger',
+                      type: 'button',
+                      style: 'padding:2px 7px;font-size:11.5px;margin-left:4px;',
+                      title: 'Remove ' + u.name + ' from ' + d.name,
+                      onClick: function () {
+                        if (OC.people && OC.people.removePersonFromDepartment) {
+                          OC.people.removePersonFromDepartment(u, d, function () { render(host, rerender); });
+                        }
+                      }
+                    }, '✕')
                   : null
               ]);
             }) : [h('p', { class: 'muted', style: 'font-size:12.5px;' }, 'No members yet.')])

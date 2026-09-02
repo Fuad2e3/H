@@ -581,6 +581,31 @@ OC.people = (function () {
     });
   }
 
+  function removePersonFromDepartment(targetUser, dept, onRemoved) {
+    var user = me();
+    if (!user || !user.admin) {
+      OC.ui.toast('Access Denied: Only System Admin may remove members from departments.', true);
+      return;
+    }
+    if (!targetUser || !dept) return;
+
+    OC.ui.confirm('Are you sure you want to remove "' + targetUser.name + '" from the "' + dept.name + '" department?', function () {
+      OC.store.mutate({
+        actor: user.id,
+        action: 'department.member.remove',
+        target: targetUser.name,
+        detail: 'Removed ' + targetUser.name + ' from ' + dept.name
+      }, function () {
+        targetUser.departments = (targetUser.departments || []).filter(function (m) {
+          var mDept = typeof m === 'string' ? m : (m && m.department);
+          return mDept !== dept.id && mDept !== dept.name;
+        });
+      });
+      OC.ui.toast('✅ Removed ' + targetUser.name + ' from ' + dept.name + '.');
+      if (typeof onRemoved === 'function') onRemoved();
+    });
+  }
+
   function editClient(client) {
     var h = OC.ui.h;
     var user = me();
@@ -880,6 +905,17 @@ OC.people = (function () {
                       }
                     }
                   }, 'Edit')
+                : null,
+              (user && user.admin)
+                ? h('button', {
+                    class: 'btn small danger',
+                    type: 'button',
+                    style: 'padding:2px 7px;font-size:11.5px;margin-left:4px;',
+                    title: 'Remove ' + u.name + ' from ' + d.name,
+                    onClick: function () {
+                      removePersonFromDepartment(u, d, function () { render(host); });
+                    }
+                  }, '✕')
                 : null
             ]);
           }) : [h('p', { class: 'muted', style: 'font-size:12.5px;' }, 'No members yet.')])
@@ -942,6 +978,7 @@ OC.people = (function () {
     editPrefs: editPrefs,
     editDepartment: editDepartment,
     addPersonToDepartment: addPersonToDepartment,
+    removePersonFromDepartment: removePersonFromDepartment,
     editClient: editClient,
     editAccount: editAccount,
     getApiEndpoint: getApiEndpoint,

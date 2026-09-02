@@ -277,11 +277,11 @@ test('permissions.js: Role computation, visibility, assignment matrix, and permi
   assert.strictEqual(OC.can.assignTo(nadia, rifat.id), true);
   assert.strictEqual(OC.can.assignTo(tanvir, rifat.id), false);
 
-  // Todo Edit & Delete Permissions
+  // Todo Edit & Delete Permissions (Admin, Dept Head, and Creator only; Assignee cannot edit)
   const todo = OC.store.state.todos[0];
   assert.strictEqual(OC.can.canEditTodo(shohag, todo), true);
   assert.strictEqual(OC.can.canEditTodo(nadia, todo), true); // Head of Outreach
-  assert.strictEqual(OC.can.canEditTodo(rifat, todo), true); // Assignee
+  assert.strictEqual(OC.can.canEditTodo(rifat, todo), false); // Assignee cannot edit
   assert.strictEqual(OC.can.canEditTodo(tanvir, todo), false); // Other member
 
   // Instruction Edit & Delete Permissions

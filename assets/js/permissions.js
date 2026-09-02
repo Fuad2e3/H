@@ -290,23 +290,13 @@ OC.can = (function () {
     return Boolean(actor.admin);
   }
 
-  /* System Admin, Department Head, todo creator, or assignee may edit a todo */
+  /* System Admin, Department Head, or task creator may edit a todo (assignees cannot edit) */
   function canEditTodo(user, todo) {
     if (!user || !todo) return false;
     if (user.admin) return true;
     if (todo.created_by === user.id) return true;
     if (isHead(user, todo.department)) return true;
     if (Array.isArray(todo.departments) && todo.departments.some(function (d) { return isHead(user, d); })) return true;
-    if (todo.assignee === user.id || (todo.assignee_type === 'user' && todo.assignee === user.id) || (Array.isArray(todo.assignees) && todo.assignees.indexOf(user.id) > -1)) return true;
-    if (inGroup(user, todo.assignee) || (todo.assignee_type === 'group' && inGroup(user, todo.assignee))) return true;
-    if (Array.isArray(todo.assignees) && todo.assignees.some(function (aid) {
-      if (aid === user.id) return true;
-      if (typeof aid === 'string') {
-        if (aid.indexOf('user:') === 0 && aid.slice(5) === user.id) return true;
-        if (aid.indexOf('group:') === 0 && inGroup(user, aid.slice(6))) return true;
-      }
-      return inGroup(user, aid);
-    })) return true;
     return false;
   }
 

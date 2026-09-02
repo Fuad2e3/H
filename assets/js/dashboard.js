@@ -89,16 +89,11 @@ OC.dashboard = (function () {
     // Client name - now standardized to show only Client code via OC.ui.clientLabel
     var clientCode = OC.ui.clientLabel(t.client || (Array.isArray(t.clients) ? t.clients[0] : ''));
 
-    // Assignee / Creator name on right side
-    var assigneeUser = OC.store.user(t.assignee || (Array.isArray(t.assignees) ? t.assignees[0] : ''));
-    var assigneeText = assigneeUser ? assigneeUser.name : (t.assignee || '');
-    var assigneeTitle = assigneeUser ? assigneeUser.title : '';
-
-    if (!assigneeText && t.created_by) {
-      var creator = OC.store.user(t.created_by);
-      assigneeText = creator ? creator.name : t.created_by;
-      assigneeTitle = creator ? creator.title : '';
-    }
+    // Assigner (the person who assigned the task / creator)
+    var assignerId = t.created_by || (t.assignee || (Array.isArray(t.assignees) ? t.assignees[0] : ''));
+    var assignerUser = OC.store.user(assignerId);
+    var assignerText = assignerUser ? assignerUser.name : (assignerId || '');
+    var assignerTitle = assignerUser ? assignerUser.title : '';
 
     var checkbox = h('button', {
       type: 'button',
@@ -138,13 +133,13 @@ OC.dashboard = (function () {
       clientCode ? h('span', { class: 'dashboard-client-name' }, clientCode) : null,
       h('span', { class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : '') }, t.title),
       overdue ? h('span', { class: 'chip overdue due', style: 'font-size:11px;padding:2px 8px;' }, OC.ui.dueLabel(t.due)) : null,
-      assigneeUser
-        ? h('span', { class: 'dashboard-assignee-text', style: 'display:inline-flex;align-items:center;gap:6px;' }, [
-            OC.ui.mark(assigneeUser.id),
-            h('span', { class: 'name' }, assigneeText),
-            assigneeTitle ? h('span', { class: 'chip role', style: 'font-size:10px;padding:1px 6px;' }, assigneeTitle) : null
+      assignerUser
+        ? h('span', { class: 'dashboard-assignee-text', style: 'display:inline-flex;align-items:center;gap:6px;', title: 'Assigned by ' + assignerText }, [
+            OC.ui.mark(assignerUser.id),
+            h('span', { class: 'name' }, assignerText),
+            assignerTitle ? h('span', { class: 'chip role', style: 'font-size:10px;padding:1px 6px;' }, assignerTitle) : null
           ].filter(Boolean))
-        : (assigneeText ? h('span', { class: 'dashboard-assignee-text' }, assigneeText) : null)
+        : (assignerText ? h('span', { class: 'dashboard-assignee-text' }, assignerText) : null)
     ].filter(Boolean));
   }
 

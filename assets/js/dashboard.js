@@ -70,12 +70,15 @@ OC.dashboard = (function () {
     var deptName = dept ? dept.name : '';
     var tag = (t.tags && t.tags.length) ? ((OC.store.tag(t.tags[0]) || {}).label || t.tags[0]) : '';
 
-    var badgeLabel = tag || deptName || 'General';
+    var badgeLabel = tag || deptName || (t.priority && t.priority !== 'normal' ? t.priority.toUpperCase() : 'General');
     var badgeIcon = 'mail';
     var badgeStyleClass = 'badge-channel';
 
     var lowerBadge = badgeLabel.toLowerCase();
-    if (lowerBadge.indexOf('linkedin') > -1) {
+    if (lowerBadge.indexOf('urgent') > -1 || lowerBadge.indexOf('high') > -1) {
+      badgeIcon = 'alert';
+      badgeStyleClass = 'badge-urgent';
+    } else if (lowerBadge.indexOf('linkedin') > -1) {
       badgeIcon = 'linkedin';
       badgeStyleClass = 'badge-linkedin';
     } else if (lowerBadge.indexOf('mail') > -1 || lowerBadge.indexOf('email') > -1 || lowerBadge.indexOf('outreach') > -1) {
@@ -122,15 +125,17 @@ OC.dashboard = (function () {
       h('span', {}, badgeLabel)
     ]);
 
-    return h('article', {
-      class: 'dashboard-todo-row' + (isDone ? ' is-done' : '') + (overdue ? ' is-overdue' : ''),
-      'data-id': t.id
-    }, [
-      checkbox,
+    var topBar = h('div', { class: 'dashboard-todo-top-bar' }, [
       channelBadge,
+      overdue
+        ? h('span', { class: 'chip overdue due', style: 'font-size:10.5px;padding:1px 7px;' }, OC.ui.dueLabel(t.due))
+        : (t.due ? h('span', { class: 'due muted mono', style: 'font-size:11px;' }, OC.ui.dueLabel(t.due)) : null)
+    ].filter(Boolean));
+
+    var mainRow = h('div', { class: 'dashboard-todo-main-row' }, [
+      checkbox,
       clientCode ? h('span', { class: 'dashboard-client-name' }, clientCode) : null,
       h('span', { class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : '') }, t.title),
-      overdue ? h('span', { class: 'chip overdue due', style: 'font-size:11px;padding:2px 8px;' }, OC.ui.dueLabel(t.due)) : null,
       assignerUser
         ? h('span', { class: 'dashboard-assignee-text', style: 'display:inline-flex;align-items:center;gap:6px;', title: 'Assigned by ' + assignerText }, [
             OC.ui.mark(assignerUser.id),
@@ -139,6 +144,14 @@ OC.dashboard = (function () {
           ].filter(Boolean))
         : (assignerText ? h('span', { class: 'dashboard-assignee-text' }, assignerText) : null)
     ].filter(Boolean));
+
+    return h('article', {
+      class: 'dashboard-todo-row' + (isDone ? ' is-done' : '') + (overdue ? ' is-overdue' : ''),
+      'data-id': t.id
+    }, [
+      topBar,
+      mainRow
+    ]);
   }
 
   function render(host, rerender) {

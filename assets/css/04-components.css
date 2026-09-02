@@ -754,16 +754,31 @@
 /* ---- Dashboard Modern Todo Row (Horizontal Strip) ---------------------- */
 .dashboard-todo-row {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   background: var(--card-bg);
   border: 1px solid var(--rule);
   border-radius: var(--r2);
-  padding: 10px 16px;
-  margin-bottom: 8px;
+  padding: 10px 16px 12px 16px;
+  margin-bottom: 10px;
   box-shadow: var(--sh1);
   transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
   cursor: pointer;
+  position: relative;
+}
+
+.dashboard-todo-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.dashboard-todo-main-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 
 .dashboard-todo-row:hover {
@@ -847,6 +862,19 @@
 .channel-badge svg {
   width: 12px;
   height: 12px;
+}
+
+/* Urgent / Critical Priority */
+.badge-urgent {
+  background: rgba(225, 29, 72, 0.12);
+  color: #e11d48;
+  border: 1px solid rgba(225, 29, 72, 0.32);
+  font-weight: 700;
+}
+:root[data-theme="dark"] .badge-urgent {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fb7185;
+  border-color: rgba(244, 63, 94, 0.4);
 }
 
 /* Warm Coral / Orange for Email / Cold Outreach */

@@ -574,7 +574,7 @@ OC.clients = (function () {
           ])
         ]);
       } else {
-        /* EDIT MODE: Simple, clean full text editor without toolbar or preview toggle */
+        /* EDIT MODE: Rich markdown text editor with interactive formatting toolbar */
         var editorText = h('textarea', {
           class: 'client-rich-textarea',
           style: 'width:100%;min-height:300px;padding:16px;background:var(--card-bg-alt);border:1px solid var(--rule);border-radius:var(--r1);color:var(--ink);font-size:14px;line-height:1.65;resize:vertical;outline:none;font-family:inherit;box-shadow:inset 0 1px 3px rgba(0,0,0,0.3);',
@@ -582,6 +582,29 @@ OC.clients = (function () {
           'aria-label': 'Client Notes'
         });
         editorText.value = client.details || client.notes || '';
+
+        function insertFormatting(prefix, suffix) {
+          var start = editorText.selectionStart || 0;
+          var end = editorText.selectionEnd || 0;
+          var text = editorText.value;
+          var selected = text.substring(start, end);
+          var replacement = prefix + (selected || 'text') + (suffix || '');
+          editorText.value = text.substring(0, start) + replacement + text.substring(end);
+          editorText.focus();
+          editorText.setSelectionRange(start + prefix.length, start + replacement.length - (suffix ? suffix.length : 0));
+        }
+
+        var toolbar = h('div', { class: 'client-editor-toolbar' }, [
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold (**text**)', onClick: function () { insertFormatting('**', '**'); } }, '𝗕 Bold'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Italic (*text*)', onClick: function () { insertFormatting('*', '*'); } }, '𝐼 Italic'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 2 (## Title)', onClick: function () { insertFormatting('## ', '\n'); } }, 'H2'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 3 (### Title)', onClick: function () { insertFormatting('### ', '\n'); } }, 'H3'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bullet List (- item)', onClick: function () { insertFormatting('- ', '\n'); } }, '• List'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Task Checkbox (- [ ] task)', onClick: function () { insertFormatting('- [ ] ', '\n'); } }, '☑ Checklist'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Code (`code`)', onClick: function () { insertFormatting('`', '`'); } }, '⌨ Code'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote (> quote)', onClick: function () { insertFormatting('> ', '\n'); } }, '❝ Quote'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear Text', onClick: function () { editorText.value = ''; editorText.focus(); } }, '🗑️ Clear')
+        ]);
 
         detailsContent = h('div', { class: 'portal-view-content' }, [
           h('div', { class: 'portal-header-box' }, [
@@ -624,7 +647,8 @@ OC.clients = (function () {
               }, '💾 Save Details')
             ])
           ]),
-          h('div', { class: 'portal-credential-card', style: 'padding:20px;' }, [
+          h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;display:flex;flex-direction:column;gap:12px;' }, [
+            toolbar,
             editorText
           ])
         ]);

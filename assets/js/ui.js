@@ -983,18 +983,18 @@ OC.ui = (function () {
   /* ---- custom client creation modal & picker --------------------------- */
   function newClientModal(onCreated) {
     var user = OC.store.user(OC.store.session());
+    var name = h('input', { type: 'text', placeholder: 'e.g. Acme Corp, Apex Solutions' });
     var clientId = h('input', { type: 'text', placeholder: 'e.g. 0583, CL-101' });
     var clientCode = h('input', { type: 'text', placeholder: 'e.g. TFR, ACME' });
-    var name = h('input', { type: 'text', placeholder: 'e.g. Acme Corp, Apex Solutions' });
-    var contact = h('input', { type: 'text', placeholder: 'e.g. John Doe / Lead Contact' });
+    var clientNumber = h('input', { type: 'text', placeholder: 'e.g. +880 1700-000000, 01712345678' });
 
     modal({
       title: 'Add new client',
       content: h('div', {}, [
-        field('Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
-        field('Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
-        field('Client / Company name', name, { required: true, hint: 'Official client or account name for task assignment.' }),
-        field('Primary contact', contact, { hint: 'Person responsible on the client side (optional).' })
+        field('1. Client / Company name', name, { required: true, hint: 'Official client or company name for task assignment.' }),
+        field('2. Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
+        field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
+        field('4. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' })
       ]),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
@@ -1004,6 +1004,7 @@ OC.ui = (function () {
             if (!cName) return 'Please enter a client name.';
             var cIdVal = clientId.value.trim();
             var cCodeVal = clientCode.value.trim();
+            var cNumVal = clientNumber.value.trim();
             var exists = OC.store.state.clients.some(function (c) {
               return c.name.toLowerCase() === cName.toLowerCase();
             });
@@ -1011,10 +1012,11 @@ OC.ui = (function () {
 
             var newClient = {
               id: OC.store.uid('c'),
+              name: cName,
               client_id: cIdVal,
               client_code: cCodeVal,
-              name: cName,
-              contact: contact.value.trim() || cName,
+              client_number: cNumVal,
+              contact: cNumVal || cName,
               status: 'active'
             };
 

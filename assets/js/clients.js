@@ -18,10 +18,10 @@ OC.clients = (function () {
   function editClient(client, onDone) {
     var h = OC.ui.h;
     var user = me();
+    var name = h('input', { type: 'text', value: client.name || '' });
     var clientId = h('input', { type: 'text', value: client.client_id || '' });
     var clientCode = h('input', { type: 'text', value: client.client_code || '' });
-    var name = h('input', { type: 'text', value: client.name || '' });
-    var contact = h('input', { type: 'text', value: client.contact || client.name });
+    var clientNumber = h('input', { type: 'text', value: client.client_number || client.contact || '' });
     var status = OC.ui.select([
       { value: 'active', label: 'Active' },
       { value: 'paused', label: 'Paused' }
@@ -32,10 +32,10 @@ OC.clients = (function () {
     OC.ui.modal({
       title: 'Edit client: ' + currentLabel,
       content: h('div', {}, [
-        OC.ui.field('Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
-        OC.ui.field('Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
-        OC.ui.field('Client / Company name', name, { required: true }),
-        OC.ui.field('Primary contact', contact, { hint: 'Contact person name.' }),
+        OC.ui.field('1. Client / Company name', name, { required: true }),
+        OC.ui.field('2. Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
+        OC.ui.field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
+        OC.ui.field('4. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' }),
         OC.ui.field('Status', status)
       ]),
       actions: [
@@ -59,10 +59,11 @@ OC.clients = (function () {
               actor: user.id, action: 'client.update', target: name.value.trim(),
               detail: 'Updated details for ' + client.name
             }, function () {
+              client.name = name.value.trim();
               client.client_id = clientId.value.trim();
               client.client_code = clientCode.value.trim();
-              client.name = name.value.trim();
-              client.contact = contact.value.trim() || client.name;
+              client.client_number = clientNumber.value.trim();
+              client.contact = clientNumber.value.trim() || client.name;
               client.status = status.value;
             });
             OC.ui.toast('Client updated.');
@@ -88,7 +89,7 @@ OC.clients = (function () {
       if (filterStatus !== 'all' && c.status !== filterStatus) return false;
       if (!searchQuery) return true;
       var q = searchQuery.toLowerCase();
-      var full = [c.client_id, c.client_code, c.name, c.contact].filter(Boolean).join(' ').toLowerCase();
+      var full = [c.name, c.client_id, c.client_code, c.client_number, c.contact].filter(Boolean).join(' ').toLowerCase();
       return full.indexOf(q) > -1;
     });
 
@@ -96,7 +97,7 @@ OC.clients = (function () {
     OC.ui.append(host, [
       h('div', { class: 'page-head' }, [
         h('h1', {}, 'Clients Portal'),
-        h('p', {}, 'Manage official client accounts, Client IDs, ticker codes, primary contacts, and assigned task workloads across all departments.')
+        h('p', {}, 'Manage official client accounts, Client IDs, ticker codes, contact numbers, and assigned task workloads across all departments.')
       ]),
 
       /* Top summary stats */
@@ -136,7 +137,7 @@ OC.clients = (function () {
         h('div', { style: 'flex:1;min-width:220px;' }, [
           h('input', {
             type: 'search',
-            placeholder: 'Search by client ID, code, name, contact...',
+            placeholder: 'Search by client name, ID, code, number...',
             value: searchQuery,
             style: 'width:100%;',
             onInput: function (e) {
@@ -178,9 +179,10 @@ OC.clients = (function () {
               h('div', { class: 'row', style: 'margin:8px 0 6px;gap:6px;flex-wrap:wrap;' }, [
                 c.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'ID: ' + c.client_id) : null,
                 c.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Code: ' + c.client_code) : null,
+                (c.client_number || c.contact) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, '📞 ' + (c.client_number || c.contact)) : null,
                 h('span', { class: 'chip count' }, activeTaskCount + ' open tasks')
               ].filter(Boolean)),
-              h('p', { class: 'muted', style: 'font-size:13px;margin:6px 0 12px;' }, 'Primary contact: ' + (c.contact || c.name)),
+              h('p', { class: 'muted', style: 'font-size:13px;margin:6px 0 12px;' }, 'Client number: ' + (c.client_number || c.contact || 'N/A')),
               h('div', { class: 'row', style: 'gap:8px;' }, [
                 canCreate
                   ? h('button', {

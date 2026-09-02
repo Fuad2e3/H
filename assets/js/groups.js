@@ -454,7 +454,13 @@ OC.groups = (function () {
       ? OC.ui.attachMentionAutocomplete(msgInput, groupMemberUsers.length ? groupMemberUsers : null, function (u) {})
       : null;
 
-    function renderMessages() {
+    var isInitialGroupLoad = true;
+
+    function renderMessages(forceScrollBottom) {
+      var prevScrollTop = msgsList ? msgsList.scrollTop : 0;
+      var prevScrollHeight = msgsList ? msgsList.scrollHeight : 0;
+      var wasNearBottom = msgsList ? (prevScrollHeight - prevScrollTop - msgsList.clientHeight < 80) : true;
+
       OC.ui.clear(chatContainer);
 
       var currentGroup = OC.store.group(groupId) || group;
@@ -494,7 +500,7 @@ OC.groups = (function () {
         h('p', { class: 'muted group-channel-topic', style: 'font-size:13px;margin:2px 0 0;' }, currentGroup.purpose)
       ]);
 
-      var msgsList = h('div', { class: 'full-page-chat-messages' });
+      msgsList = h('div', { class: 'full-page-chat-messages' });
 
       if (!currentGroup.messages.length) {
         msgsList.appendChild(h('div', { class: 'empty', style: 'padding:40px 24px;text-align:center;' }, [
@@ -530,7 +536,7 @@ OC.groups = (function () {
               OC.store.notify([m.author], user.name + ' reacted ' + emoji + ' to your message in ' + currentGroup.name, currentGroup.id);
             }
 
-            renderMessages();
+            renderMessages(false);
           }
 
           rxKeys.forEach(function (emoji) {
@@ -634,7 +640,7 @@ OC.groups = (function () {
                   }, function () {
                     OC.store.voteGroupPoll(currentGroup.id, m.id, opt.id, user.id);
                   });
-                  renderMessages();
+                  renderMessages(false);
                 }
               }, [
                 h('div', { class: 'group-msg-poll-opt-bar', style: 'width:' + pct + '%;' }),
@@ -705,7 +711,7 @@ OC.groups = (function () {
                               OC.store.editGroupMessage(currentGroup.id, m.id, val);
                             });
                             OC.ui.toast('Message updated.');
-                            renderMessages();
+                            renderMessages(false);
                             close();
                           }
                         }
@@ -722,7 +728,7 @@ OC.groups = (function () {
                         OC.store.deleteGroupMessage(currentGroup.id, m.id);
                       });
                       OC.ui.toast('Message deleted.');
-                      renderMessages();
+                      renderMessages(false);
                     });
                   }
                 }, 'Delete') : null
@@ -739,7 +745,7 @@ OC.groups = (function () {
         });
       }
 
-      function scrollToBottom(smooth) {
+      function scrollToBottom() {
         if (!msgsList) return;
         var doScroll = function () {
           try {
@@ -750,7 +756,6 @@ OC.groups = (function () {
         if (typeof requestAnimationFrame === 'function') requestAnimationFrame(doScroll);
         setTimeout(doScroll, 20);
         setTimeout(doScroll, 80);
-        setTimeout(doScroll, 200);
       }
 
       function submitGroupMessage() {
@@ -780,7 +785,7 @@ OC.groups = (function () {
         msgInput.value = '';
         setReplyContext(null, null);
         setMediaAttachment(null);
-        renderMessages();
+        renderMessages(true);
         scrollToBottom();
       }
 
@@ -806,10 +811,17 @@ OC.groups = (function () {
       chatContainer.appendChild(headerBox);
       chatContainer.appendChild(msgsList);
       chatContainer.appendChild(form);
-      scrollToBottom();
+
+      if (isInitialGroupLoad || forceScrollBottom || wasNearBottom) {
+        scrollToBottom();
+      } else if (msgsList) {
+        // Restore scroll position so screen doesn't jump
+        msgsList.scrollTop = prevScrollTop;
+      }
+      isInitialGroupLoad = false;
     }
 
-    renderMessages();
+    renderMessages(true);
     OC.ui.clear(host);
     host.appendChild(chatContainer);
     var msgsEl = chatContainer.querySelector('.full-page-chat-messages');

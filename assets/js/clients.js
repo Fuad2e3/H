@@ -38,6 +38,86 @@ OC.clients = (function () {
 
     var currentLabel = OC.ui.clientLabel ? OC.ui.clientLabel(client) : client.name;
 
+    var canDelete = !!(OC.can && OC.can.canDeleteClient ? OC.can.canDeleteClient(user, client) : (user && user.admin));
+
+    var actions = [
+      { label: 'Cancel', onClick: function (close) { close(); } },
+      {
+        label: 'Save', primary: true, onClick: function (close) {
+          var cName = name.value.trim();
+          if (!cName) return 'Client name cannot be empty.';
+          var cIdVal = clientId.value.trim();
+          var cCodeVal = clientCode.value.trim();
+          var cNumVal = clientNumber.value.trim();
+
+          var nameExists = OC.store.state.clients.some(function (c) {
+            return c.id !== client.id && c.name && c.name.toLowerCase().trim() === cName.toLowerCase();
+          });
+          if (nameExists) return 'A client with this name already exists.';
+
+          if (cIdVal) {
+            var idExists = OC.store.state.clients.some(function (c) {
+              return c.id !== client.id && c.client_id && c.client_id.toLowerCase().trim() === cIdVal.toLowerCase();
+            });
+            if (idExists) return 'Duplicate Client ID: "' + cIdVal + '" is already used by another client.';
+          }
+
+          if (cCodeVal) {
+            var codeExists = OC.store.state.clients.some(function (c) {
+              return c.id !== client.id && c.client_code && c.client_code.toLowerCase().trim() === cCodeVal.toLowerCase();
+            });
+            if (codeExists) return 'Duplicate Client Code: "' + cCodeVal + '" is already used by another client.';
+          }
+
+          if (cNumVal) {
+            var numExists = OC.store.state.clients.some(function (c) {
+              var num = (c.client_number || c.contact || '').toLowerCase().trim();
+              return c.id !== client.id && num && num === cNumVal.toLowerCase();
+            });
+            if (numExists) return 'Duplicate Client Number: "' + cNumVal + '" is already used by another client.';
+          }
+
+          OC.store.mutate({
+            actor: user.id, action: 'client.update', target: cName,
+            detail: 'Updated details for ' + client.name
+          }, function () {
+            client.name = cName;
+            client.client_id = cIdVal;
+            client.client_code = cCodeVal;
+            client.client_number = cNumVal;
+            client.contact = cNumVal || cName;
+            client.status = status.value;
+          });
+          OC.ui.toast('Client updated.');
+          if (onDone) onDone();
+          close();
+        }
+      }
+    ];
+
+    if (canDelete) {
+      actions.unshift({
+        label: 'Delete client',
+        onClick: function (closeModal) {
+          closeModal();
+          setTimeout(function () {
+            OC.ui.confirm('Permanently delete client "' + client.name + '"? Existing tasks will remain.', function () {
+              OC.store.mutate({ actor: user.id, action: 'client.delete', target: client.name }, function () {
+                OC.store.state.clients = (OC.store.state.clients || []).filter(function (c) { return c.id !== client.id; });
+              });
+              OC.ui.toast('Client "' + client.name + '" deleted.');
+              activePortalClientId = null;
+              if (onDone) onDone();
+              else {
+                var host = document.getElementById('page');
+                if (host) render(host);
+              }
+            });
+          }, 50);
+        }
+      });
+    }
+
     OC.ui.modal({
       title: 'Edit client: ' + currentLabel,
       content: h('div', {}, [
@@ -47,73 +127,7 @@ OC.clients = (function () {
         OC.ui.field('4. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' }),
         OC.ui.field('Status', status)
       ]),
-      actions: [
-        {
-          label: 'Delete client', onClick: function (close) {
-            OC.ui.confirm('Delete client "' + client.name + '"? Existing tasks will remain.', function () {
-              OC.store.mutate({ actor: user.id, action: 'client.delete', target: client.name }, function () {
-                OC.store.state.clients = OC.store.state.clients.filter(function (c) { return c.id !== client.id; });
-              });
-              OC.ui.toast('Client deleted.');
-              activePortalClientId = null;
-              if (onDone) onDone();
-              close();
-            });
-          }
-        },
-        { label: 'Cancel', onClick: function (close) { close(); } },
-        {
-          label: 'Save', primary: true, onClick: function (close) {
-            var cName = name.value.trim();
-            if (!cName) return 'Client name cannot be empty.';
-            var cIdVal = clientId.value.trim();
-            var cCodeVal = clientCode.value.trim();
-            var cNumVal = clientNumber.value.trim();
-
-            var nameExists = OC.store.state.clients.some(function (c) {
-              return c.id !== client.id && c.name && c.name.toLowerCase().trim() === cName.toLowerCase();
-            });
-            if (nameExists) return 'A client with this name already exists.';
-
-            if (cIdVal) {
-              var idExists = OC.store.state.clients.some(function (c) {
-                return c.id !== client.id && c.client_id && c.client_id.toLowerCase().trim() === cIdVal.toLowerCase();
-              });
-              if (idExists) return 'Duplicate Client ID: "' + cIdVal + '" is already used by another client.';
-            }
-
-            if (cCodeVal) {
-              var codeExists = OC.store.state.clients.some(function (c) {
-                return c.id !== client.id && c.client_code && c.client_code.toLowerCase().trim() === cCodeVal.toLowerCase();
-              });
-              if (codeExists) return 'Duplicate Client Code: "' + cCodeVal + '" is already used by another client.';
-            }
-
-            if (cNumVal) {
-              var numExists = OC.store.state.clients.some(function (c) {
-                var num = (c.client_number || c.contact || '').toLowerCase().trim();
-                return c.id !== client.id && num && num === cNumVal.toLowerCase();
-              });
-              if (numExists) return 'Duplicate Client Number: "' + cNumVal + '" is already used by another client.';
-            }
-
-            OC.store.mutate({
-              actor: user.id, action: 'client.update', target: cName,
-              detail: 'Updated details for ' + client.name
-            }, function () {
-              client.name = cName;
-              client.client_id = cIdVal;
-              client.client_code = cCodeVal;
-              client.client_number = cNumVal;
-              client.contact = cNumVal || cName;
-              client.status = status.value;
-            });
-            OC.ui.toast('Client updated.');
-            if (onDone) onDone();
-            close();
-          }
-        }
-      ]
+      actions: actions
     });
   }
 

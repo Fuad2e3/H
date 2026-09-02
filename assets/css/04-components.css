@@ -3612,8 +3612,193 @@ dialog.modal.fallback {
   .portal-card-grid {
     grid-template-columns: 1fr;
   }
-  .portal-emergency-highlight {
-    grid-column: span 1;
-  }
+/* ---- Dedicated Client Portal & Rich Workspace ---- */
+.client-item-card {
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  position: relative;
 }
+.client-item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh2);
+  border-color: var(--blueprint);
+}
+.client-portal-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  animation: fadeIn 0.12s ease-out;
+}
+.client-portal-header {
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r2);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.client-portal-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.client-portal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.client-portal-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--blueprint);
+  background: var(--tint);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: var(--r1);
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.client-portal-back-btn:hover {
+  background: var(--blueprint);
+  color: #ffffff;
+  transform: translateX(-2px);
+}
+.client-portal-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: var(--s3);
+}
+.client-portal-tab-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--r1);
+  border: 1px solid var(--rule);
+  background: var(--card-bg-alt);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.client-portal-tab-btn:hover {
+  color: var(--ink);
+  background: var(--tint);
+}
+.client-portal-tab-btn.active {
+  background: var(--blueprint);
+  color: #ffffff;
+  border-color: var(--blueprint);
+}
+
+/* Client Analytics & Graphics */
+.client-velocity-bar-wrap {
+  display: flex;
+  height: 18px;
+  width: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 10px 0 16px;
+}
+.client-velocity-segment {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+.client-graphic-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.client-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 5px;
+}
+
+/* Rich Markdown / Workspace Text Editor */
+.client-rich-editor-wrap {
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--r2);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.client-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.client-editor-tool-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--card-bg-alt);
+  border: 1px solid var(--rule);
+  border-radius: var(--r1);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+.client-editor-tool-btn:hover {
+  background: var(--blueprint);
+  color: #ffffff;
+}
+.client-rich-textarea {
+  width: 100%;
+  min-height: 280px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 12px;
+  border-radius: var(--r1);
+  border: 1px solid var(--rule);
+  background: var(--card-bg-alt);
+  color: var(--ink);
+  resize: vertical;
+}
+.client-rich-preview {
+  padding: 14px;
+  background: var(--card-bg-alt);
+  border: 1px solid var(--rule);
+  border-radius: var(--r1);
+  min-height: 140px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+.client-rich-preview h2, .client-rich-preview h3 {
+  margin: 12px 0 6px;
+  color: var(--blueprint);
+}
+.client-rich-preview ul, .client-rich-preview ol {
+  padding-left: 20px;
+  margin: 6px 0;
+}
+.client-rich-preview li {
+  margin-bottom: 4px;
+}
+.client-rich-preview blockquote {
+  border-left: 3px solid var(--blueprint);
+  padding-left: 10px;
+  margin: 8px 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 

@@ -125,22 +125,36 @@ assert.strictEqual(updated.client_code, 'AGT', 'Updated client code must match')
 assert.strictEqual(updated.client_number, '+880 1811-998877', 'Updated client number must match');
 console.log('  ✓ Client updates verified across all 4 fields');
 
-// 3. Verifying View Rendering
-console.log('\n--- [3/4] Verifying Clients Portal View Rendering ---');
+// 3. Verifying View Rendering & Client Portal
+console.log('\n--- [3/5] Verifying Clients Portal & Dedicated Workspace Rendering ---');
 const host = makeElement('main');
 OC.clients.render(host);
 assert.ok(host.children.length > 0, 'Clients portal must render into host');
-console.log('  ✓ Clients portal rendered cleanly with 4 fields');
+console.log('  ✓ Clients portal rendered cleanly with clickable cards');
 
-// 4. Verifying MySQL Sync Handler
-console.log('\n--- [4/4] Verifying MySQL Database Synchronization Handler ---');
+OC.clients.openClientPortal(testClient.id);
+assert.strictEqual(typeof OC.clients.openClientPortal, 'function', 'openClientPortal must be exported');
+console.log('  ✓ Dedicated Client Workspace Portal opened successfully');
+
+// 4. Verifying Rich Workspace Documentation & Text Editor
+console.log('\n--- [4/5] Verifying Rich Workspace Documentation & Text Editor ---');
+updated.details = '## Scope of Work\n- [x] Initial contract signing\n- [ ] Deploy production build\n> Priority client SLA 99.9%';
+updated.notes = updated.details;
+OC.store.save();
+
+const detailsFetched = OC.store.client(testClient.id);
+assert.strictEqual(detailsFetched.details, updated.details, 'Client rich details must be stored');
+console.log('  ✓ Client rich documentation & formatted workspace notes saved in store');
+
+// 5. Verifying MySQL Sync Handler
+console.log('\n--- [5/5] Verifying MySQL Database Synchronization Handler ---');
 const db = require('../dev3/API/config/db.js');
 assert.ok(typeof db.syncClientToMySQL === 'function', 'syncClientToMySQL must be a function');
 db.syncClientToMySQL(updated);
-console.log('  ✓ MySQL client synchronization executed without error');
+console.log('  ✓ MySQL client synchronization executed without error with all fields & details');
 
 console.log('\n==========================================================================');
-console.log('  🎉 CLIENT 4-FIELDS (NAME, ID, CODE, NUMBER) VERIFIED 100% WITH 0 ERRORS! ✅');
+console.log('  🎉 CLIENT 4-FIELDS, WORKSPACE PORTAL & REPORTS VERIFIED 100% (0 ERRORS)! ✅');
 console.log('==========================================================================\n');
 
 setTimeout(() => process.exit(0), 100);

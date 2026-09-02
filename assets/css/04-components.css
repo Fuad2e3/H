@@ -2161,6 +2161,64 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   border-radius: 0;
 }
 
+/* ---- Sub-nav Row with Separated Groups & Discussions Button ---- */
+.activities-subnav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.groups-discord-open-btn {
+  background: linear-gradient(135deg, #5865F2 0%, #4752C4 100%) !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  box-shadow: 0 4px 14px rgba(88, 101, 242, 0.35) !important;
+  border: 1px solid rgba(147, 197, 253, 0.3) !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.groups-discord-open-btn:hover {
+  background: linear-gradient(135deg, #4752C4 0%, #3C45A5 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(88, 101, 242, 0.5) !important;
+}
+
+.groups-fullscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 2px 0;
+}
+.groups-back-btn {
+  background: var(--card-bg, #2B2D31) !important;
+  color: var(--ink, #DBDEE1) !important;
+  border: 1px solid var(--rule, #4E5058) !important;
+  border-radius: 8px !important;
+  padding: 6px 14px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.groups-back-btn:hover {
+  background: var(--blueprint, #5865F2) !important;
+  color: #FFFFFF !important;
+  border-color: var(--blueprint, #5865F2) !important;
+  transform: translateX(-2px);
+}
+
 /* ---- Discord Two-Column Workspace Layout (Day/Night Adaptive) ---- */
 .discord-hub-container {
   display: flex;
@@ -2169,9 +2227,9 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   border-radius: 14px;
   box-shadow: var(--sh2, 0 12px 40px rgba(0, 0, 0, 0.45));
   overflow: hidden;
-  height: calc(100vh - 250px);
-  min-height: 400px;
-  max-height: calc(100vh - 250px);
+  height: calc(100vh - 130px);
+  min-height: 480px;
+  max-height: calc(100vh - 130px);
 }
 
 :root[data-theme="dark"] .discord-hub-container {

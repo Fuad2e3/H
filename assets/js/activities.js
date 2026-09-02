@@ -10,7 +10,7 @@ window.OC = window.OC || {};
 OC.activities = (function () {
   'use strict';
 
-  var activeTab = 'groups'; /* groups | departments | accounts | reports | history | invites */
+  var activeTab = 'departments'; /* departments | accounts | reports | history | invites | groups */
   var groupSearchQuery = '';
   var groupFilterStatus = 'all'; /* all | active | archived | mine */
 
@@ -41,55 +41,85 @@ OC.activities = (function () {
 
     OC.ui.clear(host);
 
-    /* ---- 1. Page Header ---- */
-    var pageHead = h('div', { class: 'page-head', style: (activeTab === 'groups' ? 'margin-bottom:6px;' : '') }, [
-      h('h1', {}, 'Management'),
-      h('p', {}, 'Centralized team collaboration & organization hub: cross-department groups, live discussions, departments, member accounts, and pending invites.')
-    ]);
+    var content = [];
 
-    /* ---- 2. Sub-navigation tabs (Without All Overview) ---- */
-    var tabs = [
-      ['groups', 'Groups & Discussions (' + allGroups.length + ')'],
-      ['departments', 'Departments (' + depts.length + ')'],
-      ['accounts', 'Team Accounts (' + users.length + ')'],
-      ['reports', 'Work Reports & Analytics'],
-      ['history', 'History & Audit Logs (' + allAudit.length + ')']
-    ];
-    if (pending.length) {
-      tabs.push(['invites', 'Pending Invites (' + pending.length + ')']);
-    }
-
-    var subNav = h('div', {
-      class: 'segmented activities-tabs',
-      role: 'group',
-      'aria-label': 'Filter Management section',
-      style: 'margin-bottom:' + (activeTab === 'groups' ? '12px;' : '24px;') + 'flex-wrap:wrap;'
-    }, tabs.map(function (opt) {
-      return h('button', {
-        type: 'button',
-        'aria-pressed': String(activeTab === opt[0]),
-        onClick: function () {
-          activeTab = opt[0];
-          render(host, rerender);
-        }
-      }, opt[1]);
-    }));
-
-    var content = [pageHead, subNav].filter(Boolean);
-
-    /* ---- Section A: Groups & Discussions ---- */
     if (activeTab === 'groups') {
-      var groupsSection = h('div', { class: 'activities-section', id: 'activities-groups-sec', style: 'margin-bottom:12px;' });
+      /* ---- Fullscreen Groups & Discussions Header with Corner Back Button ---- */
+      var fullscreenHead = h('div', { class: 'groups-fullscreen-header' }, [
+        h('button', {
+          class: 'groups-back-btn',
+          type: 'button',
+          title: 'Return to Management workspace',
+          onClick: function () {
+            activeTab = 'departments';
+            render(host, rerender);
+          }
+        }, ['← Back to Management']),
+        h('div', { class: 'row', style: 'align-items:center;gap:8px;' }, [
+          h('span', { style: 'font-weight:700;font-size:14px;color:var(--ink);' }, '💬 Groups & Discussions'),
+          h('span', { class: 'chip group' }, allGroups.length + ' channels')
+        ])
+      ]);
+
+      var groupsSection = h('div', { class: 'activities-section', id: 'activities-groups-sec', style: 'margin-bottom:8px;' });
       var groupsHost = h('div', { class: 'groups-sub-host' });
       if (OC.groups && OC.groups.render) {
         OC.groups.render(groupsHost, function () { render(host, rerender); }, true);
       }
       groupsSection.appendChild(groupsHost);
-      content.push(groupsSection);
+      content.push(fullscreenHead, groupsSection);
+    } else {
+      /* ---- Standard Management Header & Sub-Navigation ---- */
+      var pageHead = h('div', { class: 'page-head' }, [
+        h('h1', {}, 'Management'),
+        h('p', {}, 'Centralized team collaboration & organization hub: departments, member accounts, analytics, and history logs.')
+      ]);
+
+      var tabs = [
+        ['departments', 'Departments (' + depts.length + ')'],
+        ['accounts', 'Team Accounts (' + users.length + ')'],
+        ['reports', 'Work Reports & Analytics'],
+        ['history', 'History & Audit Logs (' + allAudit.length + ')']
+      ];
+      if (pending.length) {
+        tabs.push(['invites', 'Pending Invites (' + pending.length + ')']);
+      }
+
+      var subNavSegment = h('div', {
+        class: 'segmented activities-tabs',
+        role: 'group',
+        'aria-label': 'Filter Management section'
+      }, tabs.map(function (opt) {
+        return h('button', {
+          type: 'button',
+          'aria-pressed': String(activeTab === opt[0]),
+          onClick: function () {
+            activeTab = opt[0];
+            render(host, rerender);
+          }
+        }, opt[1]);
+      }));
+
+      var separateGroupsBtn = h('button', {
+        class: 'groups-discord-open-btn',
+        type: 'button',
+        title: 'Open full screen Groups & Discussions workspace',
+        onClick: function () {
+          activeTab = 'groups';
+          render(host, rerender);
+        }
+      }, ['💬 Groups & Discussions (' + allGroups.length + ') ↗']);
+
+      var subNavRow = h('div', { class: 'activities-subnav-row' }, [
+        subNavSegment,
+        separateGroupsBtn
+      ]);
+
+      content.push(pageHead, subNavRow);
     }
 
     /* ---- Section B: Departments ---- */
-    if (activeTab === 'all' || activeTab === 'departments') {
+    if (activeTab === 'departments') {
       var deptSection = h('div', { class: 'activities-section', id: 'activities-depts-sec', style: 'margin-bottom:32px;' }, [
         h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;' }, [
           h('h2', { class: 'section-head', style: 'margin:0;' }, [

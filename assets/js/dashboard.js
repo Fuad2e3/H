@@ -137,11 +137,10 @@ OC.dashboard = (function () {
       clientCode ? h('span', { class: 'dashboard-client-name' }, clientCode) : null,
       h('span', { class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : '') }, t.title),
       assignerUser
-        ? h('span', { class: 'dashboard-assignee-text', style: 'display:inline-flex;align-items:center;gap:6px;', title: 'Assigned by ' + assignerText }, [
+        ? h('span', { class: 'dashboard-assignee-text', style: 'display:inline-flex;align-items:center;gap:6px;', title: 'Assigned by ' + assignerText + (assignerTitle ? ' (' + assignerTitle + ')' : '') }, [
             OC.ui.mark(assignerUser.id),
-            h('span', { class: 'name' }, assignerText),
-            assignerTitle ? h('span', { class: 'chip role', style: 'font-size:10px;padding:1px 6px;' }, assignerTitle) : null
-          ].filter(Boolean))
+            h('span', { class: 'name' }, assignerText)
+          ])
         : (assignerText ? h('span', { class: 'dashboard-assignee-text' }, assignerText) : null)
     ].filter(Boolean));
 

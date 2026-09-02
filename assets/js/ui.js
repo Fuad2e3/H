@@ -1580,7 +1580,7 @@ OC.ui = (function () {
         };
         preview.appendChild(img);
         var approxKb = Math.round(((avatarVal.length * 0.75) / 1024) * 10) / 10;
-        sizeBadge.textContent = '⚡ ' + approxKb + ' KB (optimized)';
+        sizeBadge.textContent = approxKb + ' KB (optimized)';
         sizeBadge.style.display = 'inline-flex';
       } else {
         preview.textContent = initials(defaultName || 'User');

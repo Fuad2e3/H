@@ -899,7 +899,7 @@ OC.groups = (function () {
     var sidebar = h('div', { class: 'discord-channels-sidebar' }, [
       h('div', { class: 'discord-sidebar-top' }, [
         h('div', { class: 'discord-sidebar-title-row' }, [
-          h('span', { class: 'discord-sidebar-title' }, ['💬 CHANNELS (' + allGroups.length + ')']),
+          h('span', { class: 'discord-sidebar-title' }, [OC.icon('chat'), 'CHANNELS (' + allGroups.length + ')']),
           canCreate
             ? h('button', {
                 class: 'discord-sidebar-new-btn',
@@ -973,7 +973,7 @@ OC.groups = (function () {
                 class: 'discord-channel-tool-btn',
                 title: 'Edit channel',
                 onClick: function () { editGroup(g, function () { render(host, rerender, hideHead); }); }
-              }, '✏️') : null,
+              }, OC.icon('edit')) : null,
               canDel ? h('button', {
                 class: 'discord-channel-tool-btn',
                 title: 'Delete channel',

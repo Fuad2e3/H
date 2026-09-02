@@ -288,7 +288,7 @@ OC.dashboard = (function () {
           h('div', { class: 'user-profile-status-label' }, 'OFFICIAL EMAIL'),
           h('div', { class: 'user-profile-status-val' }, 'Verified Portal Active')
         ]),
-        h('div', { class: 'user-profile-edit-hint' }, ['✏️ Edit Profile'])
+        h('div', { class: 'user-profile-edit-hint' }, [OC.icon('edit'), 'Edit Profile'])
       ])
     ]);
 

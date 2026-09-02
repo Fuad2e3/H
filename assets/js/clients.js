@@ -234,7 +234,7 @@ OC.clients = (function () {
           onClick: function () {
             editClient(client, function () { renderClientPortal(host, client, onBack); });
           }
-        }, ['✏️ Edit Client'])
+        }, [OC.icon('edit'), 'Edit Client'])
       ])
     ]);
 
@@ -389,7 +389,7 @@ OC.clients = (function () {
       var todosContent = h('div', { class: 'portal-view-content' }, [
         h('div', { class: 'portal-header-box' }, [
           h('div', {}, [
-            h('h2', { class: 'portal-view-title' }, ['✅ Client Tasks & Workload (' + clientTodos.length + ')']),
+            h('h2', { class: 'portal-view-title' }, ['Client Tasks & Workload (' + clientTodos.length + ')']),
             h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
               'Manage and track all deliverables and assigned tasks for ' + client.name + '.')
           ]),
@@ -503,7 +503,7 @@ OC.clients = (function () {
                   renderClientPortal(host, client, onBack);
                 });
               }
-            }, '✏️ Edit'));
+            }, [OC.icon('edit'), 'Edit']));
           }
           if (canDelete && OC.board && OC.board.deleteInstruction) {
             itemActions.push(h('button', {
@@ -566,7 +566,7 @@ OC.clients = (function () {
                 isDetailsEditing = true;
                 renderClientPortal(host, client, onBack);
               }
-            }, ['✏️ Edit Details'])
+            }, [OC.icon('edit'), 'Edit Details'])
           ]),
           h('div', { class: 'portal-credential-card', style: 'padding:22px 26px;' }, [
             hasDetails
@@ -723,22 +723,22 @@ OC.clients = (function () {
       ]),
 
       /* Top summary stats */
-      h('div', { class: 'stats-grid', style: 'display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:20px;' }, [
-        h('div', { class: 'card stat-card' }, [
-          h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Total Clients'),
-          h('div', { class: 'v tabular', style: 'font-size:22px;font-weight:700;' }, String(totalClients))
+      h('div', { class: 'stats' }, [
+        h('div', { class: 'stat' }, [
+          h('span', { class: 'k' }, 'Total Clients'),
+          h('div', { class: 'v tabular' }, String(totalClients))
         ]),
-        h('div', { class: 'card stat-card' }, [
-          h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Active Clients'),
-          h('div', { class: 'v tabular', style: 'font-size:22px;font-weight:700;color:var(--accent);' }, String(activeClients))
+        h('div', { class: 'stat' }, [
+          h('span', { class: 'k' }, 'Active Clients'),
+          h('div', { class: 'v tabular' }, String(activeClients))
         ]),
-        h('div', { class: 'card stat-card' }, [
-          h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Paused Clients'),
-          h('div', { class: 'v tabular', style: 'font-size:22px;font-weight:700;' }, String(pausedClients))
+        h('div', { class: 'stat' }, [
+          h('span', { class: 'k' }, 'Paused Clients'),
+          h('div', { class: 'v tabular' }, String(pausedClients))
         ]),
-        h('div', { class: 'card stat-card' }, [
-          h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Active Client Tasks'),
-          h('div', { class: 'v tabular', style: 'font-size:22px;font-weight:700;' }, String(
+        h('div', { class: 'stat' }, [
+          h('span', { class: 'k' }, 'Active Client Tasks'),
+          h('div', { class: 'v tabular' }, String(
             OC.store.state.todos.filter(function (t) {
               return !t.archived && t.state !== 'done' && (t.client || (Array.isArray(t.clients) && t.clients.length));
             }).length

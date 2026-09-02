@@ -152,7 +152,7 @@ OC.people = (function () {
             onClick: function () {
               dispatchInviteEmail(account, true);
             }
-          }, [OC.icon('send'), '⚡ Send Email Now']),
+          }, [OC.icon('send'), 'Send Email Now']),
           h('a', {
             class: 'btn',
             href: details.gmailUrl,

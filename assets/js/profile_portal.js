@@ -211,7 +211,7 @@ OC.profilePortal = (function () {
               OC.app.openProfileModal(user, rerender);
             }
           }
-        }, ['✏️ Edit Card'])
+        }, [OC.icon('edit'), 'Edit Card'])
       ])
     ]);
 
@@ -236,7 +236,7 @@ OC.profilePortal = (function () {
             onClick: function () {
               editSectionModal(sectionKey, title, fields, rerender);
             }
-          }, ['✏️ Edit'])
+          }, [OC.icon('edit'), 'Edit'])
         ]),
         h('div', { class: 'portal-card-grid' }, contentNodes)
       ]);
@@ -907,7 +907,7 @@ OC.profilePortal = (function () {
                       style: 'background:#10b981;border-color:#10b981;font-weight:700;padding:4px 10px;font-size:11.5px;',
                       title: 'Approve this leave request',
                       onClick: function () { approveLeave(app); }
-                    }, ['✅ Accept']),
+                    }, [OC.icon('check'), 'Accept']),
                     h('button', {
                       class: 'btn small danger',
                       type: 'button',

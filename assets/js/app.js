@@ -27,7 +27,7 @@ OC.app = (function () {
   /* ---- theme (Day / Night Mode Support) ---------------------------------- */
   var THEME_KEY = 'oc-theme';
   var THEMES = [null, 'dark', 'light'];
-  var THEME_LABELS = ['Theme: 🖥️ System', 'Theme: 🌙 Night', 'Theme: ☀️ Day'];
+  var THEME_LABELS = ['Theme: System', 'Theme: Night', 'Theme: Day'];
   var themeIndex = 0;
 
   function readTheme() {

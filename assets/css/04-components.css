@@ -2169,9 +2169,9 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   border-radius: 14px;
   box-shadow: var(--sh2, 0 12px 40px rgba(0, 0, 0, 0.45));
   overflow: hidden;
-  height: calc(100vh - 240px);
-  min-height: 480px;
-  max-height: calc(100vh - 240px);
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  max-height: calc(100vh - 250px);
 }
 
 :root[data-theme="dark"] .discord-hub-container {
@@ -2448,9 +2448,9 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   border-radius: 14px !important;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
   overflow: hidden;
-  height: calc(100vh - 240px);
-  min-height: 480px;
-  max-height: calc(100vh - 240px);
+  height: calc(100vh - 250px);
+  min-height: 400px;
+  max-height: calc(100vh - 250px);
   animation: fadeIn 0.12s ease-out;
 }
 .full-page-chat-header {
@@ -2505,39 +2505,45 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   font-size: 13px !important;
 }
 .full-page-chat-messages {
-  flex: 1 1 0%;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 16px 20px;
+  padding: 14px 18px;
   background: #313338 !important;
   transform: translateZ(0);
   will-change: scroll-position;
   contain: content;
 }
 .full-page-chat-input-bar {
-  flex-shrink: 0;
-  padding: 10px 18px 12px !important;
-  background: #313338 !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-shrink: 0 !important;
+  position: relative !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 10 !important;
+  padding: 10px 16px 12px !important;
+  background: #2B2D31 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
 }
 .full-page-chat-input-bar .comment-form-row {
   background: #383A40 !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 8px !important;
   padding: 4px 10px !important;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 .full-page-chat-input-bar input {
   background: transparent !important;

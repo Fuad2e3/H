@@ -42,7 +42,7 @@ OC.activities = (function () {
     OC.ui.clear(host);
 
     /* ---- 1. Page Header ---- */
-    var pageHead = h('div', { class: 'page-head' }, [
+    var pageHead = h('div', { class: 'page-head', style: (activeTab === 'groups' ? 'margin-bottom:6px;' : '') }, [
       h('h1', {}, 'Management'),
       h('p', {}, 'Centralized team collaboration & organization hub: cross-department groups, live discussions, departments, member accounts, and pending invites.')
     ]);
@@ -63,7 +63,7 @@ OC.activities = (function () {
       class: 'segmented activities-tabs',
       role: 'group',
       'aria-label': 'Filter Management section',
-      style: 'margin-bottom:24px;flex-wrap:wrap;'
+      style: 'margin-bottom:' + (activeTab === 'groups' ? '12px;' : '24px;') + 'flex-wrap:wrap;'
     }, tabs.map(function (opt) {
       return h('button', {
         type: 'button',
@@ -75,11 +75,11 @@ OC.activities = (function () {
       }, opt[1]);
     }));
 
-    var content = [pageHead, subNav];
+    var content = [pageHead, subNav].filter(Boolean);
 
     /* ---- Section A: Groups & Discussions ---- */
-    if (activeTab === 'all' || activeTab === 'groups') {
-      var groupsSection = h('div', { class: 'activities-section', id: 'activities-groups-sec', style: 'margin-bottom:32px;' });
+    if (activeTab === 'groups') {
+      var groupsSection = h('div', { class: 'activities-section', id: 'activities-groups-sec', style: 'margin-bottom:12px;' });
       var groupsHost = h('div', { class: 'groups-sub-host' });
       if (OC.groups && OC.groups.render) {
         OC.groups.render(groupsHost, function () { render(host, rerender); }, true);

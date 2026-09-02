@@ -2161,6 +2161,140 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   border-radius: 0;
 }
 
+/* =========================================================================
+   DASHBOARD MODERN TODO ROW & EXECUTIVE CARDS
+   ========================================================================= */
+.dashboard-todo-row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 14px 11px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+  border-radius: 11px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 8px;
+}
+.dashboard-todo-row:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+.dashboard-todo-row.is-done {
+  opacity: 0.65;
+  background: var(--card-bg-alt);
+}
+.dashboard-todo-row.is-overdue {
+  border-left: 3.5px solid var(--signal);
+}
+
+.dashboard-todo-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dashboard-todo-main-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.dashboard-checkbox {
+  width: 19px;
+  height: 19px;
+  min-width: 19px;
+  border-radius: 6px;
+  border: 1.5px solid var(--rule-strong);
+  background: var(--card-bg-alt);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.14s ease;
+  padding: 0;
+}
+.dashboard-checkbox:hover {
+  border-color: var(--blueprint);
+  transform: scale(1.08);
+}
+.dashboard-checkbox.is-checked {
+  background: var(--grad-primary);
+  border-color: var(--blueprint);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.dashboard-client-name {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  background: var(--blueprint-soft);
+  color: var(--blueprint);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  border-radius: 5px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.dashboard-todo-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+  flex: 1;
+  min-width: 180px;
+  word-break: break-word;
+}
+.dashboard-todo-title.strikethrough {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.dashboard-assignee-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.channel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  line-height: 1.3;
+}
+.channel-badge.badge-urgent {
+  background: rgba(225, 29, 72, 0.12);
+  color: #E11D48;
+  border: 1px solid rgba(225, 29, 72, 0.35);
+}
+.channel-badge.badge-overdue {
+  background: rgba(217, 119, 6, 0.12);
+  color: #D97706;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+}
+.channel-badge.badge-channel {
+  background: rgba(37, 99, 235, 0.10);
+  color: #2563EB;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
 /* ---- Sub-nav Row with Separated Groups & Discussions Button ---- */
 .activities-subnav-row {
   display: flex;

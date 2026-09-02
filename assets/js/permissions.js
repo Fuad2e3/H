@@ -41,13 +41,24 @@ OC.can = (function () {
   function isHead(user, deptId) { return rankOf(user, deptId) === 0; }
   function isLead(user, deptId) { return rankOf(user, deptId) === 1; }
   function inDept(user, deptId) {
-    if (!user || !deptId || !Array.isArray(user.departments)) return false;
-    return user.departments.some(function (m) {
-      if (m.department === deptId) return true;
-      var targetDept = S().department(deptId);
-      if (targetDept && (m.department === targetDept.id || m.department === targetDept.name)) return true;
-      var userDept = S().department(m.department);
-      if (userDept && (userDept.id === deptId || userDept.name === deptId)) return true;
+    if (!user || !deptId) return false;
+    var targetDept = S().department(deptId);
+    var targetId = targetDept ? targetDept.id : String(deptId).toLowerCase();
+    var targetName = targetDept ? targetDept.name.toLowerCase() : String(deptId).toLowerCase();
+
+    var userDepts = Array.isArray(user.departments) ? user.departments : [];
+    if (user.department) userDepts = userDepts.concat([{ department: user.department, level: user.level || 'member' }]);
+    if (user.invite && user.invite.department) userDepts = userDepts.concat([{ department: user.invite.department, level: user.invite.level || 'member' }]);
+
+    return userDepts.some(function (m) {
+      var mDept = (typeof m === 'string') ? m : (m && m.department);
+      if (!mDept) return false;
+      if (mDept === deptId || mDept === targetId) return true;
+      var uDept = S().department(mDept);
+      if (uDept) {
+        if (uDept.id === targetId || uDept.name.toLowerCase() === targetName) return true;
+      }
+      if (String(mDept).toLowerCase() === targetName || String(mDept).toLowerCase() === targetId) return true;
       return false;
     });
   }
@@ -112,11 +123,18 @@ OC.can = (function () {
     if (!user || !note) return false;
     if (user.admin) return true;
     if (note.author === user.id || note.posted_by === user.id) return true;
-    var hasDepts = Boolean(note.department) || (Array.isArray(note.departments) && note.departments.length > 0);
-    if (!hasDepts || note.audience === 'all') return true;
-    if (note.department && inDept(user, note.department)) return true;
-    if (Array.isArray(note.departments) && note.departments.some(function (d) { return inDept(user, d); })) return true;
-    return false;
+
+    var depts = [];
+    if (note.department) depts.push(note.department);
+    if (Array.isArray(note.departments)) {
+      note.departments.forEach(function (d) { if (d && depts.indexOf(d) === -1) depts.push(d); });
+    }
+
+    if (!depts.length || note.audience === 'all') return true;
+
+    return depts.some(function (d) {
+      return inDept(user, d);
+    });
   }
 
   /* ---- assignment (3.2) ------------------------------------------------- */

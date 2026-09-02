@@ -46,13 +46,16 @@ OC.dashboard = (function () {
   }
 
   function myInstructions(user) {
+    if (!user || !Array.isArray(OC.store.state.instructions)) return [];
     return OC.store.state.instructions
       .filter(function (n) { return !n.archived && OC.can.seeInstruction(user, n); })
       .sort(function (a, b) {
-        var au = a.read_by.indexOf(user.id) === -1 ? 0 : 1;
-        var bu = b.read_by.indexOf(user.id) === -1 ? 0 : 1;
+        var aRead = Array.isArray(a.read_by) ? a.read_by : [];
+        var bRead = Array.isArray(b.read_by) ? b.read_by : [];
+        var au = aRead.indexOf(user.id) === -1 ? 0 : 1;
+        var bu = bRead.indexOf(user.id) === -1 ? 0 : 1;
         if (au !== bu) return au - bu;                       /* unread first */
-        return b.posted_at.localeCompare(a.posted_at);
+        return (b.posted_at || '').localeCompare(a.posted_at || '');
       });
   }
 

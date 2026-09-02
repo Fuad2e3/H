@@ -451,6 +451,18 @@ OC.store = (function () {
     return null;
   }
 
+  function byIdOrName(list, key) {
+    if (!list || !key) return null;
+    var clean = String(key).trim().toLowerCase();
+    for (var i = 0; i < list.length; i++) {
+      var item = list[i];
+      if (item.id === key) return item;
+      if (item.name && item.name.toLowerCase() === clean) return item;
+      if (item.id && item.id.toLowerCase() === clean) return item;
+    }
+    return null;
+  }
+
   var api = {
     load: load,
     reset: reset,
@@ -471,9 +483,9 @@ OC.store = (function () {
       }
       return null;
     },
-    department: function (id) { return byId(state.departments, id); },
-    client: function (id) { return byId(state.clients, id); },
-    group: function (id) { return byId(state.groups, id); },
+    department: function (id) { return byIdOrName(state.departments, id); },
+    client: function (id) { return byIdOrName(state.clients, id); },
+    group: function (id) { return byIdOrName(state.groups, id); },
     tag: function (id) { return byId(state.tags, id); },
     todo: function (id) { return byId(state.todos, id); },
     instruction: function (id) { return byId(state.instructions, id); },

@@ -543,13 +543,14 @@ OC.store = (function () {
       return !!invite && !invite.claimed_at && new Date(invite.expires_at) < new Date();
     },
 
-    comment: function (kind, id, body, authorId) {
+    comment: function (kind, id, body, authorId, extra) {
       var host = kind === 'todo' ? api.todo(id) : api.instruction(id);
       if (!host) return null;
       var entry = {
         id: api.uid('c'), author: authorId, body: body,
         posted_at: new Date().toISOString()
       };
+      if (extra && extra.reply_to) entry.reply_to = extra.reply_to;
       host.comments = host.comments || [];
       host.comments.push(entry);
       return entry;

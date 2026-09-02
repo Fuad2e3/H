@@ -651,29 +651,36 @@ OC.ui = (function () {
       : ((OC.store.department(item.department) || {}).name || 'Department');
 
     var replyingBadgeWrap = h('div', { style: 'display:none;' });
-    var replyingToUser = null;
+    var activeReplyTarget = null;
 
-    function setReplyContext(targetAuthor) {
-      replyingToUser = targetAuthor;
+    function setReplyContext(targetAuthor, targetComment) {
+      activeReplyTarget = (targetAuthor && targetComment) ? {
+        id: targetComment.id,
+        author_id: targetAuthor.id || targetComment.author,
+        author_name: targetAuthor.name || targetComment.author,
+        body: (targetComment.body || '').slice(0, 75)
+      } : null;
+
       clear(replyingBadgeWrap);
-      if (targetAuthor) {
+      if (activeReplyTarget) {
         replyingBadgeWrap.style.display = 'block';
-        replyingBadgeWrap.appendChild(h('div', { class: 'replying-badge' }, [
-          h('span', {}, '↳ Replying to ' + targetAuthor.name),
+        replyingBadgeWrap.appendChild(h('div', { class: 'reply-draft-banner' }, [
+          h('div', { class: 'reply-draft-info' }, [
+            h('span', { class: 'reply-draft-header' }, [
+              h('span', {}, '↳ Replying to ' + activeReplyTarget.author_name)
+            ]),
+            h('span', { class: 'reply-draft-snippet' }, '"' + activeReplyTarget.body + '"')
+          ]),
           h('button', {
             type: 'button',
             class: 'replying-cancel-btn',
             title: 'Cancel reply',
             onClick: function (e) {
               e.preventDefault();
-              setReplyContext(null);
+              setReplyContext(null, null);
             }
           }, '✕')
         ]));
-        var prefix = '@' + targetAuthor.name + ' ';
-        if (body.value.indexOf(prefix) !== 0) {
-          body.value = prefix + body.value;
-        }
       } else {
         replyingBadgeWrap.style.display = 'none';
       }
@@ -697,7 +704,22 @@ OC.ui = (function () {
           var canDel = OC.can && OC.can.canDeleteComment ? OC.can.canDeleteComment(user, c, item) : (user && (user.admin || c.author === user.id));
           var commentAuthorUser = OC.store.user(c.author);
 
-          return h('div', { class: 'comment' }, [
+          var replyQuoteNode = null;
+          if (c.reply_to) {
+            var replyAuthor = c.reply_to.author_name || (OC.store.user(c.reply_to.author_id) ? OC.store.user(c.reply_to.author_id).name : c.reply_to.author_id);
+            replyQuoteNode = h('div', {
+              class: 'msg-reply-quote',
+              title: 'Replying to ' + replyAuthor
+            }, [
+              h('span', { class: 'msg-reply-quote-author' }, [
+                h('span', {}, '↳'),
+                h('span', {}, replyAuthor || 'Someone')
+              ]),
+              h('span', { class: 'msg-reply-quote-snippet' }, c.reply_to.body || c.reply_to.text || 'Original comment')
+            ]);
+          }
+
+          return h('div', { class: 'comment', id: 'comm-' + c.id }, [
             h('div', { class: 'comment-by' }, [
               person(c.author, 'strong'),
               h('span', {}, fmtWhen(c.posted_at)),
@@ -709,7 +731,7 @@ OC.ui = (function () {
                   title: 'Reply to this comment',
                   onClick: function (e) {
                     e.preventDefault();
-                    setReplyContext(commentAuthorUser || { id: c.author, name: c.author });
+                    setReplyContext(commentAuthorUser || { id: c.author, name: c.author }, c);
                   }
                 }, 'Reply'),
                 canEdit ? h('button', {
@@ -767,6 +789,7 @@ OC.ui = (function () {
                 }, 'Delete') : null
               ].filter(Boolean))
             ]),
+            replyQuoteNode,
             h('div', { class: 'comment-body-text' }, formatMentions(c.body))
           ]);
         }),
@@ -774,11 +797,16 @@ OC.ui = (function () {
           function submitComment() {
             var text = body.value.trim();
             if (!text) return;
+            var extra = {};
+            if (activeReplyTarget) {
+              extra.reply_to = activeReplyTarget;
+            }
+
             OC.store.mutate({
               actor: user ? user.id : OC.store.session(), action: kind + '.comment',
               target: item.title || (item.body ? item.body.slice(0, 40) : item.id), detail: text
             }, function () {
-              OC.store.comment(kind, item.id, text, user ? user.id : OC.store.session());
+              OC.store.comment(kind, item.id, text, user ? user.id : OC.store.session(), extra);
             });
 
             // Targeted notification: Send to owner, assignee, thread participants & ALL @mentioned users
@@ -808,6 +836,11 @@ OC.ui = (function () {
               if (c.author) targets.push(c.author);
             });
 
+            // If replying to someone, ensure they get notified
+            if (activeReplyTarget && activeReplyTarget.author_id) {
+              targets.push(activeReplyTarget.author_id);
+            }
+
             // Add explicitly mentioned users
             var mentionedIds = extractMentionedUserIds(text);
             targets = targets.concat(mentionedIds);
@@ -824,7 +857,7 @@ OC.ui = (function () {
             }
 
             body.value = '';
-            setReplyContext(null);
+            setReplyContext(null, null);
             if (onChange) onChange();
             else OC.store.emit();
           }

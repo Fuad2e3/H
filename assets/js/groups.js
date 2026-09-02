@@ -198,32 +198,39 @@ OC.groups = (function () {
     var chatHost = h('div', { class: 'group-chat-container' });
     var msgInput = h('input', { type: 'text', placeholder: 'Write a message in ' + group.name + ' or type @ to mention...', 'aria-label': 'Group message' });
     var replyingBadgeWrap = h('div', { style: 'display:none;' });
-    var replyingToUser = null;
+    var activeReplyTarget = null;
 
     var mediaPreviewWrap = h('div', { style: 'display:none;' });
     var currentMediaAttachment = null;
 
-    function setReplyContext(targetAuthor) {
-      replyingToUser = targetAuthor;
+    function setReplyContext(targetAuthor, targetMsg) {
+      activeReplyTarget = (targetAuthor && targetMsg) ? {
+        id: targetMsg.id,
+        author_id: targetAuthor.id || targetMsg.author,
+        author_name: targetAuthor.name || targetMsg.author,
+        text: (targetMsg.text || (targetMsg.poll ? '📊 Poll: ' + targetMsg.poll.question : 'Media attachment')).slice(0, 75)
+      } : null;
+
       OC.ui.clear(replyingBadgeWrap);
-      if (targetAuthor) {
+      if (activeReplyTarget) {
         replyingBadgeWrap.style.display = 'block';
-        replyingBadgeWrap.appendChild(h('div', { class: 'replying-badge' }, [
-          h('span', {}, '↳ Replying to ' + targetAuthor.name),
+        replyingBadgeWrap.appendChild(h('div', { class: 'reply-draft-banner' }, [
+          h('div', { class: 'reply-draft-info' }, [
+            h('span', { class: 'reply-draft-header' }, [
+              h('span', {}, '↳ Replying to ' + activeReplyTarget.author_name)
+            ]),
+            h('span', { class: 'reply-draft-snippet' }, '"' + activeReplyTarget.text + '"')
+          ]),
           h('button', {
             type: 'button',
             class: 'replying-cancel-btn',
             title: 'Cancel reply',
             onClick: function (e) {
               e.preventDefault();
-              setReplyContext(null);
+              setReplyContext(null, null);
             }
           }, '✕')
         ]));
-        var prefix = '@' + targetAuthor.name + ' ';
-        if (msgInput.value.indexOf(prefix) !== 0) {
-          msgInput.value = prefix + msgInput.value;
-        }
       } else {
         replyingBadgeWrap.style.display = 'none';
       }
@@ -661,7 +668,31 @@ OC.groups = (function () {
             ]);
           }
 
-          var msgItem = h('div', { class: 'group-msg-item' }, [
+          var replyQuoteNode = null;
+          if (m.reply_to) {
+            var replyAuthor = m.reply_to.author_name || (OC.store.user(m.reply_to.author_id) ? OC.store.user(m.reply_to.author_id).name : m.reply_to.author_id);
+            replyQuoteNode = h('div', {
+              class: 'msg-reply-quote',
+              title: 'Replying to ' + replyAuthor,
+              onClick: function () {
+                var origEl = document.getElementById('gmsg-' + m.reply_to.id);
+                if (origEl) {
+                  origEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  origEl.style.transition = 'box-shadow 0.3s ease';
+                  origEl.style.boxShadow = '0 0 0 2px #2563eb';
+                  setTimeout(function () { origEl.style.boxShadow = ''; }, 1400);
+                }
+              }
+            }, [
+              h('span', { class: 'msg-reply-quote-author' }, [
+                h('span', {}, '↳'),
+                h('span', {}, replyAuthor || 'Someone')
+              ]),
+              h('span', { class: 'msg-reply-quote-snippet' }, m.reply_to.text || m.reply_to.body || 'Original message')
+            ]);
+          }
+
+          var msgItem = h('div', { class: 'group-msg-item', id: 'gmsg-' + m.id }, [
             h('div', { class: 'group-msg-head' }, [
               OC.ui.person(m.author, 'strong'),
               h('span', {}, OC.ui.fmtWhen(m.created_at)),
@@ -673,7 +704,7 @@ OC.groups = (function () {
                   title: 'Reply to this message',
                   onClick: function (e) {
                     e.preventDefault();
-                    setReplyContext(msgAuthorUser || { id: m.author, name: m.author });
+                    setReplyContext(msgAuthorUser || { id: m.author, name: m.author }, m);
                   }
                 }, 'Reply'),
                 canEdit ? h('button', {
@@ -723,6 +754,7 @@ OC.groups = (function () {
                 }, 'Delete') : null
               ].filter(Boolean))
             ]),
+            replyQuoteNode,
             h('div', { class: 'group-msg-text' }, OC.ui.formatMentions ? OC.ui.formatMentions(m.text) : m.text),
             mediaNode,
             pollNode,
@@ -746,6 +778,9 @@ OC.groups = (function () {
         if (currentMediaAttachment) {
           extra.media = currentMediaAttachment;
         }
+        if (activeReplyTarget) {
+          extra.reply_to = activeReplyTarget;
+        }
 
         OC.store.mutate({
           actor: user.id, action: 'group.message', target: currentGroup.name, detail: messageText.slice(0, 35)
@@ -753,8 +788,11 @@ OC.groups = (function () {
           OC.store.addGroupMessage(currentGroup.id, messageText, user.id, extra);
         });
 
-        // Targeted notification: Send to group members & ALL mentioned users
+        // Targeted notification: Send to group members & replied author & mentioned users
         var targets = (currentGroup.members || []).filter(function (id) { return id !== user.id; });
+        if (activeReplyTarget && activeReplyTarget.author_id && activeReplyTarget.author_id !== user.id) {
+          if (targets.indexOf(activeReplyTarget.author_id) === -1) targets.push(activeReplyTarget.author_id);
+        }
         if (OC.ui.extractMentionedUserIds) {
           var mentioned = OC.ui.extractMentionedUserIds(val).filter(function (id) { return id !== user.id; });
           mentioned.forEach(function (mid) {
@@ -767,7 +805,7 @@ OC.groups = (function () {
         }
 
         msgInput.value = '';
-        setReplyContext(null);
+        setReplyContext(null, null);
         setMediaAttachment(null);
         renderMessages();
         if (onDone) onDone();

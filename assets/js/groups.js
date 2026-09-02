@@ -15,6 +15,7 @@ OC.groups = (function () {
 
   var searchQuery = '';
   var filterStatus = 'all'; /* all | active | archived | mine */
+  var activeChatGroupId = null;
 
   var EMOJIS = ['👍', '❤️', '🔥', '👏', '🎉', '🚀', '👀', '✅'];
 
@@ -184,18 +185,19 @@ OC.groups = (function () {
     });
   }
 
-  /* ---- group chat / discussions workspace -------------------------------- */
-  function openGroupChat(group, onDone) {
+  /* ---- dedicated full-page group chat room view ------------------------- */
+  function renderGroupChatPage(host, group, onBack) {
     var h = OC.ui.h;
     var user = me();
     var groupId = group.id;
 
     if (!OC.can.seeGroup(user, group)) {
       OC.ui.toast('Access restricted: Only assigned group members can view this group.', true);
+      if (typeof onBack === 'function') onBack();
       return;
     }
 
-    var chatHost = h('div', { class: 'group-chat-container' });
+    var chatContainer = h('div', { class: 'full-page-chat-container' });
     var msgInput = h('input', { type: 'text', placeholder: 'Write a message in ' + group.name + ' or type @ to mention...', 'aria-label': 'Group message' });
     var replyingBadgeWrap = h('div', { style: 'display:none;' });
     var activeReplyTarget = null;
@@ -267,84 +269,73 @@ OC.groups = (function () {
       }
     }
 
-    function optimizeAndAttachImage(file) {
-      if (file.size > 15 * 1024 * 1024) {
-        OC.ui.toast('Image must be under 15MB.', true);
-        return;
+    function compressChatImage(img) {
+      var canvas = document.createElement('canvas');
+      var maxDim = 1200;
+      var w = img.width;
+      var h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+        else { w = Math.round((w * maxDim) / h); h = maxDim; }
       }
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        var img = new Image();
-        img.onload = function () {
-          var canvas = document.createElement('canvas');
-          var maxDim = 1200;
-          var w = img.width;
-          var h = img.height;
-          if (w > maxDim || h > maxDim) {
-            if (w > h) {
-              h = Math.round((h * maxDim) / w);
-              w = maxDim;
-            } else {
-              w = Math.round((w * maxDim) / h);
-              h = maxDim;
-            }
-          }
-          canvas.width = w;
-          canvas.height = h;
-          var ctx = canvas.getContext('2d');
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, 0, 0, w, h);
-          var compressed = canvas.toDataURL('image/webp', 0.82);
-          if (!compressed || compressed.indexOf('data:image/webp') !== 0) {
-            compressed = canvas.toDataURL('image/jpeg', 0.82);
-          }
-          var approxKb = Math.round(((compressed.length * 0.75) / 1024) * 10) / 10;
-          setMediaAttachment({
-            type: 'image',
-            url: compressed,
-            name: file.name,
-            size: approxKb + ' KB'
-          });
-          OC.ui.toast('Image optimized & attached 🖼️');
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function optimizeAndAttachVideo(file) {
-      if (file.size > 25 * 1024 * 1024) {
-        OC.ui.toast('Video must be under 25MB.', true);
-        return;
-      }
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        var approxMb = Math.round((file.size / (1024 * 1024)) * 10) / 10;
-        setMediaAttachment({
-          type: 'video',
-          url: e.target.result,
-          name: file.name,
-          size: approxMb + ' MB'
-        });
-        OC.ui.toast('Video attached 🎬');
-      };
-      reader.readAsDataURL(file);
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, w, h);
+      var compressed = canvas.toDataURL('image/webp', 0.82);
+      if (compressed.indexOf('data:image/webp') !== 0) compressed = canvas.toDataURL('image/jpeg', 0.82);
+      return compressed;
     }
 
     var mediaFileInput = h('input', {
       type: 'file',
-      accept: 'image/*, video/mp4, video/webm, video/ogg',
+      accept: 'image/png, image/jpeg, image/webp, image/gif, video/mp4, video/webm, video/quicktime',
       style: 'display:none;',
       onChange: function (e) {
         var file = e.target.files && e.target.files[0];
         if (!file) return;
-        if (file.type.indexOf('image/') === 0) {
-          optimizeAndAttachImage(file);
-        } else if (file.type.indexOf('video/') === 0) {
-          optimizeAndAttachVideo(file);
+        
+        var isVideo = file.type.indexOf('video/') === 0;
+        if (isVideo) {
+          if (file.size > 25 * 1024 * 1024) {
+            OC.ui.toast('Video size must be under 25MB.', true);
+            return;
+          }
+          var reader = new FileReader();
+          reader.onload = function (ev) {
+            var approxMb = Math.round((file.size / (1024 * 1024)) * 10) / 10;
+            setMediaAttachment({
+              type: 'video',
+              url: ev.target.result,
+              name: file.name,
+              size: approxMb + ' MB'
+            });
+            OC.ui.toast('Video attached successfully! 🎬');
+          };
+          reader.readAsDataURL(file);
         } else {
-          OC.ui.toast('Supported formats: Images and Videos (MP4/WebM).', true);
+          if (file.size > 15 * 1024 * 1024) {
+            OC.ui.toast('Image size must be under 15MB.', true);
+            return;
+          }
+          var imgReader = new FileReader();
+          imgReader.onload = function (ev) {
+            var img = new Image();
+            img.onload = function () {
+              var optimizedUrl = compressChatImage(img);
+              var approxKb = Math.round(((optimizedUrl.length * 0.75) / 1024) * 10) / 10;
+              setMediaAttachment({
+                type: 'image',
+                url: optimizedUrl,
+                name: file.name,
+                size: approxKb + ' KB'
+              });
+              OC.ui.toast('Image optimized & attached! 🖼️');
+            };
+            img.src = ev.target.result;
+          };
+          imgReader.readAsDataURL(file);
         }
         mediaFileInput.value = '';
       }
@@ -352,14 +343,9 @@ OC.groups = (function () {
 
     function openCreatePollModal() {
       var currentGroup = OC.store.group(groupId) || group;
-      if (!OC.can.canPostGroupMessage(user, currentGroup)) {
-        OC.ui.toast('Access restricted: Only assigned group members can create polls.', true);
-        return;
-      }
-
-      var questionInput = h('input', { type: 'text', placeholder: 'Ask a question or topic...', required: true });
-      var multiCheckbox = h('input', { type: 'checkbox' });
-      var optionsContainer = h('div', { class: 'group-msg-poll-options', style: 'margin:8px 0;' });
+      var qInput = h('input', { type: 'text', placeholder: 'e.g. Which design concept do you prefer?', 'aria-label': 'Poll question' });
+      var multiChoiceBox = h('input', { type: 'checkbox' });
+      var optionsListWrap = h('div', { style: 'display:flex;flex-direction:column;gap:8px;margin-top:8px;' });
       var optionInputs = [];
 
       function addOptionRow(val) {
@@ -368,69 +354,77 @@ OC.groups = (function () {
           return;
         }
         var optInput = h('input', { type: 'text', placeholder: 'Option ' + (optionInputs.length + 1), value: val || '' });
-        var row = h('div', { class: 'poll-option-input-row' }, [
+        var row = h('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
           optInput,
           optionInputs.length >= 2 ? h('button', {
             type: 'button',
-            class: 'btn-inline danger',
+            class: 'replying-cancel-btn',
             title: 'Remove option',
-            onClick: function () {
+            onClick: function (e) {
+              e.preventDefault();
               var idx = optionInputs.indexOf(optInput);
-              if (idx > -1) {
-                optionInputs.splice(idx, 1);
-                row.remove();
-              }
+              if (idx > -1) optionInputs.splice(idx, 1);
+              row.remove();
             }
           }, '✕') : null
         ]);
         optionInputs.push(optInput);
-        optionsContainer.appendChild(row);
+        optionsListWrap.appendChild(row);
       }
 
-      addOptionRow('');
-      addOptionRow('');
+      addOptionRow('Concept A: Modern Grid');
+      addOptionRow('Concept B: Minimalist');
 
       var addOptBtn = h('button', {
-        type: 'button',
         class: 'btn small',
-        style: 'align-self:flex-start;',
-        onClick: function () { addOptionRow(''); }
-      }, '+ Add option');
-
-      var modalContent = h('div', { class: 'form-body' }, [
-        OC.ui.field('Poll Question', questionInput, { required: true }),
-        h('div', { style: 'margin-top:10px;' }, [
-          h('label', { style: 'font-size:12px;font-weight:600;' }, 'Options (at least 2):'),
-          optionsContainer,
-          addOptBtn
-        ]),
-        h('div', { class: 'field checkbox', style: 'margin-top:12px;display:flex;align-items:center;gap:8px;' }, [
-          multiCheckbox,
-          h('span', { style: 'font-size:12.5px;' }, 'Allow members to select multiple options')
-        ])
-      ]);
+        type: 'button',
+        onClick: function (e) {
+          e.preventDefault();
+          addOptionRow('');
+        }
+      }, [OC.icon('plus'), 'Add option']);
 
       OC.ui.modal({
-        title: '📊 Create Group Poll',
-        content: modalContent,
+        title: '📊 Create Interactive Poll in ' + currentGroup.name,
+        content: h('div', {}, [
+          OC.ui.field('Question / Topic', qInput, { required: true }),
+          OC.ui.field('Poll Options', h('div', {}, [
+            optionsListWrap,
+            h('div', { style: 'margin-top:8px;' }, [addOptBtn])
+          ]), { hint: 'Add up to 8 distinct voting choices for your team.' }),
+          h('label', { class: 'checkline', style: 'margin-top:10px;' }, [
+            multiChoiceBox,
+            'Allow team members to select multiple options'
+          ])
+        ]),
         actions: [
           { label: 'Cancel', onClick: function (close) { close(); } },
           {
-            label: 'Create Poll',
-            primary: true,
-            onClick: function (close) {
-              var qVal = questionInput.value.trim();
-              if (!qVal) return 'Poll question is required.';
-              var opts = optionInputs.map(function (inp) { return inp.value.trim(); }).filter(Boolean);
-              if (opts.length < 2) return 'Please provide at least 2 non-empty options.';
+            label: 'Publish Poll', primary: true, onClick: function (close) {
+              var qVal = qInput.value.trim();
+              if (!qVal) return 'Poll question cannot be empty.';
+              
+              var validOptions = [];
+              optionInputs.forEach(function (inp, idx) {
+                var txt = inp.value.trim();
+                if (txt) {
+                  validOptions.push({
+                    id: 'opt-' + (idx + 1) + '-' + Math.random().toString(36).slice(2, 6),
+                    text: txt,
+                    voters: []
+                  });
+                }
+              });
+
+              if (validOptions.length < 2) {
+                return 'Please provide at least 2 voting options.';
+              }
 
               var pollData = {
-                id: 'poll-' + Date.now(),
+                id: OC.store.uid('poll'),
                 question: qVal,
-                multi: multiCheckbox.checked,
-                options: opts.map(function (optText, i) {
-                  return { id: 'opt-' + (i + 1), text: optText, voters: [] };
-                }),
+                multi: !!multiChoiceBox.checked,
+                options: validOptions,
                 created_by: user.id,
                 created_at: new Date().toISOString()
               };
@@ -441,7 +435,6 @@ OC.groups = (function () {
                 OC.store.addGroupMessage(currentGroup.id, '📊 Poll: ' + qVal, user.id, { poll: pollData });
               });
 
-              // Notify group members
               var targets = (currentGroup.members || []).filter(function (id) { return id !== user.id; });
               if (targets.length) {
                 OC.store.notify(targets, user.name + ' started a new poll in ' + currentGroup.name + ': "' + qVal.slice(0, 35) + '"', currentGroup.id);
@@ -449,7 +442,6 @@ OC.groups = (function () {
 
               OC.ui.toast('Poll created successfully! 📊');
               renderMessages();
-              if (onDone) onDone();
               close();
             }
           }
@@ -463,37 +455,48 @@ OC.groups = (function () {
       : null;
 
     function renderMessages() {
-      OC.ui.clear(chatHost);
+      OC.ui.clear(chatContainer);
 
       var currentGroup = OC.store.group(groupId) || group;
       currentGroup.messages = currentGroup.messages || [];
 
       var memberChips = (currentGroup.members || []).map(function (id) {
         var u = OC.store.user(id);
-        return h('span', { class: 'chip custom person' }, [
+        return h('span', { class: 'chip custom person', title: OC.can.roleLabel(u) }, [
           OC.ui.mark(id),
           u ? u.name : id
         ]);
       });
 
-      var headerBox = h('div', { class: 'group-chat-header' }, [
-        h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;' }, [
-          h('span', { style: 'font-weight:700;font-size:14px;color:var(--ink);' }, currentGroup.name),
-          h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, [
-            h('span', { class: 'chip ' + (currentGroup.status === 'active' ? 'group' : 'custom') }, currentGroup.status),
-            h('span', { class: 'chip count' }, (currentGroup.members || []).length + ' members')
-          ])
+      var headerBox = h('div', { class: 'full-page-chat-header' }, [
+        h('div', { class: 'full-page-chat-header-top' }, [
+          h('div', { class: 'full-page-chat-title-group' }, [
+            h('button', {
+              class: 'full-page-chat-back-btn',
+              type: 'button',
+              title: 'Return to groups list',
+              onClick: function (e) {
+                e.preventDefault();
+                if (typeof onBack === 'function') onBack();
+              }
+            }, ['← Back to Groups']),
+            h('h2', { style: 'font-size:17px;font-weight:700;color:var(--ink);margin:0;' }, '💬 ' + currentGroup.name),
+            h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, [
+              h('span', { class: 'chip ' + (currentGroup.status === 'active' ? 'group' : 'custom') }, currentGroup.status),
+              h('span', { class: 'chip count' }, (currentGroup.members || []).length + ' members')
+            ])
+          ]),
+          h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;' }, memberChips)
         ]),
-        h('p', { class: 'muted', style: 'font-size:12.5px;margin:0;' }, currentGroup.purpose),
-        h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;margin-top:4px;' }, memberChips)
+        h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' }, currentGroup.purpose)
       ]);
 
-      var msgsList = h('div', { class: 'group-chat-messages' });
+      var msgsList = h('div', { class: 'full-page-chat-messages' });
 
       if (!currentGroup.messages.length) {
-        msgsList.appendChild(h('div', { class: 'empty', style: 'padding:24px;text-align:center;' }, [
+        msgsList.appendChild(h('div', { class: 'empty', style: 'padding:40px 24px;text-align:center;' }, [
           OC.icon('board'),
-          h('p', { style: 'margin-top:6px;' }, 'No discussions yet. Send the first message or create a poll below!')
+          h('p', { style: 'margin-top:8px;font-size:14px;color:var(--text-secondary);' }, 'No discussions yet. Send the first message or create a poll below!')
         ]));
       } else {
         currentGroup.messages.forEach(function (m) {
@@ -520,12 +523,11 @@ OC.groups = (function () {
               OC.store.reactGroupMessage(currentGroup.id, m.id, emoji, user.id);
             });
 
-            if (!had && m.author !== user.id) {
+            if (!had && m.author && m.author !== user.id) {
               OC.store.notify([m.author], user.name + ' reacted ' + emoji + ' to your message in ' + currentGroup.name, currentGroup.id);
             }
 
             renderMessages();
-            if (onDone) onDone();
           }
 
           rxKeys.forEach(function (emoji) {
@@ -583,26 +585,21 @@ OC.groups = (function () {
           ]);
           msgReactionsWrap.appendChild(pickerBtn);
 
-          // Render attached media if present
+          // Render attached media
           var mediaNode = null;
           if (m.media) {
             if (m.media.type === 'image') {
               mediaNode = h('div', {
                 class: 'group-msg-media-img',
-                title: 'Click to view full image',
                 onClick: function (e) {
                   e.preventDefault();
                   OC.ui.modal({
                     title: '🖼️ ' + (m.media.name || 'Image Preview'),
-                    content: h('div', { style: 'text-align:center;' }, [
-                      h('img', { src: m.media.url, alt: m.media.name, style: 'max-width:100%;max-height:75vh;border-radius:6px;' })
-                    ]),
+                    content: h('div', { style: 'text-align:center;' }, [h('img', { src: m.media.url, style: 'max-width:100%;max-height:75vh;border-radius:6px;' })]),
                     actions: [{ label: 'Close', onClick: function (close) { close(); } }]
                   });
                 }
-              }, [
-                h('img', { src: m.media.url, alt: m.media.name || 'Image' })
-              ]);
+              }, [h('img', { src: m.media.url, alt: m.media.name || 'Image' })]);
             } else if (m.media.type === 'video') {
               mediaNode = h('div', { class: 'group-msg-media-video' }, [
                 h('video', { src: m.media.url, controls: true, preload: 'metadata' })
@@ -610,7 +607,7 @@ OC.groups = (function () {
             }
           }
 
-          // Render interactive poll if present
+          // Render poll
           var pollNode = null;
           if (m.poll && Array.isArray(m.poll.options)) {
             var totalPollVotes = 0;
@@ -620,107 +617,60 @@ OC.groups = (function () {
 
             var optionNodes = m.poll.options.map(function (opt) {
               var voters = opt.voters || [];
-              var voteCount = voters.length;
               var hasVoted = voters.indexOf(user.id) > -1;
+              var voteCount = voters.length;
               var pct = totalPollVotes > 0 ? Math.round((voteCount / totalPollVotes) * 100) : 0;
-
               var voterNames = voters.map(OC.ui.personName).join(', ');
 
               return h('div', {
                 class: 'group-msg-poll-opt' + (hasVoted ? ' voted' : ''),
-                title: voterNames ? 'Voted by: ' + voterNames : 'No votes yet',
                 onClick: function (e) {
                   e.preventDefault();
-                  if (!OC.can.canPostGroupMessage(user, currentGroup)) {
-                    OC.ui.toast('Access restricted: Only assigned group members can vote.', true);
-                    return;
-                  }
                   OC.store.mutate({
-                    actor: user.id, action: 'group.poll.vote', target: currentGroup.name, detail: opt.text
+                    actor: user.id, action: 'group.poll.vote', target: currentGroup.name, detail: opt.text.slice(0, 35)
                   }, function () {
                     OC.store.voteGroupPoll(currentGroup.id, m.id, opt.id, user.id);
                   });
                   renderMessages();
-                  if (onDone) onDone();
                 }
               }, [
                 h('div', { class: 'group-msg-poll-opt-bar', style: 'width:' + pct + '%;' }),
                 h('div', { class: 'group-msg-poll-opt-content' }, [
                   h('span', { class: 'group-msg-poll-opt-text' }, opt.text),
-                  h('span', { class: 'group-msg-poll-opt-stats' }, voteCount + ' vote' + (voteCount === 1 ? '' : 's') + ' (' + pct + '%)' + (voterNames ? ' · ' + voterNames : ''))
+                  h('span', { class: 'group-msg-poll-opt-stats' }, voteCount + ' vote' + (voteCount === 1 ? '' : 's') + (voterNames ? ' · ' + voterNames : ''))
                 ]),
-                h('button', {
-                  type: 'button',
-                  class: 'btn small ' + (hasVoted ? 'primary' : 'outline') + ' group-msg-poll-opt-btn'
-                }, hasVoted ? '✓ Voted' : 'Vote')
+                h('button', { type: 'button', class: 'btn small ' + (hasVoted ? 'primary' : 'outline') }, hasVoted ? '✓ Voted' : 'Vote')
               ]);
             });
 
             pollNode = h('div', { class: 'group-msg-poll' }, [
               h('div', { class: 'group-msg-poll-head' }, [
-                h('span', { class: 'group-msg-poll-title' }, [
-                  h('span', {}, '📊'),
-                  h('span', {}, m.poll.question)
-                ]),
-                h('span', { class: 'chip count' }, totalPollVotes + ' vote' + (totalPollVotes === 1 ? '' : 's') + (m.poll.multi ? ' · Multi-choice' : ''))
+                h('span', { class: 'group-msg-poll-title' }, [h('span', {}, '📊'), h('span', {}, m.poll.question)]),
+                h('span', { class: 'chip count' }, totalPollVotes + ' vote' + (totalPollVotes === 1 ? '' : 's'))
               ]),
               h('div', { class: 'group-msg-poll-options' }, optionNodes)
             ]);
           }
 
-          var replyQuoteNode = null;
-          if (m.reply_to) {
-            var replyAuthor = m.reply_to.author_name || (OC.store.user(m.reply_to.author_id) ? OC.store.user(m.reply_to.author_id).name : m.reply_to.author_id);
-            replyQuoteNode = h('div', {
-              class: 'msg-reply-quote',
-              title: 'Replying to ' + replyAuthor,
-              onClick: function () {
-                var origEl = document.getElementById('gmsg-' + m.reply_to.id);
-                if (origEl) {
-                  origEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  origEl.style.transition = 'box-shadow 0.3s ease';
-                  origEl.style.boxShadow = '0 0 0 2px #2563eb';
-                  setTimeout(function () { origEl.style.boxShadow = ''; }, 1400);
-                }
-              }
-            }, [
-              h('span', { class: 'msg-reply-quote-author' }, [
-                h('span', {}, '↳'),
-                h('span', {}, replyAuthor || 'Someone')
-              ]),
-              h('span', { class: 'msg-reply-quote-snippet' }, m.reply_to.text || m.reply_to.body || 'Original message')
-            ]);
-          }
-
+          // Render message item
           var msgItem = h('div', { class: 'group-msg-item', id: 'gmsg-' + m.id }, [
             h('div', { class: 'group-msg-head' }, [
               OC.ui.person(m.author, 'strong'),
               h('span', {}, OC.ui.fmtWhen(m.created_at)),
-              m.edited_at ? h('span', { class: 'comment-edited-tag' }, '(edited)') : null,
               h('div', { class: 'comment-tools push' }, [
-                h('button', {
-                  class: 'btn-inline',
-                  type: 'button',
-                  title: 'Reply to this message',
-                  onClick: function (e) {
-                    e.preventDefault();
-                    setReplyContext(msgAuthorUser || { id: m.author, name: m.author }, m);
-                  }
-                }, 'Reply'),
+                h('button', { class: 'btn-inline', type: 'button', onClick: function () { setReplyContext(msgAuthorUser || { id: m.author, name: m.author }, m); } }, 'Reply'),
                 canEdit ? h('button', {
-                  class: 'btn-inline', type: 'button', title: 'Edit message',
-                  onClick: function (e) {
-                    e.preventDefault();
+                  class: 'btn-inline', type: 'button', onClick: function () {
                     var editInput = h('textarea', {}, m.text);
                     OC.ui.modal({
-                      title: 'Edit group message',
+                      title: 'Edit message',
                       content: OC.ui.field('Message', editInput, { required: true }),
                       actions: [
                         { label: 'Cancel', onClick: function (close) { close(); } },
                         {
                           label: 'Save', primary: true, onClick: function (close) {
                             var val = editInput.value.trim();
-                            if (!val) return 'Message cannot be empty.';
+                            if (!val) return;
                             OC.store.mutate({
                               actor: user.id, action: 'group.message.edit', target: currentGroup.name, detail: val.slice(0, 35)
                             }, function () {
@@ -728,7 +678,6 @@ OC.groups = (function () {
                             });
                             OC.ui.toast('Message updated.');
                             renderMessages();
-                            if (onDone) onDone();
                             close();
                           }
                         }
@@ -737,10 +686,8 @@ OC.groups = (function () {
                   }
                 }, 'Edit') : null,
                 canDel ? h('button', {
-                  class: 'btn-inline danger', type: 'button', title: 'Delete message',
-                  onClick: function (e) {
-                    e.preventDefault();
-                    OC.ui.confirm('Delete this message from the group?', function () {
+                  class: 'btn-inline danger', type: 'button', onClick: function () {
+                    OC.ui.confirm('Delete this message?', function () {
                       OC.store.mutate({
                         actor: user.id, action: 'group.message.delete', target: currentGroup.name, detail: 'Deleted message'
                       }, function () {
@@ -748,13 +695,11 @@ OC.groups = (function () {
                       });
                       OC.ui.toast('Message deleted.');
                       renderMessages();
-                      if (onDone) onDone();
                     });
                   }
                 }, 'Delete') : null
               ].filter(Boolean))
             ]),
-            replyQuoteNode,
             h('div', { class: 'group-msg-text' }, OC.ui.formatMentions ? OC.ui.formatMentions(m.text) : m.text),
             mediaNode,
             pollNode,
@@ -766,21 +711,14 @@ OC.groups = (function () {
       }
 
       function submitGroupMessage() {
-        if (!OC.can.canPostGroupMessage(user, currentGroup)) {
-          OC.ui.toast('Access restricted: Only assigned group members can post messages.', true);
-          return;
-        }
+        if (!OC.can.canPostGroupMessage(user, currentGroup)) return;
         var val = msgInput.value.trim();
         if (!val && !currentMediaAttachment) return;
         
         var messageText = val || (currentMediaAttachment.type === 'image' ? '🖼️ Photo attached' : '🎬 Video attached');
         var extra = {};
-        if (currentMediaAttachment) {
-          extra.media = currentMediaAttachment;
-        }
-        if (activeReplyTarget) {
-          extra.reply_to = activeReplyTarget;
-        }
+        if (currentMediaAttachment) extra.media = currentMediaAttachment;
+        if (activeReplyTarget) extra.reply_to = activeReplyTarget;
 
         OC.store.mutate({
           actor: user.id, action: 'group.message', target: currentGroup.name, detail: messageText.slice(0, 35)
@@ -788,27 +726,10 @@ OC.groups = (function () {
           OC.store.addGroupMessage(currentGroup.id, messageText, user.id, extra);
         });
 
-        // Targeted notification: Send to group members & replied author & mentioned users
-        var targets = (currentGroup.members || []).filter(function (id) { return id !== user.id; });
-        if (activeReplyTarget && activeReplyTarget.author_id && activeReplyTarget.author_id !== user.id) {
-          if (targets.indexOf(activeReplyTarget.author_id) === -1) targets.push(activeReplyTarget.author_id);
-        }
-        if (OC.ui.extractMentionedUserIds) {
-          var mentioned = OC.ui.extractMentionedUserIds(val).filter(function (id) { return id !== user.id; });
-          mentioned.forEach(function (mid) {
-            if (targets.indexOf(mid) === -1) targets.push(mid);
-          });
-        }
-
-        if (targets.length) {
-          OC.store.notify(targets, user.name + ' in ' + currentGroup.name + ': "' + messageText.slice(0, 35) + (messageText.length > 35 ? '…' : '') + '"', currentGroup.id);
-        }
-
         msgInput.value = '';
         setReplyContext(null, null);
         setMediaAttachment(null);
         renderMessages();
-        if (onDone) onDone();
         msgsList.scrollTop = msgsList.scrollHeight;
         if (typeof requestAnimationFrame === 'function') {
           requestAnimationFrame(function () { msgsList.scrollTop = msgsList.scrollHeight; });
@@ -822,58 +743,29 @@ OC.groups = (function () {
         }
       });
 
-      var form = h('div', { class: 'comment-form group-chat-input-bar' }, [
+      var form = h('div', { class: 'comment-form full-page-chat-input-bar' }, [
         replyingBadgeWrap,
         mediaPreviewWrap,
         mediaFileInput,
         h('div', { class: 'comment-form-row' }, [
           msgInput,
-          h('button', {
-            class: 'mention-btn-trigger',
-            type: 'button',
-            title: 'Mention team member (@)',
-            onClick: function () {
-              if (mentionHelper) mentionHelper.openMentionMenu();
-            }
-          }, '@'),
-          h('button', {
-            class: 'mention-btn-trigger',
-            type: 'button',
-            title: 'Attach optimized Image / Video',
-            onClick: function () {
-              mediaFileInput.click();
-            }
-          }, '📷 Media'),
-          h('button', {
-            class: 'mention-btn-trigger',
-            type: 'button',
-            title: 'Create an interactive Poll',
-            onClick: function () {
-              openCreatePollModal();
-            }
-          }, '📊 Poll'),
-          h('button', {
-            class: 'btn small primary', type: 'button', onClick: submitGroupMessage
-          }, 'Send')
+          h('button', { class: 'mention-btn-trigger', type: 'button', onClick: function () { if (mentionHelper) mentionHelper.openMentionMenu(); } }, '@'),
+          h('button', { class: 'mention-btn-trigger', type: 'button', onClick: function () { mediaFileInput.click(); } }, '📷'),
+          h('button', { class: 'mention-btn-trigger', type: 'button', onClick: openCreatePollModal }, '📊'),
+          h('button', { class: 'btn small primary', type: 'button', onClick: submitGroupMessage }, 'Send')
         ])
       ]);
 
-      chatHost.appendChild(headerBox);
-      chatHost.appendChild(msgsList);
-      chatHost.appendChild(form);
+      chatContainer.appendChild(headerBox);
+      chatContainer.appendChild(msgsList);
+      chatContainer.appendChild(form);
     }
 
     renderMessages();
+    OC.ui.clear(host);
+    host.appendChild(chatContainer);
 
-    OC.ui.modal({
-      title: '💬 ' + group.name + ' — Workspace & Chat',
-      className: 'modal-chat',
-      bodyClass: 'chat-modal-body',
-      content: chatHost,
-      actions: []
-    });
-
-    var msgsEl = chatHost.querySelector('.group-chat-messages');
+    var msgsEl = chatContainer.querySelector('.full-page-chat-messages');
     if (msgsEl) {
       msgsEl.scrollTop = msgsEl.scrollHeight;
       if (typeof requestAnimationFrame === 'function') {
@@ -886,6 +778,18 @@ OC.groups = (function () {
   function render(host, rerender, hideHead) {
     var h = OC.ui.h;
     var user = me();
+
+    var activeGroup = activeChatGroupId ? OC.store.group(activeChatGroupId) : null;
+    if (activeGroup && OC.can.seeGroup(user, activeGroup)) {
+      renderGroupChatPage(host, activeGroup, function () {
+        activeChatGroupId = null;
+        render(host, rerender, hideHead);
+      });
+      return;
+    } else {
+      activeChatGroupId = null;
+    }
+
     var canCreate = OC.can.createGroup(user);
     var allGroups = (OC.store.state.groups || []).filter(function (g) {
       return OC.can.seeGroup(user, g);
@@ -1003,8 +907,11 @@ OC.groups = (function () {
           h('div', { class: 'actions', style: 'margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule);gap:8px;' }, [
             h('button', {
               class: 'btn small primary', type: 'button',
-              title: 'Open Group Chat & Discussions',
-              onClick: function () { openGroupChat(g, function () { render(host, rerender, hideHead); }); }
+              title: 'Open Group Chat & Discussions (Full Page)',
+              onClick: function () {
+                activeChatGroupId = g.id;
+                render(host, rerender, hideHead);
+              }
             }, ['💬 Chat (' + msgCount + ')']),
 
             canEdit ? h('button', {
@@ -1037,6 +944,12 @@ OC.groups = (function () {
 
     OC.ui.clear(host);
     OC.ui.append(host, elements);
+  }
+
+  function openGroupChat(group, onDone) {
+    activeChatGroupId = group ? group.id : null;
+    var host = document.getElementById('page') || document.querySelector('.groups-sub-host');
+    if (host) render(host, onDone, true);
   }
 
   return {

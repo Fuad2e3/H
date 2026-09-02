@@ -602,6 +602,7 @@ OC.store = (function () {
       if (extra && typeof extra === 'object') {
         if (extra.media) msg.media = extra.media;
         if (extra.poll) msg.poll = extra.poll;
+        if (extra.reply_to) msg.reply_to = extra.reply_to;
       }
       group.messages = group.messages || [];
       group.messages.push(msg);

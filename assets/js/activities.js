@@ -14,6 +14,9 @@ OC.activities = (function () {
   var groupSearchQuery = '';
   var groupFilterStatus = 'all'; /* all | active | archived | mine */
 
+  var auditSearchQuery = '';
+  var auditLimit = 20;
+
   function me() { return OC.store.user(OC.store.session()); }
 
   function render(host, rerender) {
@@ -26,6 +29,7 @@ OC.activities = (function () {
 
     var depts = OC.store.state.departments || [];
     var users = OC.store.state.users || [];
+    var allAudit = OC.store.state.audit || [];
     var pending = users.filter(function (u) {
       return u.status === 'invited' && u.invite && !u.invite.claimed_at && OC.can.manageInvite(user, u);
     });
@@ -49,7 +53,8 @@ OC.activities = (function () {
       ['groups', 'Groups & Discussions (' + allGroups.length + ')'],
       ['departments', 'Departments (' + depts.length + ')'],
       ['accounts', 'Team Accounts (' + users.length + ')'],
-      ['reports', 'Work Reports & Analytics']
+      ['reports', 'Work Reports & Analytics'],
+      ['history', 'History & Audit Logs (' + allAudit.length + ')']
     ];
     if (pending.length) {
       tabs.push(['invites', 'Pending Invites (' + pending.length + ')']);
@@ -316,6 +321,109 @@ OC.activities = (function () {
 
       invitesSection.appendChild(invitesGrid);
       content.push(invitesSection);
+    }
+
+    /* ---- Section E: History & Audit Logs (Dedicated History View) ---- */
+    if (activeTab === 'all' || activeTab === 'history') {
+      var allLogs = (OC.store.state && OC.store.state.audit) || [];
+      var filteredAudit = allLogs.filter(function (a) {
+        if (!auditSearchQuery) return true;
+        var q = auditSearchQuery.toLowerCase();
+        var actorName = OC.ui.personName(a.actor).toLowerCase();
+        var action = (a.action || '').toLowerCase();
+        var target = (a.target || '').toLowerCase();
+        var detail = (a.detail || '').toLowerCase();
+        var ip = (a.ip || '').toLowerCase();
+        return actorName.indexOf(q) > -1 || action.indexOf(q) > -1 || target.indexOf(q) > -1 || detail.indexOf(q) > -1 || ip.indexOf(q) > -1;
+      });
+
+      var visibleAudit = auditLimit === 'all' ? filteredAudit : filteredAudit.slice(0, auditLimit);
+
+      var historySection = h('div', { class: 'activities-section', id: 'activities-history-sec', style: 'margin-bottom:32px;' }, [
+        h('div', { class: 'portal-header-box', style: 'margin-bottom:16px;' }, [
+          h('div', {}, [
+            h('h2', { class: 'portal-view-title', style: 'margin:0;font-size:18px;' }, [
+              '📜 System History & Audit Logs',
+              h('span', { class: 'chip count', style: 'margin-left:8px;' }, filteredAudit.length + ' events')
+            ]),
+            h('p', { class: 'muted', style: 'font-size:13px;margin:3px 0 0;' },
+              'Comprehensive historical audit trail of all system operations, task changes, client updates, and team activity.')
+          ]),
+          h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap;align-items:center;' }, [
+            h('div', { class: 'segmented', role: 'group', 'aria-label': 'Limit logs' }, [
+              h('button', {
+                type: 'button',
+                'aria-pressed': String(auditLimit !== 'all'),
+                onClick: function () {
+                  if (auditLimit === 'all') auditLimit = 20;
+                  else auditLimit += 20;
+                  render(host, rerender);
+                }
+              }, auditLimit === 'all' ? 'Show 20' : 'See 20+'),
+              h('button', {
+                type: 'button',
+                'aria-pressed': String(auditLimit === 'all'),
+                onClick: function () {
+                  auditLimit = 'all';
+                  render(host, rerender);
+                }
+              }, 'See All (' + filteredAudit.length + ')')
+            ]),
+            h('button', {
+              class: 'btn small primary',
+              type: 'button',
+              style: 'font-weight:700;',
+              onClick: function () {
+                if (OC.reports && OC.reports.exportAudit) {
+                  OC.reports.exportAudit(filteredAudit);
+                }
+              }
+            }, [OC.icon('board'), 'Export History CSV'])
+          ])
+        ]),
+
+        /* Search Filter */
+        h('div', { class: 'row', style: 'margin-bottom:14px;' }, [
+          h('input', {
+            type: 'search',
+            placeholder: 'Search history log by actor name, action, target, IP address...',
+            value: auditSearchQuery,
+            style: 'width:100%;max-width:480px;',
+            onInput: function (e) {
+              auditSearchQuery = e.target.value.trim();
+              render(host, rerender);
+            }
+          })
+        ]),
+
+        /* Table */
+        h('div', { class: 'tablewrap' }, [
+          h('table', {}, [
+            h('thead', {}, h('tr', {}, [
+              h('th', { scope: 'col', style: 'width:140px;' }, 'When'),
+              h('th', { scope: 'col', style: 'width:180px;' }, 'Actor'),
+              h('th', { scope: 'col', style: 'width:130px;' }, 'IP Address'),
+              h('th', { scope: 'col', style: 'width:170px;' }, 'Action'),
+              h('th', { scope: 'col' }, 'Target'),
+              h('th', { scope: 'col' }, 'Detail')
+            ])),
+            h('tbody', {}, visibleAudit.length ? visibleAudit.map(function (a) {
+              return h('tr', {}, [
+                h('td', { class: 'mono', style: 'font-size:12px;' }, OC.ui.fmtWhen(a.at)),
+                h('td', {}, OC.ui.person(a.actor)),
+                h('td', { class: 'mono', style: 'font-size:11.5px;' }, a.ip ? h('span', { class: 'chip mono' }, a.ip) : h('span', { class: 'muted' }, '127.0.0.1')),
+                h('td', {}, h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, a.action || 'system.event')),
+                h('td', { style: 'font-weight:600;' }, a.target || '—'),
+                h('td', { class: 'muted', style: 'font-size:12.5px;' }, a.detail || '—')
+              ]);
+            }) : [
+              h('tr', {}, h('td', { colspan: '6', class: 'muted', style: 'text-align:center;padding:32px;' }, 'No historical log entries matching your search.'))
+            ])
+          ])
+        ])
+      ]);
+
+      content.push(historySection);
     }
 
     OC.ui.append(host, content);

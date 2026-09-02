@@ -151,57 +151,84 @@ OC.clients = (function () {
       return ins.client === client.id || (Array.isArray(ins.tags) && ins.tags.indexOf(client.client_code) > -1);
     });
 
-    var portalContainer = h('div', { class: 'client-portal-container' });
+    var openTaskCount = clientTodos.filter(function (t) { return !t.archived && t.state !== 'done'; }).length;
 
-    /* 1. Header Toolbar */
-    var header = h('div', { class: 'client-portal-header' }, [
-      h('div', { class: 'client-portal-header-top' }, [
-        h('div', { class: 'client-portal-title-wrap' }, [
-          h('button', {
-            class: 'client-portal-back-btn',
-            type: 'button',
-            onClick: function (e) {
-              e.preventDefault();
-              if (onBack) onBack();
-            }
-          }, ['← Back to Clients']),
-          h('h2', { style: 'font-size:18px;font-weight:700;color:var(--ink);margin:0;' }, '🏢 ' + client.name),
-          h('span', { class: 'chip ' + (client.status === 'active' ? 'dept' : 'custom') }, client.status),
-          client.client_id ? h('span', { class: 'chip custom' }, 'ID: ' + client.client_id) : null,
-          client.client_code ? h('span', { class: 'chip custom' }, 'Code: ' + client.client_code) : null,
-          (client.client_number || client.contact) ? h('span', { class: 'chip custom' }, '📞 ' + (client.client_number || client.contact)) : null
-        ].filter(Boolean)),
+    /* 1. Top Executive Hero Banner */
+    var initials = (client.client_code || client.name || 'CL').slice(0, 3).toUpperCase();
+    var heroBanner = h('div', { class: 'user-profile-banner' }, [
+      h('div', { class: 'user-profile-banner-left' }, [
+        h('div', { class: 'user-profile-avatar-wrap' }, [
+          h('div', { class: 'user-profile-avatar-placeholder', style: 'background:linear-gradient(135deg, #0284c7 0%, #0f172a 100%);font-size:18px;letter-spacing:1px;' }, initials)
+        ]),
+        h('div', { class: 'user-profile-info' }, [
+          h('div', { class: 'user-profile-title-row' }, [
+            h('h2', { class: 'user-profile-name' }, client.name),
+            h('span', { class: 'user-profile-badge' }, client.status === 'active' ? 'ACTIVE CLIENT' : 'PAUSED'),
+            client.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'ID: ' + client.client_id) : null,
+            client.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null
+          ].filter(Boolean)),
+          h('div', { class: 'user-profile-role-line' }, 'Official Client Account · ' + clientTodos.length + ' Total Tasks Assigned (' + openTaskCount + ' Open)'),
+          h('div', { class: 'user-profile-meta-line' }, '📞 Client Number: ' + (client.client_number || client.contact || 'No phone recorded'))
+        ])
+      ]),
+      h('div', { class: 'user-profile-right' }, [
+        h('div', { class: 'user-profile-status-badge' }, [
+          h('div', { class: 'user-profile-status-label' }, 'CLIENT WORKSPACE'),
+          h('div', { class: 'user-profile-status-val' }, client.status === 'active' ? '● Live Operational' : '○ Paused')
+        ]),
         canCreate ? h('button', {
-          class: 'btn small', type: 'button',
+          class: 'btn small primary',
+          type: 'button',
+          style: 'font-weight:700;display:inline-flex;align-items:center;gap:6px;',
           onClick: function () {
             editClient(client, function () { renderClientPortal(host, client, onBack); });
           }
-        }, ['✏️ Edit Client Info']) : null
-      ]),
-      h('p', { class: 'muted', style: 'font-size:13px;margin:0;' },
-        'Client Workspace: Review task completion graphics & reports, manage linked todos, board notices, and customize rich documentation notes.')
+        }, ['✏️ Edit Client']) : null
+      ])
     ]);
 
-    /* 2. Navigation Tabs */
-    var tabs = [
-      ['report', '📊 Report & Analytics'],
-      ['todos', '✅ Todos (' + clientTodos.length + ')'],
-      ['instructions', '📋 Instructions (' + clientInstructions.length + ')'],
-      ['details', '📝 Details & Rich Workspace']
+    /* 2. Sidebar Navigation Items */
+    var sidebarItems = [
+      { id: 'report', label: 'Report & Analytics', icon: 'stats', emoji: '📊' },
+      { id: 'todos', label: 'Todos & Tasks', icon: 'check', emoji: '✅', badge: openTaskCount > 0 ? openTaskCount : null },
+      { id: 'instructions', label: 'Instructions', icon: 'file', emoji: '📋', badge: clientInstructions.length > 0 ? clientInstructions.length : null },
+      { id: 'details', label: 'Details & Workspace', icon: 'edit', emoji: '📝' }
     ];
 
-    var tabNav = h('div', { class: 'client-portal-tabs' }, tabs.map(function (t) {
-      return h('button', {
-        class: 'client-portal-tab-btn' + (activePortalTab === t[0] ? ' active' : ''),
-        type: 'button',
-        onClick: function () {
-          activePortalTab = t[0];
-          renderClientPortal(host, client, onBack);
-        }
-      }, t[1]);
-    }));
+    var sidebar = h('aside', { class: 'portal-sidebar' }, [
+      h('div', { class: 'portal-sidebar-brand' }, [
+        h('div', { class: 'portal-sidebar-tag' }, 'CLIENT PORTAL'),
+        h('div', { class: 'portal-sidebar-title' }, 'Workspace Menu')
+      ]),
+      h('nav', { class: 'portal-sidebar-nav' }, sidebarItems.map(function (item) {
+        var isActive = activePortalTab === item.id;
+        return h('button', {
+          type: 'button',
+          class: 'portal-nav-btn' + (isActive ? ' active' : ''),
+          onClick: function () {
+            activePortalTab = item.id;
+            renderClientPortal(host, client, onBack);
+          }
+        }, [
+          h('span', { class: 'portal-nav-icon' }, item.emoji),
+          h('span', { class: 'portal-nav-label' }, item.label),
+          item.badge ? h('span', { class: 'chip count', style: 'margin-left:auto;font-size:10.5px;padding:2px 7px;' }, String(item.badge)) : null
+        ]);
+      })),
+      h('div', { class: 'portal-sidebar-footer' }, [
+        h('button', {
+          class: 'btn small secondary',
+          type: 'button',
+          style: 'width:100%;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600;',
+          onClick: function () {
+            if (onBack) onBack();
+          }
+        }, ['← Back to Clients'])
+      ])
+    ]);
 
-    var bodyContent = h('div', { class: 'client-portal-body' });
+    /* 3. Main Area Container */
+    var mainArea = h('main', { class: 'portal-main-area' });
 
     /* TAB 1: REPORT & ANALYTICS */
     if (activePortalTab === 'report') {
@@ -231,10 +258,13 @@ OC.clients = (function () {
       var openPct = totalT > 0 ? (openT / totalT) * 100 : 0;
       var blockPct = totalT > 0 ? (blockedT / totalT) * 100 : 0;
 
-      var reportView = h('div', { style: 'display:flex;flex-direction:column;gap:16px;' }, [
-        /* Timeframe Switcher */
-        h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;' }, [
-          h('h3', { style: 'margin:0;font-size:15px;' }, '📈 Task Completion Velocity & Workload Distribution'),
+      var reportContent = h('div', { class: 'portal-view-content' }, [
+        h('div', { class: 'portal-header-box' }, [
+          h('div', {}, [
+            h('h2', { class: 'portal-view-title' }, ['📊 Task Completion Analytics & Reports']),
+            h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
+              'Review completion velocity, active task breakdowns, and SLA performance metrics for ' + client.name + '.')
+          ]),
           h('div', { class: 'segmented', role: 'group', 'aria-label': 'Select timeframe' }, [
             ['day', '📅 Today (Day)'],
             ['month', '🗓️ This Month'],
@@ -252,48 +282,47 @@ OC.clients = (function () {
           }))
         ]),
 
-        /* KPI Stat Cards */
-        h('div', { class: 'stats-grid', style: 'display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:12px;' }, [
+        /* 4 KPI Cards */
+        h('div', { class: 'stats-grid', style: 'display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:14px;margin-bottom:18px;' }, [
           h('div', { class: 'card stat-card' }, [
-            h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Total Tasks (' + activeTimeframe + ')'),
-            h('div', { class: 'v tabular', style: 'font-size:22px;font-weight:700;' }, String(totalT))
+            h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Total Tasks (' + activeTimeframe.toUpperCase() + ')'),
+            h('div', { class: 'v tabular', style: 'font-size:24px;font-weight:700;' }, String(totalT))
           ]),
           h('div', { class: 'card stat-card' }, [
-            h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Completed Rate'),
-            h('div', { class: 'v tabular', style: 'font-size:22px;font-weight:700;color:var(--success);' }, rate + '% (' + doneT + ' done)')
+            h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Completion Rate'),
+            h('div', { class: 'v tabular', style: 'font-size:24px;font-weight:700;color:#10b981;' }, rate + '%')
           ]),
           h('div', { class: 'card stat-card' }, [
             h('span', { class: 'k muted', style: 'font-size:12px;' }, 'In Progress'),
-            h('div', { class: 'v tabular', style: 'font-size:22px;font-weight:700;color:var(--blueprint);' }, String(progT))
+            h('div', { class: 'v tabular', style: 'font-size:24px;font-weight:700;color:#38bdf8;' }, String(progT))
           ]),
           h('div', { class: 'card stat-card' }, [
-            h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Blocked / Open'),
-            h('div', { class: 'v tabular', style: 'font-size:22px;font-weight:700;color:var(--signal);' }, (blockedT + openT) + ' pending')
+            h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Pending / Blocked'),
+            h('div', { class: 'v tabular', style: 'font-size:24px;font-weight:700;color:#f59e0b;' }, String(openT + blockedT))
           ])
         ]),
 
-        /* Visual Task Completion Velocity Graphic */
-        h('div', { class: 'card', style: 'padding:18px 20px;' }, [
+        /* Visual Velocity Graphic Card */
+        h('div', { class: 'portal-credential-card', style: 'padding:20px;' }, [
           h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;' }, [
-            h('h4', { style: 'margin:0;font-size:14px;color:var(--ink);' }, 'Task Progress Graphic (' + activeTimeframe.toUpperCase() + ')'),
+            h('div', { style: 'font-weight:700;font-size:14.5px;color:var(--ink);' }, 'Task Progress Breakdown (' + activeTimeframe.toUpperCase() + ')'),
             h('span', { class: 'chip count' }, totalT + ' Total Tracked')
           ]),
-          h('div', { class: 'client-velocity-bar-wrap' }, [
+          h('div', { class: 'client-velocity-bar-wrap', style: 'height:22px;margin:14px 0 16px;' }, [
             h('div', { class: 'client-velocity-segment', style: 'width:' + donePct + '%;background:#10b981;', title: 'Done: ' + doneT + ' (' + Math.round(donePct) + '%)' }),
-            h('div', { class: 'client-velocity-segment', style: 'width:' + progPct + '%;background:#3b82f6;', title: 'In Progress: ' + progT + ' (' + Math.round(progPct) + '%)' }),
+            h('div', { class: 'client-velocity-segment', style: 'width:' + progPct + '%;background:#38bdf8;', title: 'In Progress: ' + progT + ' (' + Math.round(progPct) + '%)' }),
             h('div', { class: 'client-velocity-segment', style: 'width:' + openPct + '%;background:#f59e0b;', title: 'Open: ' + openT + ' (' + Math.round(openPct) + '%)' }),
             h('div', { class: 'client-velocity-segment', style: 'width:' + blockPct + '%;background:#ef4444;', title: 'Blocked: ' + blockedT + ' (' + Math.round(blockPct) + '%)' })
           ]),
-          h('div', { class: 'client-graphic-legend' }, [
-            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#10b981;' }), 'Completed (' + doneT + ')']),
-            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#3b82f6;' }), 'In Progress (' + progT + ')']),
-            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#f59e0b;' }), 'Open (' + openT + ')']),
-            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#ef4444;' }), 'Blocked (' + blockedT + ')'])
+          h('div', { class: 'client-graphic-legend', style: 'font-size:12.5px;gap:20px;' }, [
+            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#10b981;' }), 'Completed: ' + doneT + ' (' + Math.round(donePct) + '%)']),
+            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#38bdf8;' }), 'In Progress: ' + progT + ' (' + Math.round(progPct) + '%)']),
+            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#f59e0b;' }), 'Open: ' + openT + ' (' + Math.round(openPct) + '%)']),
+            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#ef4444;' }), 'Blocked: ' + blockedT + ' (' + Math.round(blockPct) + '%)'])
           ])
         ])
       ]);
-
-      bodyContent.appendChild(reportView);
+      mainArea.appendChild(reportContent);
     }
 
     /* TAB 2: TODOS */
@@ -306,14 +335,34 @@ OC.clients = (function () {
         return true;
       });
 
-      var todosView = h('div', { style: 'display:flex;flex-direction:column;gap:14px;' }, [
-        h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;' }, [
+      var todosContent = h('div', { class: 'portal-view-content' }, [
+        h('div', { class: 'portal-header-box' }, [
+          h('div', {}, [
+            h('h2', { class: 'portal-view-title' }, ['✅ Client Tasks & Workload (' + clientTodos.length + ')']),
+            h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
+              'Manage and track all deliverables and assigned tasks for ' + client.name + '.')
+          ]),
+          h('button', {
+            class: 'btn primary small',
+            type: 'button',
+            style: 'font-weight:700;',
+            onClick: function () {
+              if (OC.ui && OC.ui.newTodoModal) {
+                OC.ui.newTodoModal(function () { renderClientPortal(host, client, onBack); }, { defaultClient: client.id });
+              } else if (OC.dashboard && OC.dashboard.newTodo) {
+                OC.dashboard.newTodo(function () { renderClientPortal(host, client, onBack); });
+              }
+            }
+          }, ['+ Add Task for ' + client.name])
+        ]),
+
+        h('div', { class: 'row', style: 'margin-bottom:14px;justify-content:space-between;align-items:center;' }, [
           h('div', { class: 'segmented', role: 'group', 'aria-label': 'Filter tasks' }, [
             ['all', 'All (' + clientTodos.length + ')'],
-            ['open', 'Open'],
-            ['progress', 'In Progress'],
-            ['done', 'Done'],
-            ['blocked', 'Blocked']
+            ['open', 'Open (' + clientTodos.filter(function (t) { return t.state === 'open'; }).length + ')'],
+            ['progress', 'In Progress (' + clientTodos.filter(function (t) { return t.state === 'progress'; }).length + ')'],
+            ['done', 'Done (' + clientTodos.filter(function (t) { return t.state === 'done'; }).length + ')'],
+            ['blocked', 'Blocked (' + clientTodos.filter(function (t) { return t.state === 'blocked'; }).length + ')']
           ].map(function (opt) {
             return h('button', {
               type: 'button',
@@ -323,26 +372,17 @@ OC.clients = (function () {
                 renderClientPortal(host, client, onBack);
               }
             }, opt[1]);
-          })),
-          h('button', {
-            class: 'btn primary small', type: 'button',
-            onClick: function () {
-              if (OC.ui && OC.ui.newTodoModal) {
-                OC.ui.newTodoModal(function () { renderClientPortal(host, client, onBack); }, { defaultClient: client.id });
-              } else if (OC.dashboard && OC.dashboard.newTodo) {
-                OC.dashboard.newTodo(function () { renderClientPortal(host, client, onBack); });
-              }
-            }
-          }, ['+ Add task for ' + client.name])
+          }))
         ]),
 
-        filteredList.length ? h('div', { class: 'grid-1', style: 'display:flex;flex-direction:column;gap:8px;' }, filteredList.map(function (t) {
+        filteredList.length ? h('div', { style: 'display:flex;flex-direction:column;gap:10px;' }, filteredList.map(function (t) {
           var assignees = (Array.isArray(t.assignees) && t.assignees.length) ? t.assignees : (t.assigned_to ? [t.assigned_to] : []);
-          return h('div', { class: 'card', style: 'padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;' }, [
-            h('div', { style: 'display:flex;align-items:center;gap:10px;flex:1;' }, [
+          return h('div', { class: 'portal-credential-card', style: 'padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;' }, [
+            h('div', { style: 'display:flex;align-items:center;gap:12px;flex:1;' }, [
               h('input', {
                 type: 'checkbox',
                 checked: t.state === 'done',
+                style: 'width:18px;height:18px;cursor:pointer;',
                 onChange: function () {
                   OC.store.mutate({ actor: user.id, action: 'todo.state', target: t.title }, function () {
                     t.state = (t.state === 'done') ? 'open' : 'done';
@@ -350,12 +390,12 @@ OC.clients = (function () {
                   renderClientPortal(host, client, onBack);
                 }
               }),
-              h('div', { style: 'display:flex;flex-direction:column;gap:2px;' }, [
-                h('span', { style: 'font-weight:600;font-size:14px;color:var(--ink);' + (t.state === 'done' ? 'text-decoration:line-through;color:var(--text-secondary);' : '') }, t.title),
-                h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, [
+              h('div', { style: 'display:flex;flex-direction:column;gap:3px;' }, [
+                h('span', { style: 'font-weight:600;font-size:14.5px;color:var(--ink);' + (t.state === 'done' ? 'text-decoration:line-through;color:var(--text-secondary);' : '') }, t.title),
+                h('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
                   h('span', { class: 'chip ' + (t.state === 'done' ? 'state-done' : 'state-open') }, t.state || 'open'),
                   t.priority ? h('span', { class: 'chip ' + (t.priority === 'urgent' ? 'signal' : 'custom') }, t.priority) : null,
-                  t.due ? h('span', { class: 'muted', style: 'font-size:11px;' }, 'Due: ' + OC.ui.fmtDate(t.due)) : null
+                  t.due ? h('span', { class: 'muted', style: 'font-size:11.5px;' }, 'Due: ' + OC.ui.fmtDate(t.due)) : null
                 ].filter(Boolean))
               ])
             ]),
@@ -363,46 +403,51 @@ OC.clients = (function () {
               return OC.ui.person(uId);
             }))
           ]);
-        })) : h('div', { class: 'card', style: 'padding:32px;text-align:center;' }, [
-          h('p', { class: 'muted', style: 'margin:0;' }, 'No tasks found matching current filter for this client.')
+        })) : h('div', { class: 'portal-credential-card', style: 'padding:36px;text-align:center;' }, [
+          h('p', { class: 'muted', style: 'margin:0;font-size:14px;' }, 'No tasks found matching current filter for this client.')
         ])
       ]);
-
-      bodyContent.appendChild(todosView);
+      mainArea.appendChild(todosContent);
     }
 
     /* TAB 3: INSTRUCTIONS */
     if (activePortalTab === 'instructions') {
-      var insView = h('div', { style: 'display:flex;flex-direction:column;gap:14px;' }, [
-        h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;' }, [
-          h('h3', { style: 'margin:0;font-size:15px;' }, 'Notice Board Instructions for ' + client.name),
+      var insContent = h('div', { class: 'portal-view-content' }, [
+        h('div', { class: 'portal-header-box' }, [
+          h('div', {}, [
+            h('h2', { class: 'portal-view-title' }, ['📋 Instructions & Notice Board (' + clientInstructions.length + ')']),
+            h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
+              'Official directives, policies, and operational announcements linked to ' + client.name + '.')
+          ]),
           h('button', {
-            class: 'btn primary small', type: 'button',
+            class: 'btn primary small',
+            type: 'button',
+            style: 'font-weight:700;',
             onClick: function () {
               if (OC.board && OC.board.newInstruction) {
                 OC.board.newInstruction(function () { renderClientPortal(host, client, onBack); });
               }
             }
-          }, ['+ New instruction'])
+          }, ['+ New Instruction'])
         ]),
-        clientInstructions.length ? h('div', { class: 'grid-1', style: 'display:flex;flex-direction:column;gap:10px;' }, clientInstructions.map(function (ins) {
-          return h('div', { class: 'card', style: 'padding:14px 18px;' }, [
-            h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:6px;' }, [
-              h('h4', { style: 'margin:0;font-size:15px;color:var(--ink);' }, ins.title || 'Instruction'),
-              h('span', { class: 'muted', style: 'font-size:11px;' }, OC.ui.fmtWhen(ins.created_at || ins.posted_at))
+
+        clientInstructions.length ? h('div', { style: 'display:flex;flex-direction:column;gap:12px;' }, clientInstructions.map(function (ins) {
+          return h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;' }, [
+            h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:8px;' }, [
+              h('h4', { style: 'margin:0;font-size:15px;font-weight:700;color:var(--ink);' }, ins.title || 'Instruction'),
+              h('span', { class: 'muted', style: 'font-size:11.5px;' }, OC.ui.fmtWhen(ins.created_at || ins.posted_at))
             ]),
-            h('p', { style: 'font-size:13.5px;color:var(--text);margin:6px 0;' }, ins.body),
-            h('div', { class: 'row', style: 'gap:6px;align-items:center;margin-top:8px;' }, [
+            h('p', { style: 'font-size:14px;color:var(--text);margin:6px 0 10px;line-height:1.55;' }, ins.body),
+            h('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
               OC.ui.person(ins.author, 'strong'),
               ins.target_type ? h('span', { class: 'chip custom' }, 'Target: ' + ins.target_type) : null
             ].filter(Boolean))
           ]);
-        })) : h('div', { class: 'card', style: 'padding:32px;text-align:center;' }, [
-          h('p', { class: 'muted', style: 'margin:0;' }, 'No specific instructions logged for this client yet.')
+        })) : h('div', { class: 'portal-credential-card', style: 'padding:36px;text-align:center;' }, [
+          h('p', { class: 'muted', style: 'margin:0;font-size:14px;' }, 'No specific instructions logged for this client yet.')
         ])
       ]);
-
-      bodyContent.appendChild(insView);
+      mainArea.appendChild(insContent);
     }
 
     /* TAB 4: DETAILS & RICH WORKSPACE TEXT EDITOR */
@@ -443,7 +488,7 @@ OC.clients = (function () {
         h('button', {
           class: 'client-editor-tool-btn push',
           type: 'button',
-          style: 'background:var(--tint);color:var(--blueprint);',
+          style: 'background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.3);font-weight:700;',
           onClick: function () {
             isPreviewMode = !isPreviewMode;
             if (isPreviewMode) {
@@ -461,6 +506,7 @@ OC.clients = (function () {
         h('button', {
           class: 'btn primary small',
           type: 'button',
+          style: 'font-weight:700;',
           onClick: function () {
             var val = editorText.value.trim();
             OC.store.mutate({
@@ -477,25 +523,36 @@ OC.clients = (function () {
 
       editorText.addEventListener('input', updatePreview);
 
-      var detailsWrap = h('div', { class: 'client-rich-editor-wrap' }, [
-        h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;' }, [
-          h('h3', { style: 'margin:0;font-size:15px;color:var(--ink);' }, '📝 Client Documentation, Scope & Workspace Notes'),
-          h('span', { class: 'muted', style: 'font-size:12px;' }, 'Full Markdown & unlimited text formatting')
+      var detailsContent = h('div', { class: 'portal-view-content' }, [
+        h('div', { class: 'portal-header-box' }, [
+          h('div', {}, [
+            h('h2', { class: 'portal-view-title' }, ['📝 Details & Workspace Documentation']),
+            h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
+              'Unlimited rich text documentation, contracts, specifications, and scope notes for ' + client.name + '.')
+          ])
         ]),
-        toolbar,
-        editorText,
-        previewWrap
+        h('div', { class: 'portal-credential-card', style: 'padding:20px;' }, [
+          toolbar,
+          editorText,
+          previewWrap
+        ])
       ]);
-
-      bodyContent.appendChild(detailsWrap);
+      mainArea.appendChild(detailsContent);
     }
 
-    portalContainer.appendChild(header);
-    portalContainer.appendChild(tabNav);
-    portalContainer.appendChild(bodyContent);
+    /* 4. Assemble Whole Page Layout */
+    var layoutContainer = h('div', { class: 'portal-layout-container' }, [
+      sidebar,
+      mainArea
+    ]);
+
+    var rootWrap = h('div', { class: 'client-portal-container' }, [
+      heroBanner,
+      layoutContainer
+    ]);
 
     OC.ui.clear(host);
-    host.appendChild(portalContainer);
+    host.appendChild(rootWrap);
   }
 
   function render(host) {

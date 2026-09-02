@@ -466,6 +466,10 @@ OC.ui = (function () {
     if (!text) return [];
     var allUsers = (OC.store.state && OC.store.state.users) || [];
     var mentioned = [];
+    if (text.toLowerCase().indexOf('@everyone') > -1) {
+      allUsers.forEach(function (u) { if (u && u.id && mentioned.indexOf(u.id) === -1) mentioned.push(u.id); });
+      return mentioned;
+    }
     allUsers.forEach(function (u) {
       if (!u || !u.name) return;
       var pattern = '@' + u.name.toLowerCase();
@@ -485,10 +489,21 @@ OC.ui = (function () {
     var match;
     while ((match = regex.exec(text)) !== null) {
       var matchedName = match[1].trim();
-      var foundUser = allUsers.find(function (u) {
+      var isEveryone = matchedName.toLowerCase() === 'everyone';
+      var foundUser = isEveryone ? null : allUsers.find(function (u) {
         return u.name.toLowerCase() === matchedName.toLowerCase();
       });
-      if (foundUser) {
+
+      if (isEveryone) {
+        if (match.index > lastIdx) {
+          parts.push(text.slice(lastIdx, match.index));
+        }
+        parts.push(h('span', {
+          class: 'mention-tag everyone',
+          title: 'Notifies all team members in this group'
+        }, '📢 @everyone'));
+        lastIdx = match.index + match[0].length;
+      } else if (foundUser) {
         if (match.index > lastIdx) {
           parts.push(text.slice(lastIdx, match.index));
         }
@@ -530,11 +545,22 @@ OC.ui = (function () {
     }
 
     function renderPop(match) {
-      var all = allowedUsers || ((OC.store.state && OC.store.state.users) || []).filter(function (u) { return u.status === 'active'; });
-      filtered = all.filter(function (u) {
-        if (!match.query) return true;
-        return u.name.toLowerCase().indexOf(match.query) > -1 || (u.email && u.email.toLowerCase().indexOf(match.query) > -1);
-      }).slice(0, 6);
+      var all = (allowedUsers && allowedUsers.length) ? allowedUsers.slice() : ((OC.store.state && OC.store.state.users) || []).filter(function (u) { return u.status === 'active'; });
+      var list = [];
+      if (!match.query || 'everyone'.indexOf(match.query) === 0) {
+        list.push({
+          id: 'everyone',
+          name: 'everyone',
+          isEveryone: true,
+          title: 'Notify all members in this channel/group'
+        });
+      }
+      all.forEach(function (u) {
+        if (!match.query || u.name.toLowerCase().indexOf(match.query) > -1 || (u.email && u.email.toLowerCase().indexOf(match.query) > -1)) {
+          list.push(u);
+        }
+      });
+      filtered = list.slice(0, 7);
 
       if (!filtered.length) {
         closePop();
@@ -551,17 +577,21 @@ OC.ui = (function () {
       clear(pop);
 
       filtered.forEach(function (u, i) {
+        var markNode = u.isEveryone
+          ? h('div', { class: 'mention-everyone-badge', style: 'width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;' }, '📢')
+          : mark(u.id);
+
         var item = h('div', {
-          class: 'mention-pop-item' + (i === activeIdx ? ' active' : ''),
+          class: 'mention-pop-item' + (i === activeIdx ? ' active' : '') + (u.isEveryone ? ' is-everyone' : ''),
           onClick: function (e) {
             e.preventDefault();
             e.stopPropagation();
             selectUser(u, match);
           }
         }, [
-          mark(u.id),
+          markNode,
           h('div', { class: 'mention-pop-info' }, [
-            h('span', { class: 'mention-pop-name' }, u.name),
+            h('span', { class: 'mention-pop-name' }, u.isEveryone ? '@everyone' : u.name),
             h('span', { class: 'mention-pop-role' }, u.title || (OC.can && OC.can.roleLabel ? OC.can.roleLabel(u) : 'Member'))
           ])
         ]);

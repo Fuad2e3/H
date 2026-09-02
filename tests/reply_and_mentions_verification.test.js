@@ -10,6 +10,52 @@
 
 const assert = require('assert');
 require('./harness.js');
+
+function makeElement(tag) {
+  return {
+    nodeType: 1,
+    tagName: tag ? tag.toUpperCase() : 'DIV',
+    className: '',
+    classList: {
+      add: function (c) { this.className += ' ' + c; },
+      remove: function () {},
+      contains: function (c) { return (this.className || '').indexOf(c) > -1; }
+    },
+    style: {},
+    attributes: {},
+    children: [],
+    value: '',
+    setAttribute: function (k, v) { this.attributes[k] = v; if (k === 'class') this.className = v; },
+    getAttribute: function (k) { return this.attributes[k]; },
+    removeAttribute: function (k) { delete this.attributes[k]; },
+    appendChild: function (child) {
+      if (typeof child === 'string') {
+        this.children.push({ nodeType: 3, text: child });
+      } else if (child) {
+        this.children.push(child);
+      }
+      return child;
+    },
+    removeChild: function (child) {
+      const idx = this.children.indexOf(child);
+      if (idx > -1) this.children.splice(idx, 1);
+    },
+    addEventListener: function () {},
+    removeEventListener: function () {},
+    focus: function () {}
+  };
+}
+
+globalThis.document = {
+  createElement: makeElement,
+  createTextNode: function (txt) { return { nodeType: 3, text: txt }; },
+  querySelector: function () { return null; },
+  querySelectorAll: function () { return []; },
+  body: makeElement('body'),
+  addEventListener: function () {},
+  removeEventListener: function () {}
+};
+
 loadFile('assets/js/store.js');
 loadFile('assets/js/permissions.js');
 loadFile('assets/js/ui.js');
@@ -47,12 +93,20 @@ const mentionedIds = OC.ui.extractMentionedUserIds(sampleComment);
 assert.strictEqual(mentionedIds.length, 2, 'Should extract 2 mentioned users');
 assert.ok(mentionedIds.includes('u-tarieeq'), 'Must include Tarieeq');
 assert.ok(mentionedIds.includes('u-masum'), 'Must include Mahfuzur Rahman');
-console.log('  ✓ Mentioned users correctly identified:', mentionedIds);
+
+const everyoneMsg = 'Attention team @everyone we have a new announcement!';
+const everyoneIds = OC.ui.extractMentionedUserIds(everyoneMsg);
+assert.ok(everyoneIds.length >= 3, 'Should extract all active users for @everyone');
+console.log('  ✓ Mentioned users correctly identified:', mentionedIds, 'and @everyone resolved to', everyoneIds.length, 'users');
 
 console.log('\n--- [2/4] Testing Mention Text Formatting ---');
 const parts = OC.ui.formatMentions(sampleComment);
 assert.ok(Array.isArray(parts), 'formatMentions must return array of parts when mentions exist');
-console.log('  ✓ Mention text formatted into rich elements successfully');
+
+const everyoneParts = OC.ui.formatMentions(everyoneMsg);
+assert.ok(Array.isArray(everyoneParts), 'formatMentions must format @everyone');
+assert.ok(everyoneParts.some(p => p && p.className && p.className.indexOf('everyone') > -1), '@everyone formatted as special badge');
+console.log('  ✓ Mention text and @everyone formatted into rich elements successfully');
 
 console.log('\n--- [3/4] Testing Social Media Style Quoted Reply Object & Notification ---');
 // User u-fuad replies to a previous comment with structured reply_to quote

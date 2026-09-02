@@ -653,6 +653,31 @@ OC.groups = (function () {
           }
 
           // Render message item
+          var replyQuoteNode = null;
+          if (m.reply_to) {
+            var repAuthor = m.reply_to.author_name || (OC.store.user(m.reply_to.author_id) ? OC.store.user(m.reply_to.author_id).name : (m.reply_to.author || 'Someone'));
+            var repSnippet = m.reply_to.text || m.reply_to.snippet || m.reply_to.body || 'Original message';
+            replyQuoteNode = h('div', {
+              class: 'msg-reply-quote group-msg-reply-quote',
+              title: 'Replying to ' + repAuthor + ' (Click to view message)',
+              onClick: function (e) {
+                e.preventDefault();
+                var targetEl = document.getElementById('gmsg-' + m.reply_to.id);
+                if (targetEl) {
+                  targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  targetEl.classList.add('highlight-target-msg');
+                  setTimeout(function () { targetEl.classList.remove('highlight-target-msg'); }, 1800);
+                }
+              }
+            }, [
+              h('div', { class: 'msg-reply-quote-author' }, [
+                h('span', {}, '↩️ Replying to '),
+                h('strong', {}, repAuthor)
+              ]),
+              h('div', { class: 'msg-reply-quote-snippet' }, '"' + repSnippet + '"')
+            ]);
+          }
+
           var msgItem = h('div', { class: 'group-msg-item', id: 'gmsg-' + m.id }, [
             h('div', { class: 'group-msg-head' }, [
               OC.ui.person(m.author, 'strong'),
@@ -700,6 +725,7 @@ OC.groups = (function () {
                 }, 'Delete') : null
               ].filter(Boolean))
             ]),
+            replyQuoteNode,
             h('div', { class: 'group-msg-text' }, OC.ui.formatMentions ? OC.ui.formatMentions(m.text) : m.text),
             mediaNode,
             pollNode,
@@ -726,6 +752,14 @@ OC.groups = (function () {
           OC.store.addGroupMessage(currentGroup.id, messageText, user.id, extra);
         });
 
+        // If @everyone was mentioned, notify all other group members
+        if (messageText.toLowerCase().indexOf('@everyone') > -1) {
+          var allMembers = (currentGroup.members || []).filter(function (mid) { return mid !== user.id; });
+          if (allMembers.length) {
+            OC.store.notify(allMembers, '📢 ' + user.name + ' mentioned @everyone in ' + currentGroup.name + ': "' + messageText.slice(0, 40) + '"', currentGroup.id);
+          }
+        }
+
         msgInput.value = '';
         setReplyContext(null, null);
         setMediaAttachment(null);
@@ -749,9 +783,8 @@ OC.groups = (function () {
         mediaFileInput,
         h('div', { class: 'comment-form-row' }, [
           msgInput,
-          h('button', { class: 'mention-btn-trigger', type: 'button', onClick: function () { if (mentionHelper) mentionHelper.openMentionMenu(); } }, '@'),
-          h('button', { class: 'mention-btn-trigger', type: 'button', onClick: function () { mediaFileInput.click(); } }, '📷'),
-          h('button', { class: 'mention-btn-trigger', type: 'button', onClick: openCreatePollModal }, '📊'),
+          h('button', { class: 'mention-btn-trigger', type: 'button', title: 'Attach Photo/Video', onClick: function () { mediaFileInput.click(); } }, '📷'),
+          h('button', { class: 'mention-btn-trigger', type: 'button', title: 'Create Poll', onClick: openCreatePollModal }, '📊'),
           h('button', { class: 'btn small primary', type: 'button', onClick: submitGroupMessage }, 'Send')
         ])
       ]);

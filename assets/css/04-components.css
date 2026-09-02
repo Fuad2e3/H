@@ -3879,4 +3879,184 @@ dialog.modal.fallback {
   font-style: italic;
 }
 
+/* =========================================================================
+   CHAT REPLIES & SOCIAL @ MENTIONS (Photo/Message Quotations & @everyone)
+   ========================================================================= */
+
+/* Quoted Reply Header on Messages */
+.msg-reply-quote,
+.group-msg-reply-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  margin: 4px 0 6px;
+  background: var(--tint, rgba(37, 99, 235, 0.07));
+  border-left: 3px solid var(--blueprint, #38bdf8);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+.msg-reply-quote:hover,
+.group-msg-reply-quote:hover {
+  background: var(--tint-strong, rgba(37, 99, 235, 0.14));
+  border-left-color: var(--brand-orange, #f97316);
+  transform: translateX(2px);
+}
+.msg-reply-quote-author {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blueprint, #38bdf8);
+}
+.msg-reply-quote-snippet {
+  font-size: 12px;
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+}
+
+/* Highlight flash when scrolling to target replied message */
+.highlight-target-msg {
+  animation: highlight-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes highlight-pulse {
+  0% {
+    background-color: rgba(249, 115, 22, 0.25);
+    box-shadow: 0 0 16px rgba(249, 115, 22, 0.4);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Active Reply Draft Banner above Input Bar */
+.reply-draft-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--card-bg, #111b2e);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-left: 4px solid var(--blueprint, #3b82f6);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.reply-draft-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.reply-draft-header {
+  font-weight: 700;
+  color: var(--blueprint, #38bdf8);
+  font-size: 11.5px;
+}
+.reply-draft-snippet {
+  color: var(--text-secondary, #94a3b8);
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.replying-cancel-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.12s ease;
+}
+.replying-cancel-btn:hover {
+  color: var(--signal, #ef4444);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* Mention Badges & Pills */
+.mention-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  background: rgba(37, 99, 235, 0.18);
+  color: var(--blueprint, #38bdf8);
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: -0.01em;
+  margin: 0 2px;
+}
+.mention-tag.everyone {
+  background: rgba(249, 115, 22, 0.22);
+  color: var(--brand-orange, #f97316);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.2);
+}
+
+/* Floating Autocomplete Popover */
+.mention-autocomplete-pop {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  width: 280px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--card-bg, #111b2e);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 16px rgba(37, 99, 235, 0.18);
+  backdrop-filter: blur(12px);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mention-pop-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.mention-pop-item:hover,
+.mention-pop-item.active {
+  background: var(--tint-strong, rgba(37, 99, 235, 0.18));
+}
+.mention-pop-item.is-everyone {
+  border-bottom: 1px solid var(--rule, rgba(255, 255, 255, 0.08));
+  margin-bottom: 3px;
+  padding-bottom: 8px;
+}
+.mention-pop-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.mention-pop-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink, #ffffff);
+}
+.mention-pop-role {
+  font-size: 10.5px;
+  color: var(--text-secondary, #94a3b8);
+}
+
+
 

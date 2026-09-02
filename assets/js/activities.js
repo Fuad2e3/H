@@ -10,7 +10,7 @@ window.OC = window.OC || {};
 OC.activities = (function () {
   'use strict';
 
-  var activeTab = 'all'; /* all | groups | departments | accounts | invites */
+  var activeTab = 'groups'; /* groups | departments | accounts | reports | history | invites */
   var groupSearchQuery = '';
   var groupFilterStatus = 'all'; /* all | active | archived | mine */
 
@@ -47,9 +47,8 @@ OC.activities = (function () {
       h('p', {}, 'Centralized team collaboration & organization hub: cross-department groups, live discussions, departments, member accounts, and pending invites.')
     ]);
 
-    /* ---- 2. Sub-navigation tabs ---- */
+    /* ---- 2. Sub-navigation tabs (Without All Overview) ---- */
     var tabs = [
-      ['all', 'All Overview'],
       ['groups', 'Groups & Discussions (' + allGroups.length + ')'],
       ['departments', 'Departments (' + depts.length + ')'],
       ['accounts', 'Team Accounts (' + users.length + ')'],
@@ -254,8 +253,8 @@ OC.activities = (function () {
       content.push(accountsSection);
     }
 
-    /* ---- Section C: Work Reports & Analytics ---- */
-    if (activeTab === 'all' || activeTab === 'reports') {
+    /* ---- Section D: Work Reports & Analytics ---- */
+    if (activeTab === 'reports') {
       var reportsSection = h('div', { class: 'activities-section', id: 'activities-reports-sec', style: 'margin-bottom:32px;' }, [
         h('div', { class: 'row', style: 'align-items:center;margin-bottom:12px;' }, [
           h('h2', { class: 'section-head', style: 'margin:0;' }, 'Work Reports & Analytics')
@@ -269,8 +268,8 @@ OC.activities = (function () {
       content.push(reportsSection);
     }
 
-    /* ---- Section D: Pending Invites (if any) ---- */
-    if ((activeTab === 'all' || activeTab === 'invites') && pending.length) {
+    /* ---- Section E: Pending Invites (if any) ---- */
+    if (activeTab === 'invites' && pending.length) {
       var invitesSection = h('div', { class: 'activities-section', style: 'margin-bottom:32px;' }, [
         h('h2', { class: 'section-head' }, [
           'Pending Invites',
@@ -323,8 +322,8 @@ OC.activities = (function () {
       content.push(invitesSection);
     }
 
-    /* ---- Section E: History & Audit Logs (Dedicated History View) ---- */
-    if (activeTab === 'all' || activeTab === 'history') {
+    /* ---- Section F: History & Audit Logs (Dedicated History View) ---- */
+    if (activeTab === 'history') {
       var allLogs = (OC.store.state && OC.store.state.audit) || [];
       var filteredAudit = allLogs.filter(function (a) {
         if (!auditSearchQuery) return true;

@@ -810,21 +810,10 @@ OC.groups = (function () {
     }
   }
 
-  /* ---- render ----------------------------------------------------------- */
+  /* ---- render (Discord Two-Column Layout) -------------------------------- */
   function render(host, rerender, hideHead) {
     var h = OC.ui.h;
     var user = me();
-
-    var activeGroup = activeChatGroupId ? OC.store.group(activeChatGroupId) : null;
-    if (activeGroup && OC.can.seeGroup(user, activeGroup)) {
-      renderGroupChatPage(host, activeGroup, function () {
-        activeChatGroupId = null;
-        render(host, rerender, hideHead);
-      });
-      return;
-    } else {
-      activeChatGroupId = null;
-    }
 
     var canCreate = OC.can.createGroup(user);
     var allGroups = (OC.store.state.groups || []).filter(function (g) {
@@ -849,140 +838,137 @@ OC.groups = (function () {
       return true;
     });
 
+    if (!activeChatGroupId || !OC.store.group(activeChatGroupId)) {
+      activeChatGroupId = (visible.length ? visible[0].id : (allGroups.length ? allGroups[0].id : null));
+    }
+
+    var activeGroup = activeChatGroupId ? OC.store.group(activeChatGroupId) : null;
+
     var activeCount = allGroups.filter(function (g) { return g.status === 'active'; }).length;
     var myCount = allGroups.filter(function (g) { return (g.members || []).indexOf(user.id) > -1; }).length;
 
-    var elements = [];
-    if (!hideHead) {
-      elements.push(
-        h('div', { class: 'page-head' }, [
-          h('h1', {}, 'Groups & Cross-Department Teams'),
-          h('p', {}, 'Groups cut across the department tree for work that needs people from more than one department. ' +
-            'Includes team discussions, message editing/deletion, and emoji reactions.')
+    /* ---- 1. Discord Channels Left Sidebar ---- */
+    var sidebar = h('div', { class: 'discord-channels-sidebar' }, [
+      h('div', { class: 'discord-sidebar-top' }, [
+        h('div', { class: 'discord-sidebar-title-row' }, [
+          h('span', { class: 'discord-sidebar-title' }, ['💬 CHANNELS (' + allGroups.length + ')']),
+          canCreate
+            ? h('button', {
+                class: 'discord-sidebar-new-btn',
+                type: 'button',
+                title: 'Create new channel / group',
+                onClick: function () {
+                  newGroup(function () { render(host, rerender, hideHead); });
+                }
+              }, '+ New')
+            : null
         ]),
-        h('div', { class: 'grid-3', style: 'margin-bottom:var(--s4);' }, [
-          h('div', { class: 'stat' }, [
-            h('span', { class: 'k' }, 'Total Groups'),
-            h('span', { class: 'v' }, String(allGroups.length))
-          ]),
-          h('div', { class: 'stat' }, [
-            h('span', { class: 'k' }, 'Active Groups'),
-            h('span', { class: 'v' }, String(activeCount))
-          ]),
-          h('div', { class: 'stat' }, [
-            h('span', { class: 'k' }, 'My Groups'),
-            h('span', { class: 'v' }, String(myCount))
-          ])
-        ])
-      );
-    }
-
-    elements.push(
-      h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:var(--s4);flex-wrap:wrap;gap:10px;' }, [
-        h('div', { class: 'row', style: 'gap:10px;align-items:center;flex:1;min-width:260px;' }, [
-          h('input', {
-            type: 'search', placeholder: 'Search groups by name, purpose, or member...',
-            value: searchQuery,
-            style: 'max-width:320px;',
-            onInput: OC.ui.debounce(function (e) { searchQuery = e.target.value; render(host, rerender, hideHead); }, 120)
-          }),
-          h('div', { class: 'segmented', role: 'group', 'aria-label': 'Filter groups' }, [
-            ['all', 'All (' + allGroups.length + ')'],
-            ['mine', 'My Groups (' + myCount + ')'],
-            ['active', 'Active (' + activeCount + ')'],
-            ['archived', 'Archived (' + (allGroups.length - activeCount) + ')']
-          ].map(function (opt) {
-            return h('button', {
-              type: 'button',
-              'aria-pressed': String(filterStatus === opt[0]),
-              onClick: function () { filterStatus = opt[0]; render(host, rerender, hideHead); }
-            }, opt[1]);
-          }))
-        ]),
-        canCreate
-          ? h('button', { class: 'btn primary', type: 'button', onClick: function () { newGroup(function () { render(host, rerender, hideHead); }); } },
-              [OC.icon('plus'), 'New group'])
-          : null
+        h('input', {
+          class: 'discord-sidebar-search',
+          type: 'search',
+          placeholder: 'Filter #channels...',
+          value: searchQuery,
+          onInput: OC.ui.debounce(function (e) {
+            searchQuery = e.target.value;
+            render(host, rerender, hideHead);
+          }, 100)
+        }),
+        h('div', { class: 'segmented', role: 'group', 'aria-label': 'Filter groups', style: 'width:100%;gap:2px;' }, [
+          ['all', 'All (' + allGroups.length + ')'],
+          ['mine', 'Mine (' + myCount + ')'],
+          ['active', 'Active (' + activeCount + ')']
+        ].map(function (opt) {
+          return h('button', {
+            type: 'button',
+            style: 'padding:3px 6px;font-size:11px;flex:1;',
+            'aria-pressed': String(filterStatus === opt[0]),
+            onClick: function () {
+              filterStatus = opt[0];
+              render(host, rerender, hideHead);
+            }
+          }, opt[1]);
+        }))
       ]),
 
-      h('div', { class: 'grid-2' }, visible.length ? visible.map(function (g) {
-        var isMember = (g.members || []).indexOf(user.id) > -1;
+      /* Channel Items List */
+      h('div', { class: 'discord-channels-list' }, visible.length ? visible.map(function (g) {
+        var isSelected = (activeChatGroupId === g.id);
+        var msgCount = (g.messages || []).length;
         var canEdit = OC.can.canEditGroup(user, g);
         var canDel = OC.can.canDeleteGroup(user, g);
-        var msgCount = (g.messages || []).length;
 
         return h('div', {
-          class: 'card group-card-discord',
-          style: 'display:flex;flex-direction:column;gap:10px;cursor:default;'
+          class: 'discord-channel-pill' + (isSelected ? ' active' : ''),
+          onClick: function () {
+            activeChatGroupId = g.id;
+            render(host, rerender, hideHead);
+          }
         }, [
-          h('div', { class: 'row', style: 'align-items:center;justify-content:space-between;' }, [
-            h('h3', { class: 'group-card-title', style: 'font-size:16px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;' }, [
-              h('span', { class: 'group-channel-hash' }, '#'),
-              h('span', {}, g.name)
-            ]),
-            h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, [
-              h('span', { class: 'chip ' + (g.status === 'active' ? 'group' : 'custom') }, (g.status === 'active' ? '🟢 ' : '') + g.status),
-              isMember ? h('span', { class: 'chip client' }, 'Joined') : null
-            ])
+          h('div', { class: 'discord-channel-left' }, [
+            h('span', { class: 'discord-channel-hash' }, '#'),
+            h('span', { class: 'discord-channel-name' }, g.name),
+            g.status === 'active' ? h('span', { style: 'font-size:8px;color:#23A55A;' }, '🟢') : null
           ]),
-
-          h('p', { class: 'muted group-card-purpose', style: 'font-size:13.5px;margin:2px 0 6px;line-height:1.45;' }, g.purpose),
-
-          h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;' }, (g.members || []).map(function (id) {
-            var u = OC.store.user(id);
-            return h('span', { class: 'chip custom person', title: OC.can.roleLabel(u) }, [
-              OC.ui.mark(id),
-              u ? u.name : id
-            ]);
-          })),
-
-          h('div', { class: 'row muted mono', style: 'font-size:11.5px;margin-top:4px;align-items:center;justify-content:space-between;' }, [
-            h('span', {}, 'Created by ' + OC.ui.personName(g.created_by) + ' · ' + OC.ui.fmtDate(g.created_at)),
-            h('span', { class: 'group-card-badge' }, [
-              '💬 ' + msgCount + (msgCount === 1 ? ' message' : ' messages')
-            ])
-          ]),
-
-          h('div', { class: 'actions', style: 'margin-top:8px;padding-top:10px;border-top:1px dashed var(--rule);gap:8px;' }, [
-            h('button', {
-              class: 'btn small primary group-chat-open-btn', type: 'button',
-              title: 'Open Group Chat & Discussions (Discord View)',
-              onClick: function () {
-                activeChatGroupId = g.id;
-                render(host, rerender, hideHead);
-              }
-            }, ['💬 Chat (' + msgCount + ')']),
-
-            canEdit ? h('button', {
-              class: 'btn small', type: 'button',
-              title: 'Edit Group info and members',
-              onClick: function () { editGroup(g, function () { render(host, rerender, hideHead); }); }
-            }, 'Edit') : null,
-
-            (g.status === 'active' && canEdit) ? h('button', {
-              class: 'btn small', type: 'button',
-              title: 'Archive Group',
-              onClick: function () { archive(g, function () { render(host, rerender, hideHead); }); }
-            }, 'Archive') : null,
-
-            canDel ? h('button', {
-              class: 'btn small danger', type: 'button',
-              title: 'Permanently delete group',
-              onClick: function () { deleteGroupDirect(g, function () { render(host, rerender, hideHead); }); }
-            }, 'Delete') : null
-          ].filter(Boolean))
+          h('div', { class: 'row', style: 'align-items:center;gap:6px;' }, [
+            msgCount > 0 ? h('span', { class: 'discord-channel-badge' }, String(msgCount)) : null,
+            h('div', { class: 'discord-channel-actions', onClick: function (e) { e.stopPropagation(); } }, [
+              canEdit ? h('button', {
+                class: 'discord-channel-tool-btn',
+                title: 'Edit channel',
+                onClick: function () { editGroup(g, function () { render(host, rerender, hideHead); }); }
+              }, '✏️') : null,
+              canDel ? h('button', {
+                class: 'discord-channel-tool-btn',
+                title: 'Delete channel',
+                onClick: function () { deleteGroupDirect(g, function () { render(host, rerender, hideHead); }); }
+              }, '🗑️') : null
+            ].filter(Boolean))
+          ])
         ]);
       }) : [
-        h('div', { class: 'empty', style: 'grid-column:1/-1;padding:40px;text-align:center;' }, [
-          OC.icon('board'),
-          h('h3', { style: 'margin-top:10px;' }, 'No groups match your filter.'),
-          h('p', { class: 'muted', style: 'font-size:13px;margin-top:4px;' }, 'Try adjusting your search keywords or filter status.')
+        h('div', { style: 'padding:24px 12px;text-align:center;color:#949BA4;font-size:13px;' }, 'No channels found.')
+      ]),
+
+      /* Bottom User Bar */
+      h('div', { class: 'discord-sidebar-user-bar' }, [
+        h('div', { class: 'row', style: 'align-items:center;gap:8px;' }, [
+          OC.ui.mark(user.id),
+          h('div', { style: 'display:flex;flex-direction:column;' }, [
+            h('span', { style: 'color:#F2F3F5;font-size:13px;font-weight:700;' }, user.name),
+            h('span', { style: 'color:#949BA4;font-size:10.5px;font-family:var(--font-mono);' }, OC.can.roleLabel(user))
+          ])
         ])
       ])
-    );
+    ]);
+
+    /* ---- 2. Right Chat Main Pane ---- */
+    var chatMainHost = h('div', { class: 'discord-chat-main' });
+    if (activeGroup && OC.can.seeGroup(user, activeGroup)) {
+      renderGroupChatPage(chatMainHost, activeGroup, function () {
+        activeChatGroupId = null;
+        render(host, rerender, hideHead);
+      });
+    } else {
+      chatMainHost.appendChild(h('div', { class: 'empty', style: 'padding:80px 24px;text-align:center;color:#949BA4;' }, [
+        OC.icon('board'),
+        h('h3', { style: 'color:#F2F3F5;margin-top:14px;' }, 'Welcome to Groups & Discussions'),
+        h('p', { style: 'font-size:13.5px;margin-top:6px;' }, 'Select a channel from the left sidebar or create a new channel to begin chatting.'),
+        canCreate ? h('button', {
+          class: 'btn primary',
+          type: 'button',
+          style: 'margin-top:16px;',
+          onClick: function () { newGroup(function () { render(host, rerender, hideHead); }); }
+        }, '+ Create Channel') : null
+      ]));
+    }
+
+    var discordHub = h('div', { class: 'discord-hub-container' }, [
+      sidebar,
+      chatMainHost
+    ]);
 
     OC.ui.clear(host);
-    OC.ui.append(host, elements);
+    OC.ui.append(host, [discordHub]);
   }
 
   function openGroupChat(group, onDone) {

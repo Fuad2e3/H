@@ -2133,6 +2133,182 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   border-radius: 0;
 }
 
+/* ---- Discord Two-Column Workspace Layout (Sidebar Channels + Main Chat) ---- */
+.discord-hub-container {
+  display: flex;
+  background: #313338 !important;
+  border: 1px solid #232428 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45) !important;
+  overflow: hidden;
+  height: calc(100vh - 180px);
+  min-height: 560px;
+}
+
+/* Left Sidebar Channels */
+.discord-channels-sidebar {
+  width: 290px;
+  min-width: 260px;
+  max-width: 320px;
+  background: #2B2D31 !important;
+  border-right: 1px solid #1F2023 !important;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.discord-sidebar-top {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #1F2023;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.discord-sidebar-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.discord-sidebar-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #949BA4;
+  text-transform: uppercase;
+  font-family: var(--font-mono, monospace);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.discord-sidebar-new-btn {
+  background: #5865F2 !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.discord-sidebar-new-btn:hover {
+  background: #4752C4 !important;
+  transform: translateY(-1px);
+}
+.discord-sidebar-search {
+  background: #1E1F22 !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 6px !important;
+  color: #DBDEE1 !important;
+  font-size: 13px !important;
+  padding: 6px 10px !important;
+  width: 100% !important;
+  outline: none !important;
+}
+.discord-sidebar-search::placeholder {
+  color: #80848E !important;
+}
+.discord-channels-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.discord-channel-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #949BA4;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.12s ease;
+  user-select: none;
+  text-decoration: none;
+}
+.discord-channel-pill:hover {
+  background: #35373C;
+  color: #DBDEE1;
+}
+.discord-channel-pill.active {
+  background: #35373C !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  box-shadow: inset 3px 0 0 #5865F2;
+}
+.discord-channel-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.discord-channel-hash {
+  color: #80848E;
+  font-size: 16px;
+  font-weight: 700;
+}
+.discord-channel-pill.active .discord-channel-hash {
+  color: #5865F2;
+}
+.discord-channel-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.discord-channel-badge {
+  background: #5865F2;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  font-family: var(--font-mono, monospace);
+}
+.discord-channel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.discord-channel-pill:hover .discord-channel-actions {
+  opacity: 1;
+}
+.discord-channel-tool-btn {
+  background: transparent;
+  border: none;
+  color: #949BA4;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+.discord-channel-tool-btn:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.1);
+}
+.discord-sidebar-user-bar {
+  padding: 10px 14px;
+  background: #232428;
+  border-top: 1px solid #1F2023;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Right Chat Main Pane */
+.discord-chat-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #313338 !important;
+}
+
 /* ---- Dedicated Full-Page Chat Room View (Discord Look & Feel) ---- */
 .group-card-discord {
   background: #2B2D31 !important;

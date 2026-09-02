@@ -479,16 +479,19 @@ OC.groups = (function () {
                 e.preventDefault();
                 if (typeof onBack === 'function') onBack();
               }
-            }, ['← Back to Groups']),
-            h('h2', { style: 'font-size:17px;font-weight:700;color:var(--ink);margin:0;' }, '💬 ' + currentGroup.name),
+            }, ['← Back to Channels']),
+            h('h2', { style: 'font-size:17px;font-weight:700;color:var(--ink);margin:0;display:flex;align-items:center;gap:6px;' }, [
+              h('span', { class: 'group-channel-hash' }, '#'),
+              h('span', {}, currentGroup.name)
+            ]),
             h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, [
-              h('span', { class: 'chip ' + (currentGroup.status === 'active' ? 'group' : 'custom') }, currentGroup.status),
+              h('span', { class: 'chip ' + (currentGroup.status === 'active' ? 'group' : 'custom') }, (currentGroup.status === 'active' ? '🟢 ' : '') + currentGroup.status),
               h('span', { class: 'chip count' }, (currentGroup.members || []).length + ' members')
             ])
           ]),
           h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;' }, memberChips)
         ]),
-        h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' }, currentGroup.purpose)
+        h('p', { class: 'muted group-channel-topic', style: 'font-size:13px;margin:2px 0 0;' }, currentGroup.purpose)
       ]);
 
       var msgsList = h('div', { class: 'full-page-chat-messages' });
@@ -909,18 +912,21 @@ OC.groups = (function () {
         var msgCount = (g.messages || []).length;
 
         return h('div', {
-          class: 'card',
-          style: 'display:flex;flex-direction:column;gap:8px;cursor:default;'
+          class: 'card group-card-discord',
+          style: 'display:flex;flex-direction:column;gap:10px;cursor:default;'
         }, [
           h('div', { class: 'row', style: 'align-items:center;justify-content:space-between;' }, [
-            h('h3', { style: 'font-size:16px;font-weight:700;color:var(--ink);' }, g.name),
+            h('h3', { class: 'group-card-title', style: 'font-size:16px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;' }, [
+              h('span', { class: 'group-channel-hash' }, '#'),
+              h('span', {}, g.name)
+            ]),
             h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, [
-              h('span', { class: 'chip ' + (g.status === 'active' ? 'group' : 'custom') }, g.status),
+              h('span', { class: 'chip ' + (g.status === 'active' ? 'group' : 'custom') }, (g.status === 'active' ? '🟢 ' : '') + g.status),
               isMember ? h('span', { class: 'chip client' }, 'Joined') : null
             ])
           ]),
 
-          h('p', { class: 'muted', style: 'font-size:13.5px;margin:2px 0 6px;line-height:1.45;' }, g.purpose),
+          h('p', { class: 'muted group-card-purpose', style: 'font-size:13.5px;margin:2px 0 6px;line-height:1.45;' }, g.purpose),
 
           h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;' }, (g.members || []).map(function (id) {
             var u = OC.store.user(id);
@@ -930,17 +936,17 @@ OC.groups = (function () {
             ]);
           })),
 
-          h('div', { class: 'row muted mono', style: 'font-size:11px;margin-top:6px;align-items:center;justify-content:space-between;' }, [
+          h('div', { class: 'row muted mono', style: 'font-size:11.5px;margin-top:4px;align-items:center;justify-content:space-between;' }, [
             h('span', {}, 'Created by ' + OC.ui.personName(g.created_by) + ' · ' + OC.ui.fmtDate(g.created_at)),
             h('span', { class: 'group-card-badge' }, [
               '💬 ' + msgCount + (msgCount === 1 ? ' message' : ' messages')
             ])
           ]),
 
-          h('div', { class: 'actions', style: 'margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule);gap:8px;' }, [
+          h('div', { class: 'actions', style: 'margin-top:8px;padding-top:10px;border-top:1px dashed var(--rule);gap:8px;' }, [
             h('button', {
-              class: 'btn small primary', type: 'button',
-              title: 'Open Group Chat & Discussions (Full Page)',
+              class: 'btn small primary group-chat-open-btn', type: 'button',
+              title: 'Open Group Chat & Discussions (Discord View)',
               onClick: function () {
                 activeChatGroupId = g.id;
                 render(host, rerender, hideHead);

@@ -816,7 +816,7 @@ OC.board = (function () {
     ]);
   }
 
-  function editInstruction(note) {
+  function editInstruction(note, onSaved) {
     var user = me();
     var body = h('textarea', {}, note.body || '');
     var clientPicker = OC.ui.clientPicker(note.clients || note.client || '');
@@ -851,6 +851,7 @@ OC.board = (function () {
           });
 
           OC.ui.toast('Instruction updated.');
+          if (typeof onSaved === 'function') onSaved(note);
           close();
         }
       }
@@ -870,6 +871,7 @@ OC.board = (function () {
               OC.store.deleteInstruction(note.id);
             });
             OC.ui.toast('Instruction deleted.');
+            if (typeof onSaved === 'function') onSaved(note, 'deleted');
             close();
           });
         }
@@ -888,7 +890,7 @@ OC.board = (function () {
     });
   }
 
-  function deleteInstruction(note) {
+  function deleteInstruction(note, onDeleted) {
     OC.ui.confirm('Permanently delete this instruction? This action cannot be undone.', function () {
       OC.store.mutate({
         actor: OC.store.session(),
@@ -899,6 +901,7 @@ OC.board = (function () {
         OC.store.deleteInstruction(note.id);
       });
       OC.ui.toast('Instruction deleted.');
+      if (typeof onDeleted === 'function') onDeleted(note);
     });
   }
 
@@ -917,12 +920,17 @@ OC.board = (function () {
   }
 
   /* ---- post an instruction ----------------------------------------------- */
-  function newInstruction() {
+  function newInstruction(preset, onCreated) {
+    if (typeof preset === 'function') {
+      onCreated = preset;
+      preset = {};
+    }
+    preset = preset || {};
     var user = me();
     var body = h('textarea', { placeholder: 'the instruction, as it was given' });
-    var clientPicker = OC.ui.clientPicker('');
-    var deptPicker = OC.ui.deptPicker('', user);
-    var tags = OC.ui.tagPicker([]);
+    var clientPicker = OC.ui.clientPicker(preset.clients || preset.client || '');
+    var deptPicker = OC.ui.deptPicker(preset.departments || preset.department || (user.department || ''), user);
+    var tags = OC.ui.tagPicker(preset.tags || []);
 
     OC.ui.modal({
       title: 'Post an instruction',
@@ -968,6 +976,7 @@ OC.board = (function () {
             if (audience.length) {
               OC.store.notify(audience, user.name + ' posted an instruction (' + label + '): ' + (note.body.length > 50 ? note.body.slice(0, 50) + '…' : note.body), note.id);
             }
+            if (typeof onCreated === 'function') onCreated(note);
             OC.ui.toast('Instruction posted to ' + audience.length + ' people.');
             close();
           }
@@ -1119,11 +1128,14 @@ OC.board = (function () {
     newTodo: newTodo,
     newInstruction: newInstruction,
     editTodo: editTodo,
+    editInstruction: editInstruction,
+    deleteInstruction: deleteInstruction,
     changeState: changeState,
     stateSelect: stateSelect,
     reassignTodo: reassignTodo,
     archiveTodo: archiveTodo,
     todoItem: todoItem,
+    instructionItem: instructionItem,
     applyFilter: function (next) { filters = JSON.parse(JSON.stringify(next)); mode = 'panels'; },
     /* a getter, because applying a pinned filter rebinds the object */
     get filters() { return filters; }

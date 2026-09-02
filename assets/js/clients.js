@@ -425,23 +425,76 @@ OC.clients = (function () {
             style: 'font-weight:700;',
             onClick: function () {
               if (OC.board && OC.board.newInstruction) {
-                OC.board.newInstruction(function () { renderClientPortal(host, client, onBack); });
+                OC.board.newInstruction({ client: client.id, clients: [client.id] }, function () {
+                  renderClientPortal(host, client, onBack);
+                });
               }
             }
           }, ['+ New Instruction'])
         ]),
 
         clientInstructions.length ? h('div', { style: 'display:flex;flex-direction:column;gap:12px;' }, clientInstructions.map(function (ins) {
+          var canEdit = OC.can && OC.can.canEditInstruction ? OC.can.canEditInstruction(user, ins) : (user.admin || ins.author === user.id);
+          var canDelete = OC.can && OC.can.canDeleteInstruction ? OC.can.canDeleteInstruction(user, ins) : (user.admin || ins.author === user.id);
+          var isUnread = ins.read_by && ins.read_by.indexOf(user.id) === -1;
+
+          var itemActions = [];
+          if (isUnread) {
+            itemActions.push(h('button', {
+              class: 'btn small',
+              type: 'button',
+              style: 'font-size:11.5px;padding:3px 8px;',
+              onClick: function () {
+                OC.store.mutate(null, function () {
+                  if (!ins.read_by) ins.read_by = [];
+                  ins.read_by.push(user.id);
+                });
+                renderClientPortal(host, client, onBack);
+              }
+            }, 'Mark read'));
+          }
+          if (canEdit && OC.board && OC.board.editInstruction) {
+            itemActions.push(h('button', {
+              class: 'btn small',
+              type: 'button',
+              style: 'font-size:11.5px;padding:3px 8px;',
+              onClick: function () {
+                OC.board.editInstruction(ins, function () {
+                  renderClientPortal(host, client, onBack);
+                });
+              }
+            }, '✏️ Edit'));
+          }
+          if (canDelete && OC.board && OC.board.deleteInstruction) {
+            itemActions.push(h('button', {
+              class: 'btn small danger',
+              type: 'button',
+              style: 'font-size:11.5px;padding:3px 8px;',
+              onClick: function () {
+                OC.board.deleteInstruction(ins, function () {
+                  renderClientPortal(host, client, onBack);
+                });
+              }
+            }, '🗑️ Delete'));
+          }
+
           return h('div', { class: 'client-instruction-item-card' }, [
-            h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:6px;' }, [
-              h('h4', { style: 'margin:0;font-size:15px;font-weight:700;color:var(--ink);' }, ins.title || 'Instruction'),
-              h('span', { class: 'muted', style: 'font-size:11.5px;' }, OC.ui.fmtWhen(ins.created_at || ins.posted_at))
+            h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;' }, [
+              h('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
+                OC.ui.person(ins.author, 'strong'),
+                ins.department ? OC.ui.deptChip(ins.department) : null,
+                ins.target_type ? h('span', { class: 'chip custom' }, 'Target: ' + ins.target_type) : null
+              ].filter(Boolean)),
+              h('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
+                h('span', { class: 'muted', style: 'font-size:11.5px;' }, OC.ui.fmtWhen(ins.posted_at || ins.created_at)),
+                itemActions.length ? h('div', { class: 'row', style: 'gap:4px;' }, itemActions) : null
+              ].filter(Boolean))
             ]),
-            h('p', { style: 'font-size:14px;color:var(--text);margin:4px 0 8px;line-height:1.55;' }, ins.body),
-            h('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
-              OC.ui.person(ins.author, 'strong'),
-              ins.target_type ? h('span', { class: 'chip custom' }, 'Target: ' + ins.target_type) : null
-            ].filter(Boolean))
+            h('p', { style: 'font-size:14px;color:var(--text);margin:6px 0 10px;line-height:1.6;white-space:pre-wrap;' }, ins.body),
+            OC.ui && OC.ui.reactionsBar ? OC.ui.reactionsBar('instruction', ins) : null,
+            (OC.can && OC.can.commentOnInstruction && OC.can.commentOnInstruction(user, ins) && OC.ui && OC.ui.commentThread)
+              ? OC.ui.commentThread('instruction', ins)
+              : null
           ]);
         })) : h('div', { class: 'portal-credential-card', style: 'padding:36px;text-align:center;' }, [
           h('p', { class: 'muted', style: 'margin:0;font-size:14px;' }, 'No specific instructions logged for this client yet.')

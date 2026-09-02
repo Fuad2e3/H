@@ -260,13 +260,35 @@ OC.dashboard = (function () {
             h('span', { class: 'sub' }, unread.length ? unread.length + ' unread first' : 'all read')
           ]),
           h('div', { class: 'panel-body' }, notes.length
-            ? notes.slice(0, 8).map(function (n) {
+            ? notes.slice(0, 12).map(function (n) {
                 var isUnread = n.read_by.indexOf(user.id) === -1;
+                var readers = (n.read_by || []).map(OC.ui.personName);
+
+                var actions = [];
+                if (isUnread) {
+                  actions.push(h('button', {
+                    class: 'btn small', type: 'button', onClick: function () {
+                      OC.store.mutate(null, function () { n.read_by.push(user.id); });
+                    }
+                  }, 'Mark as read'));
+                }
+                if (!n.linked_todo && OC.board && OC.board.convertToTodo) {
+                  actions.push(h('button', {
+                    class: 'btn small', type: 'button', onClick: function () { OC.board.convertToTodo(n); }
+                  }, 'Convert to todo'));
+                }
+                if (OC.can && OC.can.canEditInstruction && OC.can.canEditInstruction(user, n) && OC.board && OC.board.editInstruction) {
+                  actions.push(h('button', {
+                    class: 'btn small', type: 'button', onClick: function () { OC.board.editInstruction(n); }
+                  }, 'Edit'));
+                }
+
                 return h('article', { class: 'note' + (isUnread ? ' unread' : '') }, [
                   h('div', { class: 'byline' }, [
-                    OC.ui.person(n.author, 'strong'),
+                    OC.ui.person(n.author || n.posted_by, 'strong'),
                     h('span', {}, OC.ui.fmtWhen(n.posted_at)),
-                    isUnread ? h('span', { class: 'chip overdue' }, 'unread') : null
+                    isUnread ? h('span', { class: 'chip overdue' }, 'unread') : null,
+                    n.linked_todo ? h('span', { class: 'chip group' }, 'todo created') : null
                   ]),
                   h('div', { class: 'body' }, n.body),
                   h('div', { class: 'tags' }, [
@@ -276,16 +298,13 @@ OC.dashboard = (function () {
                     (Array.isArray(n.departments) && n.departments.length > 1)
                       ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, n.departments.map(OC.ui.deptChip))
                       : OC.ui.deptChip(n.department),
-                    n.tags.map(OC.ui.tagChip)
+                    (n.tags || []).map(OC.ui.tagChip)
                   ]),
+                  h('div', { class: 'readers' }, readers.length
+                    ? 'Read by ' + readers.length + ': ' + readers.join(', ')
+                    : 'Nobody has read this yet'),
+                  actions.length ? h('div', { class: 'actions', style: 'margin-top:8px;' }, actions) : null,
                   OC.ui.reactionsBar('instruction', n),
-                  isUnread ? h('div', { class: 'actions' }, [
-                    h('button', {
-                      class: 'btn small', type: 'button', onClick: function () {
-                        OC.store.mutate(null, function () { n.read_by.push(user.id); });
-                      }
-                    }, 'Mark as read')
-                  ]) : null,
                   OC.can.canSeeComments(user, n) ? OC.ui.commentThread('instruction', n) : null
                 ]);
               })

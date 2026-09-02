@@ -40,19 +40,29 @@ OC.can = (function () {
 
   function isHead(user, deptId) { return rankOf(user, deptId) === 0; }
   function isLead(user, deptId) { return rankOf(user, deptId) === 1; }
-  function inDept(user, deptId) { return levelIn(user, deptId) !== null; }
+  function inDept(user, deptId) {
+    if (!user || !deptId || !Array.isArray(user.departments)) return false;
+    return user.departments.some(function (m) {
+      if (m.department === deptId) return true;
+      var targetDept = S().department(deptId);
+      if (targetDept && (m.department === targetDept.id || m.department === targetDept.name)) return true;
+      var userDept = S().department(m.department);
+      if (userDept && (userDept.id === deptId || userDept.name === deptId)) return true;
+      return false;
+    });
+  }
 
   function headOfAny(user) {
-    return !!user && user.departments.some(function (m) { return rank(m.department, m.level) === 0; });
+    return !!user && Array.isArray(user.departments) && user.departments.some(function (m) { return rank(m.department, m.level) === 0; });
   }
 
   function departmentsOf(user) {
-    return user ? user.departments.map(function (m) { return m.department; }) : [];
+    return user ? (user.departments || []).map(function (m) { return m.department; }) : [];
   }
 
   function inGroup(user, groupId) {
     var g = S().group(groupId);
-    return !!g && g.members.indexOf(user.id) > -1;
+    return !!g && Array.isArray(g.members) && g.members.indexOf(user.id) > -1;
   }
 
   /* ---- descriptive role, for display ----------------------------------- */
@@ -74,7 +84,7 @@ OC.can = (function () {
       var r = rank(m.department, m.level);
       if (!best || r < best.r) best = { r: r, level: m.level };
     });
-    if (best.r === 0) return 'Department Head';
+    if (best && best.r === 0) return 'Department Head';
     return 'Member';
   }
 
@@ -101,7 +111,9 @@ OC.can = (function () {
   function seeInstruction(user, note) {
     if (!user || !note) return false;
     if (user.admin) return true;
-    if (note.author === user.id) return true;
+    if (note.author === user.id || note.posted_by === user.id) return true;
+    var hasDepts = Boolean(note.department) || (Array.isArray(note.departments) && note.departments.length > 0);
+    if (!hasDepts || note.audience === 'all') return true;
     if (note.department && inDept(user, note.department)) return true;
     if (Array.isArray(note.departments) && note.departments.some(function (d) { return inDept(user, d); })) return true;
     return false;

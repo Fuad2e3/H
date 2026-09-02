@@ -24,10 +24,10 @@ OC.app = (function () {
     { id: 'clients', label: 'Clients Portal', view: function () { return OC.clients; } }
   ];
 
-  /* ---- theme ------------------------------------------------------------ */
+  /* ---- theme (Day / Night Mode Support) ---------------------------------- */
   var THEME_KEY = 'oc-theme';
   var THEMES = [null, 'dark', 'light'];
-  var THEME_LABELS = ['Theme: system', 'Theme: dark', 'Theme: light'];
+  var THEME_LABELS = ['Theme: 🖥️ System', 'Theme: 🌙 Night', 'Theme: ☀️ Day'];
   var themeIndex = 0;
 
   function readTheme() {

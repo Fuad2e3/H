@@ -20,6 +20,7 @@ OC.clients = (function () {
   var activePortalTab = 'report'; /* report | todos | instructions | details */
   var activeTimeframe = 'month'; /* day | month | year */
   var todoFilterState = 'all'; /* all | open | progress | done | blocked */
+  var isDetailsEditing = false; /* view mode vs edit mode in Details tab */
 
   function me() { return OC.store.user(OC.store.session()); }
 
@@ -505,91 +506,151 @@ OC.clients = (function () {
 
     /* TAB 4: DETAILS & RICH WORKSPACE TEXT EDITOR */
     if (activePortalTab === 'details') {
-      var editorText = h('textarea', {
-        class: 'client-rich-textarea',
-        placeholder: 'Write comprehensive client notes, scope of work, contracts, deliverables, or checklist specs...\n\nSupports full Markdown: # Headings, **Bold**, - Bullet points, - [ ] Checklists, and quotes!',
-        'aria-label': 'Client Rich Notes'
-      }, client.details || client.notes || '');
+      var detailsContent;
+      var hasDetails = !!(client.details || client.notes);
 
-      var previewWrap = h('div', { class: 'client-rich-preview', style: 'display:none;' });
-      var isPreviewMode = false;
+      if (!isDetailsEditing) {
+        /* VIEW MODE: Clean, rendered formatted text */
+        var renderedHtml = renderMarkdownPreview(client.details || client.notes || '');
 
-      function updatePreview() {
-        previewWrap.innerHTML = renderMarkdownPreview(editorText.value);
-      }
-
-      function insertFormatting(prefix, suffix, defaultText) {
-        var start = editorText.selectionStart || 0;
-        var end = editorText.selectionEnd || 0;
-        var val = editorText.value;
-        var selected = val.slice(start, end) || defaultText || '';
-        var replacement = prefix + selected + (suffix || '');
-        editorText.value = val.slice(0, start) + replacement + val.slice(end);
-        editorText.focus();
-        editorText.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
-        updatePreview();
-      }
-
-      var toolbar = h('div', { class: 'client-editor-toolbar' }, [
-        h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold', onClick: function () { insertFormatting('**', '**', 'bold text'); } }, 'B'),
-        h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Italic', onClick: function () { insertFormatting('*', '*', 'italic text'); } }, 'I'),
-        h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 2', onClick: function () { insertFormatting('## ', '', 'Heading 2'); } }, 'H2'),
-        h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 3', onClick: function () { insertFormatting('### ', '', 'Heading 3'); } }, 'H3'),
-        h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bullet list', onClick: function () { insertFormatting('- ', '', 'List item'); } }, '• List'),
-        h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Checklist item', onClick: function () { insertFormatting('- [ ] ', '', 'Task to complete'); } }, '☑ Check'),
-        h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote block', onClick: function () { insertFormatting('> ', '', 'Important client note'); } }, '❝ Quote'),
-        h('button', {
-          class: 'client-editor-tool-btn push',
-          type: 'button',
-          style: 'background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.3);font-weight:700;',
-          onClick: function () {
-            isPreviewMode = !isPreviewMode;
-            if (isPreviewMode) {
-              updatePreview();
-              editorText.style.display = 'none';
-              previewWrap.style.display = 'block';
-              this.textContent = '✏️ Edit Mode';
-            } else {
-              editorText.style.display = 'block';
-              previewWrap.style.display = 'none';
-              this.textContent = '👁️ Preview Formatted';
-            }
-          }
-        }, '👁️ Preview Formatted'),
-        h('button', {
-          class: 'btn primary small',
-          type: 'button',
-          style: 'font-weight:700;',
-          onClick: function () {
-            var val = editorText.value.trim();
-            OC.store.mutate({
-              actor: user.id, action: 'client.details.update', target: client.name,
-              detail: 'Updated documentation notes for ' + client.name
-            }, function () {
-              client.details = val;
-              client.notes = val;
-            });
-            OC.ui.toast('Client details & notes saved successfully! 💾');
-          }
-        }, '💾 Save Details')
-      ]);
-
-      editorText.addEventListener('input', updatePreview);
-
-      var detailsContent = h('div', { class: 'portal-view-content' }, [
-        h('div', { class: 'portal-header-box' }, [
-          h('div', {}, [
-            h('h2', { class: 'portal-view-title' }, ['📝 Details & Workspace Documentation']),
-            h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-              'Unlimited rich text documentation, contracts, specifications, and scope notes for ' + client.name + '.')
+        detailsContent = h('div', { class: 'portal-view-content' }, [
+          h('div', { class: 'portal-header-box' }, [
+            h('div', {}, [
+              h('h2', { class: 'portal-view-title' }, ['📝 Details & Documentation']),
+              h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
+                'Custom specifications, contracts, and notes for ' + client.name + '.')
+            ]),
+            h('button', {
+              class: 'btn primary small',
+              type: 'button',
+              style: 'font-weight:700;display:inline-flex;align-items:center;gap:6px;',
+              onClick: function () {
+                isDetailsEditing = true;
+                renderClientPortal(host, client, onBack);
+              }
+            }, ['✏️ Edit Details'])
+          ]),
+          h('div', { class: 'portal-credential-card', style: 'padding:22px 26px;' }, [
+            hasDetails
+              ? (function () {
+                  var p = h('div', { class: 'client-rich-preview', style: 'padding:0;background:transparent;border:none;' });
+                  p.innerHTML = renderedHtml;
+                  return p;
+                })()
+              : h('div', { style: 'text-align:center;padding:36px 20px;' }, [
+                  h('p', { class: 'muted', style: 'font-size:14px;margin-bottom:14px;' }, 'No customized details or documentation added for this client yet.'),
+                  h('button', {
+                    class: 'btn primary small',
+                    type: 'button',
+                    onClick: function () {
+                      isDetailsEditing = true;
+                      renderClientPortal(host, client, onBack);
+                    }
+                  }, ['+ Write Details'])
+                ])
           ])
-        ]),
-        h('div', { class: 'portal-credential-card', style: 'padding:20px;' }, [
-          toolbar,
-          editorText,
-          previewWrap
-        ])
-      ]);
+        ]);
+      } else {
+        /* EDIT MODE: Rich Toolbar + Textarea + Save */
+        var editorText = h('textarea', {
+          class: 'client-rich-textarea',
+          placeholder: 'Write comprehensive client notes, scope of work, contracts, deliverables, or checklist specs...\n\nSupports full Markdown: # Headings, **Bold**, - Bullet points, - [ ] Checklists, and quotes!',
+          'aria-label': 'Client Rich Notes'
+        }, client.details || client.notes || '');
+
+        var previewWrap = h('div', { class: 'client-rich-preview', style: 'display:none;' });
+        var isPreviewMode = false;
+
+        function updatePreview() {
+          previewWrap.innerHTML = renderMarkdownPreview(editorText.value);
+        }
+
+        function insertFormatting(prefix, suffix, defaultText) {
+          var start = editorText.selectionStart || 0;
+          var end = editorText.selectionEnd || 0;
+          var val = editorText.value;
+          var selected = val.slice(start, end) || defaultText || '';
+          var replacement = prefix + selected + (suffix || '');
+          editorText.value = val.slice(0, start) + replacement + val.slice(end);
+          editorText.focus();
+          editorText.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+          updatePreview();
+        }
+
+        var toolbar = h('div', { class: 'client-editor-toolbar' }, [
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold', onClick: function () { insertFormatting('**', '**', 'bold text'); } }, 'B'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Italic', onClick: function () { insertFormatting('*', '*', 'italic text'); } }, 'I'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 2', onClick: function () { insertFormatting('## ', '', 'Heading 2'); } }, 'H2'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 3', onClick: function () { insertFormatting('### ', '', 'Heading 3'); } }, 'H3'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bullet list', onClick: function () { insertFormatting('- ', '', 'List item'); } }, '• List'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Checklist item', onClick: function () { insertFormatting('- [ ] ', '', 'Task to complete'); } }, '☑ Check'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote block', onClick: function () { insertFormatting('> ', '', 'Important client note'); } }, '❝ Quote'),
+          h('button', {
+            class: 'client-editor-tool-btn push',
+            type: 'button',
+            style: 'background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.3);font-weight:700;',
+            onClick: function () {
+              isPreviewMode = !isPreviewMode;
+              if (isPreviewMode) {
+                updatePreview();
+                editorText.style.display = 'none';
+                previewWrap.style.display = 'block';
+                this.textContent = '✏️ Edit Text';
+              } else {
+                editorText.style.display = 'block';
+                previewWrap.style.display = 'none';
+                this.textContent = '👁️ Preview';
+              }
+            }
+          }, '👁️ Preview')
+        ]);
+
+        editorText.addEventListener('input', updatePreview);
+
+        detailsContent = h('div', { class: 'portal-view-content' }, [
+          h('div', { class: 'portal-header-box' }, [
+            h('div', {}, [
+              h('h2', { class: 'portal-view-title' }, ['📝 Editing Client Details']),
+              h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
+                'Write and format documentation for ' + client.name + '. Click "Save Details" when finished.')
+            ]),
+            h('div', { class: 'row', style: 'gap:8px;' }, [
+              h('button', {
+                class: 'btn small secondary',
+                type: 'button',
+                onClick: function () {
+                  isDetailsEditing = false;
+                  renderClientPortal(host, client, onBack);
+                }
+              }, 'Cancel'),
+              h('button', {
+                class: 'btn primary small',
+                type: 'button',
+                style: 'font-weight:700;',
+                onClick: function () {
+                  var val = editorText.value.trim();
+                  OC.store.mutate({
+                    actor: user.id, action: 'client.details.update', target: client.name,
+                    detail: 'Updated documentation notes for ' + client.name
+                  }, function () {
+                    client.details = val;
+                    client.notes = val;
+                  });
+                  OC.ui.toast('Client details & notes saved successfully! 💾');
+                  isDetailsEditing = false;
+                  renderClientPortal(host, client, onBack);
+                }
+              }, '💾 Save Details')
+            ])
+          ]),
+          h('div', { class: 'portal-credential-card', style: 'padding:20px;' }, [
+            toolbar,
+            editorText,
+            previewWrap
+          ])
+        ]);
+      }
+
       mainArea.appendChild(detailsContent);
     }
 
@@ -720,6 +781,7 @@ OC.clients = (function () {
               title: 'Click to open ' + c.name + ' workspace portal & reports',
               onClick: function () {
                 activePortalClientId = c.id;
+                isDetailsEditing = false;
                 render(host);
               }
             }, [

@@ -1420,7 +1420,7 @@ OC.ui = (function () {
       }
 
       if (filteredPeople.length) {
-        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--ink-muted);margin:3px 0;font-weight:700;' }, 'Team Members'));
+        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin:3px 0;font-weight:700;' }, 'Team Members'));
         filteredPeople.forEach(function (u) {
           var val = 'user:' + u.id;
           var isChecked = chosen.indexOf(val) > -1;
@@ -1448,7 +1448,7 @@ OC.ui = (function () {
       }
 
       if (filteredGroups.length) {
-        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--ink-muted);margin:8px 0 3px 0;font-weight:700;' }, 'Cross-Dept Groups'));
+        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin:8px 0 3px 0;font-weight:700;' }, 'Cross-Dept Groups'));
         filteredGroups.forEach(function (g) {
           var val = 'group:' + g.id;
           var isChecked = chosen.indexOf(val) > -1;

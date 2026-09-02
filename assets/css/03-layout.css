@@ -186,6 +186,8 @@
   position: sticky;
   top: var(--topbar-h);
   z-index: 25;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 /* Underline tabs: the current section is marked by a 2px rule sitting on the
    nav's own bottom border, so the row keeps a single clean baseline. */
@@ -429,10 +431,6 @@
 }
 
 /* ---- responsiveness & performance optimizations ----------------------- */
-.nav {
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
 .nav::-webkit-scrollbar {
   display: none;
 }

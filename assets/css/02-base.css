@@ -8,6 +8,8 @@
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
 }
 
 html {
@@ -79,10 +81,6 @@ body::before {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
   background-clip: padding-box;
-}
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--rule-strong) transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

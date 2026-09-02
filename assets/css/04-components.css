@@ -105,30 +105,6 @@
 }
 
 /* ---- person mark & avatar ---------------------------------------------- */
-.person {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
-}
-.mark-tint {
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0;
-  color: #FFFFFF;
-  line-height: 1;
-  user-select: none;
-  flex: none;
-  font-variant-numeric: tabular-nums;
-}
 .mark-tint.tint-blueprint {
   background: #2563EB;
 }
@@ -568,47 +544,6 @@
 }
 
 /* ---- Dashboard Modern Todo Row (Horizontal Strip) ---------------------- */
-.dashboard-todo-row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--card-bg);
-  border: 1px solid var(--rule);
-  border-radius: var(--r2);
-  padding: 10px 16px 12px 16px;
-  margin-bottom: 10px;
-  box-shadow: var(--sh1);
-  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
-  cursor: pointer;
-  position: relative;
-}
-
-.dashboard-todo-top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.dashboard-todo-main-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.dashboard-todo-row:hover {
-  border-color: var(--rule-strong);
-  box-shadow: var(--sh2);
-}
-
-.dashboard-todo-row.is-done {
-  opacity: 0.68;
-}
-
-.dashboard-todo-row.is-overdue {
-  border-color: rgba(225, 29, 72, 0.35);
-}
 
 /* the completion control: a real checkbox shape, themed from tokens */
 .todo-check-btn {
@@ -649,18 +584,6 @@
   stroke: #ffffff;
 }
 
-.channel-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 22px;
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 0 10px;
-  border-radius: var(--r-pill);
-  white-space: nowrap;
-}
-
 .channel-badge .channel-icon,
 .channel-badge svg {
   width: 12px;
@@ -695,37 +618,6 @@
   background: var(--card-bg-alt);
   color: var(--text-secondary);
   border: 1px solid var(--rule);
-}
-
-.dashboard-client-name {
-  font-weight: 700;
-  color: var(--ink);
-  font-size: 13.5px;
-  white-space: nowrap;
-}
-
-.dashboard-todo-title {
-  font-size: 13.5px;
-  color: var(--ink);
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dashboard-todo-title.strikethrough {
-  text-decoration: line-through;
-  opacity: 0.65;
-}
-
-.dashboard-assignee-text {
-  margin-left: auto;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  font-weight: 500;
-  white-space: nowrap;
-  padding-left: 8px;
 }
 
 /* ---- instruction item --------------------------------------------------- */
@@ -807,6 +699,45 @@
   font-size: 11.5px;
   line-height: 1.6;
   color: var(--text-secondary);
+}
+
+/* ---- board grouping header ----------------------------------------------
+   The Person / Client / Department views bucket todos under a heading that
+   carries the bucket name and its count. It had no styles at all, so the
+   count's `.push` (margin-left:auto) had no flex parent to push against and
+   rendered flush against the name — "Shohag Munshe3".
+   ------------------------------------------------------------------------- */
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: var(--s3) 0 2px;
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--rule);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.stack:first-child > .group-head {
+  margin-top: 0;
+}
+.group-head .n {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  background: var(--card-bg-alt);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- filter toolbar ----------------------------------------------------- */
@@ -1214,17 +1145,17 @@ dialog.modal::backdrop {
   align-items: center;
   gap: 6px;
   padding: 3px 8px 3px 6px;
-  background: var(--surface-2, rgba(56, 189, 248, 0.12));
-  border: 1px solid var(--accent, #38BDF8);
+  background: var(--blueprint-soft);
+  border: 1px solid rgba(37, 99, 235, 0.35);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--ink, #FFFFFF);
+  color: var(--ink);
 }
 .assignee-chip .chip-remove {
   background: transparent;
   border: none;
-  color: var(--ink-muted, #94A3B8);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0 2px;
   font-size: 13px;
@@ -1293,25 +1224,25 @@ dialog.modal::backdrop {
   align-items: center;
   gap: 6px;
   padding: 3px 8px 3px 6px;
-  background: var(--surface-2, rgba(56, 189, 248, 0.12));
-  border: 1px solid var(--accent, #38BDF8);
+  background: var(--blueprint-soft);
+  border: 1px solid rgba(37, 99, 235, 0.35);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--ink, #FFFFFF);
+  color: var(--ink);
 }
 .multi-picker-chip.client-chip {
-  border-color: #38BDF8;
-  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(37, 99, 235, 0.40);
+  background: var(--blueprint-soft);
 }
 .multi-picker-chip.dept-chip {
-  border-color: #F59E0B;
-  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(217, 119, 6, 0.40);
+  background: var(--brass-soft);
 }
 .multi-picker-chip .chip-remove {
   background: transparent;
   border: none;
-  color: var(--ink-muted, #94A3B8);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0 2px;
   font-size: 13px;
@@ -1368,16 +1299,6 @@ dialog.modal::backdrop {
 .emoji,
 .reaction-emoji-btn,
 .reaction-pill .emoji,
-.reaction-picker-btn .icon-smile {
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", "Android Emoji", "EmojiSymbols", sans-serif !important;
-  font-style: normal;
-  font-variant-emoji: emoji;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
 
 .reaction-pill {
   display: inline-flex;
@@ -1485,6 +1406,14 @@ dialog.modal::backdrop {
 }
 
 .reaction-picker-btn .icon-smile {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", "Android Emoji", "EmojiSymbols", sans-serif !important;
+  font-style: normal;
+  font-variant-emoji: emoji;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 14px;
   line-height: 1;
 }
@@ -1699,20 +1628,6 @@ dialog.modal::backdrop {
 }
 
 /* ---- Mentions & Reply Badges ---- */
-.mention-tag {
-  display: inline-flex;
-  align-items: center;
-  color: #2563eb;
-  background: rgba(37, 99, 235, 0.1);
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 12.5px;
-  margin: 0 2px;
-  border: 1px solid rgba(37, 99, 235, 0.2);
-  user-select: none;
-  transition: background 0.15s ease;
-}
 :root[data-theme="dark"] .mention-tag {
   color: #38bdf8;
   background: rgba(56, 189, 248, 0.15);
@@ -1723,56 +1638,8 @@ dialog.modal::backdrop {
 }
 
 /* ---- Social App Style Quoted Replies ---- */
-.reply-draft-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  background: var(--card-bg-alt);
-  border: 1px solid var(--rule);
-  border-left: 3px solid #2563eb;
-  padding: 6px 12px;
-  border-radius: var(--r1);
-  font-size: 12px;
-  animation: fadeIn 0.15s ease-out;
-}
-.reply-draft-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  flex: 1;
-}
-.reply-draft-header {
-  font-weight: 700;
-  color: #2563eb;
-  font-size: 11.5px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
 :root[data-theme="dark"] .reply-draft-header {
   color: #38bdf8;
-}
-.reply-draft-snippet {
-  font-size: 11px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.replying-cancel-btn {
-  background: none;
-  border: none;
-  padding: 2px 6px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: 4px;
-}
-.replying-cancel-btn:hover {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
 }
 
 .msg-reply-quote {
@@ -1796,24 +1663,8 @@ dialog.modal::backdrop {
 .msg-reply-quote:hover {
   background: rgba(37, 99, 235, 0.12);
 }
-.msg-reply-quote-author {
-  font-weight: 700;
-  color: #2563eb;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
 :root[data-theme="dark"] .msg-reply-quote-author {
   color: #38bdf8;
-}
-.msg-reply-quote-snippet {
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 11px;
-  font-style: italic;
 }
 
 .mention-btn-trigger {
@@ -1836,49 +1687,7 @@ dialog.modal::backdrop {
   background: rgba(37, 99, 235, 0.05);
 }
 
-.mention-autocomplete-pop {
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  max-height: 200px;
-  overflow-y: auto;
-  background: var(--card-bg);
-  border: 1px solid var(--rule);
-  border-radius: var(--r2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  padding: 4px;
-}
-.mention-pop-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: var(--r1);
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
 .mention-pop-item:hover,
-.mention-pop-item.active {
-  background: rgba(37, 99, 235, 0.1);
-}
-.mention-pop-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.mention-pop-name {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ink);
-}
-.mention-pop-role {
-  font-size: 10.5px;
-  color: var(--text-secondary);
-}
 
 /* ---- dedicated group chat modal & workspace (fitted, zero outer scroll) ---- */
 dialog.modal.modal-chat {
@@ -1948,25 +1757,26 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 .dashboard-todo-row {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 10px 14px 11px;
+  gap: 8px;
   background: var(--card-bg);
   border: 1px solid var(--rule);
-  border-radius: 11px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  margin-bottom: 8px;
+  border-radius: var(--r2);
+  padding: var(--s3) var(--s4);
+  margin-bottom: 10px;
+  box-shadow: var(--sh1);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  cursor: pointer;
+  position: relative;
 }
 .dashboard-todo-row:hover {
-  border-color: rgba(37, 99, 235, 0.35);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-  transform: translateY(-1px);
+  border-color: var(--rule-strong);
+  box-shadow: var(--sh2);
 }
 .dashboard-todo-row.is-done {
-  opacity: 0.65;
-  background: var(--card-bg-alt);
+  opacity: 0.68;
 }
 .dashboard-todo-row.is-overdue {
+  border-color: rgba(225, 29, 72, 0.35);
   border-left: 3.5px solid var(--signal);
 }
 
@@ -1974,6 +1784,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -1982,6 +1793,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   min-width: 0;
   flex-wrap: wrap;
 }
@@ -2014,12 +1826,13 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 }
 
 .dashboard-client-name {
-  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
-  font-size: 11px;
   font-weight: 700;
+  color: var(--blueprint);
+  font-size: 11px;
+  white-space: nowrap;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   padding: 2px 7px;
   background: var(--blueprint-soft);
-  color: var(--blueprint);
   border: 1px solid rgba(37, 99, 235, 0.25);
   border-radius: 5px;
   letter-spacing: 0.04em;
@@ -2028,37 +1841,45 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 
 .dashboard-todo-title {
   font-size: 13.5px;
-  font-weight: 600;
   color: var(--ink);
-  line-height: 1.4;
   flex: 1;
   min-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1.4;
   word-break: break-word;
 }
 .dashboard-todo-title.strikethrough {
   text-decoration: line-through;
+  opacity: 0.65;
   color: var(--text-secondary);
 }
 
 .dashboard-assignee-text {
+  margin-left: auto;
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-secondary);
+  white-space: nowrap;
+  padding-left: 8px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
 }
 
 .channel-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 6px;
-  line-height: 1.3;
+  height: 22px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+  line-height: 1;
 }
 .channel-badge.badge-urgent {
   background: rgba(225, 29, 72, 0.12);
@@ -2622,13 +2443,6 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   border-color: var(--blueprint) !important;
   color: var(--blueprint) !important;
 }
-.group-msg-reply-quote {
-  background: var(--surface-alt) !important;
-  border-left: 3px solid var(--blueprint) !important;
-  border-radius: 4px !important;
-  padding: 4px 10px !important;
-  margin-bottom: 4px !important;
-}
 .group-msg-reply-quote .msg-reply-quote-author {
   color: var(--blueprint) !important;
   font-weight: 600 !important;
@@ -2948,16 +2762,18 @@ dialog.modal.fallback {
 .mark-tint {
   display: inline-grid;
   place-items: center;
-  flex: none;
   width: 22px;
   height: 22px;
-  border-radius: var(--r1);
+  border-radius: 6px;
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1;
+  letter-spacing: 0;
   color: #FFFFFF;
+  line-height: 1;
+  user-select: none;
+  flex: none;
+  font-variant-numeric: tabular-nums;
 }
 .tint-blueprint {
   background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
@@ -2984,6 +2800,9 @@ dialog.modal.fallback {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
   white-space: nowrap;
 }
 .person.strong {
@@ -4337,14 +4156,15 @@ dialog.modal.fallback {
 /* Quoted Reply Header on Messages */
 .msg-reply-quote,
 .group-msg-reply-quote {
+  background: var(--surface-alt) !important;
+  border-left: 3px solid var(--blueprint) !important;
+  border-radius: 4px !important;
+  padding: 4px 10px !important;
+  margin-bottom: 4px !important;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 6px 10px;
   margin: 4px 0 6px;
-  background: var(--tint, rgba(37, 99, 235, 0.07));
-  border-left: 3px solid var(--blueprint, #38bdf8);
-  border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
   user-select: none;
@@ -4357,19 +4177,19 @@ dialog.modal.fallback {
   transform: translateX(2px);
 }
 .msg-reply-quote-author {
+  font-weight: 600;
+  color: var(--blueprint, #38bdf8);
+  font-size: 11px;
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--blueprint, #38bdf8);
 }
 .msg-reply-quote-snippet {
-  font-size: 12px;
   color: var(--text-secondary, #94a3b8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 12px;
   font-style: italic;
 }
 
@@ -4394,28 +4214,33 @@ dialog.modal.fallback {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 12px;
   background: var(--card-bg, #111b2e);
   border: 1px solid rgba(56, 189, 248, 0.3);
   border-left: 4px solid var(--blueprint, #3b82f6);
+  padding: 8px 12px;
   border-radius: 8px;
-  margin-bottom: 6px;
   font-size: 12px;
+  animation: fadeIn 0.15s ease-out;
+  margin-bottom: 6px;
 }
 .reply-draft-info {
   display: flex;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
+  flex: 1;
 }
 .reply-draft-header {
   font-weight: 700;
   color: var(--blueprint, #38bdf8);
   font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .reply-draft-snippet {
-  color: var(--text-secondary, #94a3b8);
   font-size: 11.5px;
+  color: var(--text-secondary, #94a3b8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4423,12 +4248,12 @@ dialog.modal.fallback {
 .replying-cancel-btn {
   background: transparent;
   border: none;
+  padding: 4px;
+  font-size: 14px;
   color: var(--text-secondary, #94a3b8);
   cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  padding: 4px;
   border-radius: 4px;
+  line-height: 1;
   transition: all 0.12s ease;
 }
 .replying-cancel-btn:hover {
@@ -4440,15 +4265,18 @@ dialog.modal.fallback {
 .mention-tag {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 1px 6px;
-  background: rgba(37, 99, 235, 0.18);
   color: var(--blueprint, #38bdf8);
+  background: rgba(37, 99, 235, 0.18);
+  padding: 1px 6px;
   border-radius: 4px;
   font-weight: 700;
   font-size: 12.5px;
-  letter-spacing: -0.01em;
   margin: 0 2px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  user-select: none;
+  transition: background 0.15s ease;
+  gap: 2px;
+  letter-spacing: -0.01em;
 }
 .mention-tag.everyone {
   background: rgba(249, 115, 22, 0.22);
@@ -4462,18 +4290,19 @@ dialog.modal.fallback {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 0;
-  z-index: 50;
-  width: 280px;
+  right: 0;
   max-height: 240px;
   overflow-y: auto;
   background: var(--card-bg, #111b2e);
   border: 1px solid rgba(56, 189, 248, 0.3);
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 16px rgba(37, 99, 235, 0.18);
-  backdrop-filter: blur(12px);
-  padding: 6px;
+  z-index: 50;
   display: flex;
   flex-direction: column;
+  padding: 6px;
+  width: 280px;
+  backdrop-filter: blur(12px);
   gap: 2px;
 }
 .mention-pop-item {

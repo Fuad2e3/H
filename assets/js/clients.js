@@ -536,7 +536,7 @@ OC.clients = (function () {
       var hasDetails = Boolean(rawNotes);
 
       if (!isDetailsEditing) {
-        /* VIEW MODE: Direct clean text rendering with preserved lines */
+        /* VIEW MODE: Direct clean text rendering with preserved lines & continuous Edit button */
         detailsContent = h('div', { class: 'portal-view-content' }, [
           h('div', { class: 'portal-header-box' }, [
             h('div', {}, [
@@ -577,10 +577,11 @@ OC.clients = (function () {
         /* EDIT MODE: Simple, clean full text editor without toolbar or preview toggle */
         var editorText = h('textarea', {
           class: 'client-rich-textarea',
-          style: 'width:100%;min-height:260px;padding:16px;background:var(--card-bg-alt);border:1px solid var(--rule);border-radius:var(--r1);color:var(--ink);font-size:14px;line-height:1.65;resize:vertical;outline:none;font-family:inherit;',
+          style: 'width:100%;min-height:300px;padding:16px;background:var(--card-bg-alt);border:1px solid var(--rule);border-radius:var(--r1);color:var(--ink);font-size:14px;line-height:1.65;resize:vertical;outline:none;font-family:inherit;box-shadow:inset 0 1px 3px rgba(0,0,0,0.3);',
           placeholder: 'Write any client notes, requirements, specifications, contracts, or details here...',
           'aria-label': 'Client Notes'
-        }, client.details || client.notes || '');
+        });
+        editorText.value = client.details || client.notes || '';
 
         detailsContent = h('div', { class: 'portal-view-content' }, [
           h('div', { class: 'portal-header-box' }, [
@@ -610,6 +611,11 @@ OC.clients = (function () {
                   }, function () {
                     client.details = val;
                     client.notes = val;
+                    var target = (OC.store.state.clients || []).find(function (c) { return c.id === client.id; });
+                    if (target) {
+                      target.details = val;
+                      target.notes = val;
+                    }
                   });
                   OC.ui.toast('Client details saved successfully! 💾');
                   isDetailsEditing = false;

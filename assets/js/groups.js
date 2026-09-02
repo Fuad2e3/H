@@ -739,6 +739,20 @@ OC.groups = (function () {
         });
       }
 
+      function scrollToBottom(smooth) {
+        if (!msgsList) return;
+        var doScroll = function () {
+          try {
+            msgsList.scrollTop = msgsList.scrollHeight;
+          } catch (e) { }
+        };
+        doScroll();
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(doScroll);
+        setTimeout(doScroll, 20);
+        setTimeout(doScroll, 80);
+        setTimeout(doScroll, 200);
+      }
+
       function submitGroupMessage() {
         if (!OC.can.canPostGroupMessage(user, currentGroup)) return;
         var val = msgInput.value.trim();
@@ -767,10 +781,7 @@ OC.groups = (function () {
         setReplyContext(null, null);
         setMediaAttachment(null);
         renderMessages();
-        msgsList.scrollTop = msgsList.scrollHeight;
-        if (typeof requestAnimationFrame === 'function') {
-          requestAnimationFrame(function () { msgsList.scrollTop = msgsList.scrollHeight; });
-        }
+        scrollToBottom();
       }
 
       msgInput.addEventListener('keydown', function (e) {
@@ -795,18 +806,17 @@ OC.groups = (function () {
       chatContainer.appendChild(headerBox);
       chatContainer.appendChild(msgsList);
       chatContainer.appendChild(form);
+      scrollToBottom();
     }
 
     renderMessages();
     OC.ui.clear(host);
     host.appendChild(chatContainer);
-
     var msgsEl = chatContainer.querySelector('.full-page-chat-messages');
     if (msgsEl) {
       msgsEl.scrollTop = msgsEl.scrollHeight;
-      if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(function () { msgsEl.scrollTop = msgsEl.scrollHeight; });
-      }
+      setTimeout(function () { msgsEl.scrollTop = msgsEl.scrollHeight; }, 50);
+      setTimeout(function () { msgsEl.scrollTop = msgsEl.scrollHeight; }, 150);
     }
   }
 

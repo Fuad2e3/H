@@ -2169,8 +2169,9 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   border-radius: 14px;
   box-shadow: var(--sh2, 0 12px 40px rgba(0, 0, 0, 0.45));
   overflow: hidden;
-  height: calc(100vh - 180px);
-  min-height: 560px;
+  height: calc(100vh - 240px);
+  min-height: 480px;
+  max-height: calc(100vh - 240px);
 }
 
 :root[data-theme="dark"] .discord-hub-container {
@@ -2188,6 +2189,8 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  height: 100%;
+  overflow: hidden;
 }
 :root[data-theme="dark"] .discord-channels-sidebar {
   background: #2B2D31 !important;
@@ -2200,6 +2203,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex-shrink: 0;
 }
 .discord-sidebar-title-row {
   display: flex;
@@ -2246,8 +2250,9 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   color: var(--text-secondary, #80848E) !important;
 }
 .discord-channels-list {
-  flex: 1;
+  flex: 1 1 0%;
   overflow-y: auto;
+  min-height: 0;
   padding: 10px 8px;
   display: flex;
   flex-direction: column;
@@ -2346,6 +2351,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 :root[data-theme="dark"] .discord-sidebar-user-bar {
   background: #232428 !important;
@@ -2353,14 +2359,28 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 
 /* Right Chat Main Pane */
 .discord-chat-main {
-  flex: 1;
+  flex: 1 1 0%;
   min-width: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--card-bg, #313338);
 }
 :root[data-theme="dark"] .discord-chat-main {
   background: #313338 !important;
+}
+
+.discord-chat-main .full-page-chat-container {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }
 
 /* ---- Dedicated Full-Page Chat Room View (Discord Look & Feel) ---- */
@@ -2428,8 +2448,9 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   border-radius: 14px !important;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
   overflow: hidden;
-  height: calc(100vh - 175px);
-  min-height: 520px;
+  height: calc(100vh - 240px);
+  min-height: 480px;
+  max-height: calc(100vh - 240px);
   animation: fadeIn 0.12s ease-out;
 }
 .full-page-chat-header {
@@ -2484,12 +2505,12 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   font-size: 13px !important;
 }
 .full-page-chat-messages {
-  flex: 1;
+  flex: 1 1 0%;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: auto;
+  scroll-behavior: smooth;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -2501,12 +2522,12 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 }
 .full-page-chat-input-bar {
   flex-shrink: 0;
-  padding: 12px 20px 16px !important;
+  padding: 10px 18px 12px !important;
   background: #313338 !important;
-  border-top: none !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .full-page-chat-input-bar .comment-form-row {
   background: #383A40 !important;

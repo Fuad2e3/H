@@ -181,6 +181,59 @@ OC.dashboard = (function () {
     
     var joinLine = 'Joined ' + joinedDate + ' (' + orgName + ')';
 
+    var todayStr = new Date().toISOString().split('T')[0];
+    var attendanceList = OC.store.state.attendance || [];
+    var todayLog = attendanceList.find(function (a) { return a.user_id === user.id && a.date === todayStr; });
+    var isPunchComplete = Boolean(todayLog && todayLog.punch_in && todayLog.punch_out);
+    var schedIn = user.scheduled_in || (user.office_details && user.office_details.scheduled_in) || '09:00 AM';
+
+    var punchBtnLabel = isPunchComplete
+      ? '🔒 Completed (' + todayLog.punch_in + ' - ' + todayLog.punch_out + ')'
+      : (!todayLog ? '⏱️ Quick Punch In' : '🏁 Quick Punch Out (' + todayLog.punch_in + ')');
+
+    function handleDashboardPunch(e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      var latestAtt = OC.store.state.attendance || [];
+      var currentLog = latestAtt.find(function (a) { return a.user_id === user.id && a.date === todayStr; });
+      if (currentLog && currentLog.punch_in && currentLog.punch_out) {
+        OC.ui.toast('🔒 Your attendance for today is already completed and locked.', true);
+        return;
+      }
+
+      var nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      OC.store.mutate({
+        actor: user.id,
+        action: 'attendance.punch',
+        target: user.name,
+        detail: 'Punched at ' + nowTime
+      }, function () {
+        var existing = (OC.store.state.attendance || []).find(function (a) { return a.user_id === user.id && a.date === todayStr; });
+        if (!existing) {
+          var isLate = new Date().getHours() >= 10 && new Date().getMinutes() > 15;
+          OC.store.state.attendance.unshift({
+            id: OC.store.uid('att'),
+            user_id: user.id,
+            date: todayStr,
+            scheduled_in: schedIn,
+            punch_in: nowTime,
+            punch_out: null,
+            status: isLate ? 'Late' : 'Present',
+            note: 'Auto Quick Punch In'
+          });
+          OC.ui.toast('Punch In recorded with date ' + todayStr + ' at ' + nowTime + ' ✅');
+        } else if (!existing.punch_out) {
+          existing.punch_out = nowTime;
+          OC.ui.toast('Punch Out recorded with date ' + todayStr + ' at ' + nowTime + ' 🏁');
+        }
+      });
+      if (typeof rerender === 'function') {
+        rerender();
+      } else {
+        render(host, rerender);
+      }
+    }
+
     var profileBanner = h('div', {
       class: 'user-profile-banner',
       role: 'button',
@@ -209,7 +262,16 @@ OC.dashboard = (function () {
           h('div', { class: 'user-profile-meta-line' }, joinLine)
         ])
       ]),
-      h('div', { class: 'user-profile-right' }, [
+      h('div', { class: 'user-profile-right', style: 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;' }, [
+        h('button', {
+          class: 'btn primary' + (isPunchComplete ? ' disabled' : ''),
+          type: 'button',
+          id: 'dashboard-attendance-punch-btn',
+          disabled: isPunchComplete,
+          title: isPunchComplete ? 'Attendance completed for today' : 'Click to punch attendance directly from Dashboard',
+          style: 'font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;box-shadow:0 2px 8px rgba(37,99,235,0.35);white-space:nowrap;z-index:2;' + (isPunchComplete ? 'opacity:0.65;cursor:not-allowed;' : ''),
+          onClick: handleDashboardPunch
+        }, [punchBtnLabel]),
         h('div', { class: 'user-profile-status-badge' }, [
           h('div', { class: 'user-profile-status-label' }, 'OFFICIAL EMAIL'),
           h('div', { class: 'user-profile-status-val' }, 'Verified Portal Active')

@@ -213,14 +213,14 @@ OC.clients = (function () {
           h('div', { class: 'user-profile-status-label' }, 'CLIENT WORKSPACE'),
           h('div', { class: 'user-profile-status-val' }, client.status === 'active' ? '● Live Operational' : '○ Paused')
         ]),
-        canCreate ? h('button', {
+        h('button', {
           class: 'btn small primary',
           type: 'button',
           style: 'font-weight:700;display:inline-flex;align-items:center;gap:6px;',
           onClick: function () {
             editClient(client, function () { renderClientPortal(host, client, onBack); });
           }
-        }, ['✏️ Edit Client']) : null
+        }, ['✏️ Edit Client'])
       ])
     ]);
 
@@ -452,9 +452,9 @@ OC.clients = (function () {
       var insContent = h('div', { class: 'portal-view-content' }, [
         h('div', { class: 'portal-header-box' }, [
           h('div', {}, [
-            h('h2', { class: 'portal-view-title' }, ['📋 Instructions & Notice Board (' + clientInstructions.length + ')']),
+            h('h2', { class: 'portal-view-title' }, ['📋 Client Instructions (' + clientInstructions.length + ')']),
             h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-              'Official directives, policies, and operational announcements linked to ' + client.name + '.')
+              'Specific workflow directives, briefs, and team guidelines for ' + client.name + '.')
           ]),
           h('button', {
             class: 'btn primary small',
@@ -462,39 +462,23 @@ OC.clients = (function () {
             style: 'font-weight:700;',
             onClick: function () {
               if (OC.board && OC.board.newInstruction) {
-                OC.board.newInstruction({
+                OC.board.newInstruction(function () {
+                  renderClientPortal(host, client, onBack);
+                }, {
                   client: client.id,
-                  clients: [client.id],
                   client_only: true,
                   tags: client.client_code ? [client.client_code] : []
-                }, function () {
-                  renderClientPortal(host, client, onBack);
                 });
               }
             }
-          }, ['+ New Instruction'])
+          }, ['+ Post Client Instruction'])
         ]),
 
         clientInstructions.length ? h('div', { style: 'display:flex;flex-direction:column;gap:12px;' }, clientInstructions.map(function (ins) {
-          var canEdit = OC.can && OC.can.canEditInstruction ? OC.can.canEditInstruction(user, ins) : (user.admin || ins.author === user.id);
-          var canDelete = OC.can && OC.can.canDeleteInstruction ? OC.can.canDeleteInstruction(user, ins) : (user.admin || ins.author === user.id);
-          var isUnread = ins.read_by && ins.read_by.indexOf(user.id) === -1;
-
+          var canEdit = OC.can && OC.can.canEditInstruction ? OC.can.canEditInstruction(user, ins) : (user && (user.admin || ins.author === user.id));
+          var canDelete = OC.can && OC.can.canDeleteInstruction ? OC.can.canDeleteInstruction(user, ins) : (user && (user.admin || ins.author === user.id));
           var itemActions = [];
-          if (isUnread) {
-            itemActions.push(h('button', {
-              class: 'btn small',
-              type: 'button',
-              style: 'font-size:11.5px;padding:3px 8px;',
-              onClick: function () {
-                OC.store.mutate(null, function () {
-                  if (!ins.read_by) ins.read_by = [];
-                  ins.read_by.push(user.id);
-                });
-                renderClientPortal(host, client, onBack);
-              }
-            }, 'Mark read'));
-          }
+
           if (canEdit && OC.board && OC.board.editInstruction) {
             itemActions.push(h('button', {
               class: 'btn small',
@@ -545,15 +529,14 @@ OC.clients = (function () {
       mainArea.appendChild(insContent);
     }
 
-    /* TAB 4: DETAILS & RICH WORKSPACE TEXT EDITOR */
+    /* TAB 4: DETAILS & WORKSPACE NOTES */
     if (activePortalTab === 'details') {
       var detailsContent;
-      var hasDetails = !!(client.details || client.notes);
+      var rawNotes = (client.details || client.notes || '').trim();
+      var hasDetails = Boolean(rawNotes);
 
       if (!isDetailsEditing) {
-        /* VIEW MODE: Clean, rendered formatted text */
-        var renderedHtml = renderMarkdownPreview(client.details || client.notes || '');
-
+        /* VIEW MODE: Direct clean text rendering with preserved lines */
         detailsContent = h('div', { class: 'portal-view-content' }, [
           h('div', { class: 'portal-header-box' }, [
             h('div', {}, [
@@ -573,11 +556,10 @@ OC.clients = (function () {
           ]),
           h('div', { class: 'portal-credential-card', style: 'padding:22px 26px;' }, [
             hasDetails
-              ? (function () {
-                  var p = h('div', { class: 'client-rich-preview', style: 'padding:0;background:transparent;border:none;' });
-                  p.innerHTML = renderedHtml;
-                  return p;
-                })()
+              ? h('div', {
+                  class: 'client-details-text-view',
+                  style: 'white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.7;color:var(--ink);font-family:inherit;'
+                }, client.details || client.notes)
               : h('div', { style: 'text-align:center;padding:36px 20px;' }, [
                   h('p', { class: 'muted', style: 'font-size:14px;margin-bottom:14px;' }, 'No customized details or documentation added for this client yet.'),
                   h('button', {
@@ -592,68 +574,20 @@ OC.clients = (function () {
           ])
         ]);
       } else {
-        /* EDIT MODE: Rich Toolbar + Textarea + Save */
+        /* EDIT MODE: Simple, clean full text editor without toolbar or preview toggle */
         var editorText = h('textarea', {
           class: 'client-rich-textarea',
-          placeholder: 'Write comprehensive client notes, scope of work, contracts, deliverables, or checklist specs...\n\nSupports full Markdown: # Headings, **Bold**, - Bullet points, - [ ] Checklists, and quotes!',
-          'aria-label': 'Client Rich Notes'
+          style: 'width:100%;min-height:260px;padding:16px;background:var(--card-bg-alt);border:1px solid var(--rule);border-radius:var(--r1);color:var(--ink);font-size:14px;line-height:1.65;resize:vertical;outline:none;font-family:inherit;',
+          placeholder: 'Write any client notes, requirements, specifications, contracts, or details here...',
+          'aria-label': 'Client Notes'
         }, client.details || client.notes || '');
-
-        var previewWrap = h('div', { class: 'client-rich-preview', style: 'display:none;' });
-        var isPreviewMode = false;
-
-        function updatePreview() {
-          previewWrap.innerHTML = renderMarkdownPreview(editorText.value);
-        }
-
-        function insertFormatting(prefix, suffix, defaultText) {
-          var start = editorText.selectionStart || 0;
-          var end = editorText.selectionEnd || 0;
-          var val = editorText.value;
-          var selected = val.slice(start, end) || defaultText || '';
-          var replacement = prefix + selected + (suffix || '');
-          editorText.value = val.slice(0, start) + replacement + val.slice(end);
-          editorText.focus();
-          editorText.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
-          updatePreview();
-        }
-
-        var toolbar = h('div', { class: 'client-editor-toolbar' }, [
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold', onClick: function () { insertFormatting('**', '**', 'bold text'); } }, 'B'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Italic', onClick: function () { insertFormatting('*', '*', 'italic text'); } }, 'I'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 2', onClick: function () { insertFormatting('## ', '', 'Heading 2'); } }, 'H2'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 3', onClick: function () { insertFormatting('### ', '', 'Heading 3'); } }, 'H3'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bullet list', onClick: function () { insertFormatting('- ', '', 'List item'); } }, '• List'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Checklist item', onClick: function () { insertFormatting('- [ ] ', '', 'Task to complete'); } }, '☑ Check'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote block', onClick: function () { insertFormatting('> ', '', 'Important client note'); } }, '❝ Quote'),
-          h('button', {
-            class: 'client-editor-tool-btn push',
-            type: 'button',
-            style: 'background:rgba(56,189,248,0.15);color:#38bdf8;border-color:rgba(56,189,248,0.3);font-weight:700;',
-            onClick: function () {
-              isPreviewMode = !isPreviewMode;
-              if (isPreviewMode) {
-                updatePreview();
-                editorText.style.display = 'none';
-                previewWrap.style.display = 'block';
-                this.textContent = '✏️ Edit Text';
-              } else {
-                editorText.style.display = 'block';
-                previewWrap.style.display = 'none';
-                this.textContent = '👁️ Preview';
-              }
-            }
-          }, '👁️ Preview')
-        ]);
-
-        editorText.addEventListener('input', updatePreview);
 
         detailsContent = h('div', { class: 'portal-view-content' }, [
           h('div', { class: 'portal-header-box' }, [
             h('div', {}, [
-              h('h2', { class: 'portal-view-title' }, ['📝 Editing Client Details']),
+              h('h2', { class: 'portal-view-title' }, ['📝 Edit Client Details']),
               h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-                'Write and format documentation for ' + client.name + '. Click "Save Details" when finished.')
+                'Write notes for ' + client.name + ' and click "Save Details" when finished.')
             ]),
             h('div', { class: 'row', style: 'gap:8px;' }, [
               h('button', {
@@ -677,7 +611,7 @@ OC.clients = (function () {
                     client.details = val;
                     client.notes = val;
                   });
-                  OC.ui.toast('Client details & notes saved successfully! 💾');
+                  OC.ui.toast('Client details saved successfully! 💾');
                   isDetailsEditing = false;
                   renderClientPortal(host, client, onBack);
                 }
@@ -685,9 +619,7 @@ OC.clients = (function () {
             ])
           ]),
           h('div', { class: 'portal-credential-card', style: 'padding:20px;' }, [
-            toolbar,
-            editorText,
-            previewWrap
+            editorText
           ])
         ]);
       }

@@ -295,6 +295,8 @@ OC.can = (function () {
 
   function invite(user) { return !!user && (user.admin || headOfAny(user)); }
   function createClient(user) { return !!user && (user.admin || headOfAny(user)); }
+  function editClient(user, client) { return Boolean(user); }
+  function canEditClient(user, client) { return Boolean(user); }
 
   /* an unclaimed invite may be withdrawn by whoever sent it, or by the
      system admin (6.1) */
@@ -408,7 +410,7 @@ OC.can = (function () {
     canPostGroupMessage: canPostGroupMessage, canEditGroupMessage: canEditGroupMessage, canDeleteGroupMessage: canDeleteGroupMessage,
     canReactGroupMessage: canReactGroupMessage,
     postInstruction: postInstruction, createTodo: createTodo,
-    createClient: createClient, canEditTodo: canEditTodo,
+    createClient: createClient, editClient: editClient, canEditClient: canEditClient, canEditTodo: canEditTodo,
     canEditInstruction: canEditInstruction, canDeleteInstruction: canDeleteInstruction,
     canEditComment: canEditComment, canDeleteComment: canDeleteComment,
     changeState: changeState, reassign: reassign, assignsOthers: assignsOthers, archiveInstruction: archiveInstruction,

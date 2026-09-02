@@ -247,7 +247,7 @@ OC.groups = (function () {
         mediaPreviewWrap.style.display = 'block';
         var thumb = media.type === 'image'
           ? h('img', { class: 'chat-media-preview-thumb', src: media.url, alt: media.name })
-          : h('div', { class: 'chat-media-preview-thumb', style: 'display:flex;align-items:center;justify-content:center;background:#000;color:#fff;font-size:16px;' }, '🎬');
+          : h('div', { class: 'chat-media-preview-thumb', style: 'display:flex;align-items:center;justify-content:center;background:var(--paper);color:var(--ink);font-size:16px;' }, '🎬');
 
         mediaPreviewWrap.appendChild(h('div', { class: 'chat-media-preview-bar' }, [
           thumb,
@@ -746,17 +746,21 @@ OC.groups = (function () {
         });
       }
 
-      function scrollToBottom() {
+      function scrollToBottom(smooth) {
         if (!msgsList) return;
-        var doScroll = function () {
+        var perform = function () {
           try {
+            msgsList.scrollTo({
+              top: msgsList.scrollHeight,
+              behavior: smooth ? 'smooth' : 'auto'
+            });
+          } catch (e) {
             msgsList.scrollTop = msgsList.scrollHeight;
-          } catch (e) { }
+          }
         };
-        doScroll();
-        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(doScroll);
-        setTimeout(doScroll, 20);
-        setTimeout(doScroll, 80);
+        perform();
+        // Fallback for slower rendering
+        setTimeout(perform, 50);
       }
 
       function submitGroupMessage() {
@@ -787,7 +791,6 @@ OC.groups = (function () {
         setReplyContext(null, null);
         setMediaAttachment(null);
         renderMessages(true);
-        scrollToBottom();
       }
 
       msgInput.addEventListener('keydown', function (e) {
@@ -814,7 +817,7 @@ OC.groups = (function () {
       chatContainer.appendChild(form);
 
       if (isInitialGroupLoad || forceScrollBottom || wasNearBottom) {
-        scrollToBottom();
+        scrollToBottom(forceScrollBottom && !isInitialGroupLoad);
       } else if (msgsList) {
         // Restore scroll position so screen doesn't jump
         msgsList.scrollTop = prevScrollTop;
@@ -961,7 +964,7 @@ OC.groups = (function () {
           h('div', { class: 'discord-channel-left' }, [
             h('span', { class: 'discord-channel-hash' }, '#'),
             h('span', { class: 'discord-channel-name' }, g.name),
-            g.status === 'active' ? h('span', { style: 'font-size:8px;color:#23A55A;' }, '🟢') : null
+            g.status === 'active' ? h('span', { style: 'font-size:8px;color:var(--success);' }, '🟢') : null
           ]),
           h('div', { class: 'row', style: 'align-items:center;gap:6px;' }, [
             unreadCount > 0 ? h('span', { class: 'discord-channel-badge' }, String(unreadCount)) : null,
@@ -980,7 +983,7 @@ OC.groups = (function () {
           ])
         ]);
       }) : [
-        h('div', { style: 'padding:24px 12px;text-align:center;color:#949BA4;font-size:13px;' }, 'No channels found.')
+        h('div', { style: 'padding:24px 12px;text-align:center;color:var(--text-secondary);font-size:13px;' }, 'No channels found.')
       ]),
 
       /* Bottom User Bar */
@@ -988,8 +991,8 @@ OC.groups = (function () {
         h('div', { class: 'row', style: 'align-items:center;gap:8px;' }, [
           OC.ui.mark(user.id),
           h('div', { style: 'display:flex;flex-direction:column;' }, [
-            h('span', { style: 'color:#F2F3F5;font-size:13px;font-weight:700;' }, user.name),
-            h('span', { style: 'color:#949BA4;font-size:10.5px;font-family:var(--font-mono);' }, OC.can.roleLabel(user))
+            h('span', { style: 'color:var(--ink);font-size:13px;font-weight:700;' }, user.name),
+            h('span', { style: 'color:var(--text-secondary);font-size:10.5px;font-family:var(--font-mono);' }, OC.can.roleLabel(user))
           ])
         ])
       ])
@@ -1003,9 +1006,9 @@ OC.groups = (function () {
         render(host, rerender, hideHead);
       });
     } else {
-      chatMainHost.appendChild(h('div', { class: 'empty', style: 'padding:80px 24px;text-align:center;color:#949BA4;' }, [
+      chatMainHost.appendChild(h('div', { class: 'empty', style: 'padding:80px 24px;text-align:center;color:var(--text-secondary);' }, [
         OC.icon('board'),
-        h('h3', { style: 'color:#F2F3F5;margin-top:14px;' }, 'Welcome to Groups & Discussions'),
+        h('h3', { style: 'color:var(--ink);margin-top:14px;' }, 'Welcome to Groups & Discussions'),
         h('p', { style: 'font-size:13.5px;margin-top:6px;' }, 'Select a channel from the left sidebar or create a new channel to begin chatting.'),
         canCreate ? h('button', {
           class: 'btn primary',

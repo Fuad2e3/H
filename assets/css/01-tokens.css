@@ -17,7 +17,15 @@
   --surface-alt: #F1F5F9;    /* Slate-100: Crisp sub-container */
   --topbar-bg: rgba(255, 255, 255, 0.94);
   --modal-overlay: rgba(15, 23, 42, 0.65);
-  
+
+  /* Discord-like Workspace Tokens (Adaptive) */
+  --discord-sidebar-bg: #F2F3F5;
+  --discord-main-bg: #FFFFFF;
+  --discord-header-bg: #F2F3F5;
+  --discord-input-bg: #E3E5E8;
+  --discord-item-hover: #E3E5E8;
+  --discord-item-active: #DBDEE1;
+
   /* Brand Accent Tokens (Vibrant, high-energy executive colors) */
   --brand-orange: #F97316;   /* Energetic Originate Orange */
   --brand-orange-soft: #FFF7ED; /* Warm peach wash */
@@ -106,6 +114,14 @@
     --topbar-bg: rgba(17, 27, 46, 0.94);
     --modal-overlay: rgba(0, 0, 0, 0.75);
 
+    /* Discord-like Workspace Tokens (Adaptive) */
+    --discord-sidebar-bg: #2B2D31;
+    --discord-main-bg: #313338;
+    --discord-header-bg: #2B2D31;
+    --discord-input-bg: #383A40;
+    --discord-item-hover: #35373C;
+    --discord-item-active: #404249;
+
     --text: #F8FAFC;
     --text-secondary: #94A3B8;/* Slate-400: Clear readable secondary */
     --bg: #090E1A;
@@ -180,6 +196,14 @@
   --surface-alt: #16243D;    /* Distinct sub-container surface */
   --topbar-bg: rgba(17, 27, 46, 0.94);
   --modal-overlay: rgba(0, 0, 0, 0.75);
+
+  /* Discord-like Workspace Tokens (Adaptive) */
+  --discord-sidebar-bg: #2B2D31;
+  --discord-main-bg: #313338;
+  --discord-header-bg: #2B2D31;
+  --discord-input-bg: #383A40;
+  --discord-item-hover: #35373C;
+  --discord-item-active: #404249;
 
   --text: #F8FAFC;
   --text-secondary: #94A3B8;/* Slate-400: Clear readable secondary */

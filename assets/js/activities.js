@@ -160,7 +160,7 @@ OC.activities = (function () {
                   (user && user.admin)
                     ? h('button', {
                         class: 'btn small primary', type: 'button',
-                        style: 'background:#2563eb;border-color:#2563eb;color:#fff;font-weight:600;',
+                        style: 'background:var(--blueprint);border-color:var(--blueprint);color:#fff;font-weight:600;',
                         onClick: function () {
                           if (OC.people && OC.people.addPersonToDepartment) {
                             OC.people.addPersonToDepartment(d, function () { render(host, rerender); });

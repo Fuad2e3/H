@@ -2356,19 +2356,14 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 /* ---- Discord Two-Column Workspace Layout (Day/Night Adaptive) ---- */
 .discord-hub-container {
   display: flex;
-  background: var(--card-bg-alt, #313338);
-  border: 1px solid var(--rule, #232428);
+  background: var(--discord-main-bg);
+  border: 1px solid var(--rule);
   border-radius: 14px;
-  box-shadow: var(--sh2, 0 12px 40px rgba(0, 0, 0, 0.45));
+  box-shadow: var(--sh2);
   overflow: hidden;
   height: calc(100vh - 130px);
   min-height: 480px;
   max-height: calc(100vh - 130px);
-}
-
-:root[data-theme="dark"] .discord-hub-container {
-  background: #313338 !important;
-  border-color: #232428 !important;
 }
 
 /* Left Sidebar Channels */
@@ -2376,22 +2371,18 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   width: 290px;
   min-width: 260px;
   max-width: 320px;
-  background: var(--card-bg, #2B2D31);
-  border-right: 1px solid var(--rule, #1F2023);
+  background: var(--discord-sidebar-bg);
+  border-right: 1px solid var(--rule);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   height: 100%;
   overflow: hidden;
 }
-:root[data-theme="dark"] .discord-channels-sidebar {
-  background: #2B2D31 !important;
-  border-right-color: #1F2023 !important;
-}
 
 .discord-sidebar-top {
   padding: 14px 16px 10px;
-  border-bottom: 1px solid var(--rule, #1F2023);
+  border-bottom: 1px solid var(--rule);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2429,17 +2420,17 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   transform: translateY(-1px);
 }
 .discord-sidebar-search {
-  background: var(--card-bg-alt, #1E1F22) !important;
-  border: 1px solid var(--rule, rgba(255, 255, 255, 0.06)) !important;
+  background: var(--discord-input-bg) !important;
+  border: 1px solid var(--rule) !important;
   border-radius: 6px !important;
-  color: var(--ink, #DBDEE1) !important;
+  color: var(--ink) !important;
   font-size: 13px !important;
   padding: 6px 10px !important;
   width: 100% !important;
   outline: none !important;
 }
 .discord-sidebar-search::placeholder {
-  color: var(--text-secondary, #80848E) !important;
+  color: var(--text-secondary) !important;
 }
 .discord-channels-list {
   flex: 1 1 0%;
@@ -2457,7 +2448,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   padding: 8px 12px;
   border-radius: 6px;
   cursor: pointer;
-  color: var(--text-secondary, #949BA4);
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 600;
   transition: all 0.12s ease;
@@ -2465,23 +2456,14 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   text-decoration: none;
 }
 .discord-channel-pill:hover {
-  background: var(--tint, #35373C);
-  color: var(--ink, #DBDEE1);
+  background: var(--discord-item-hover);
+  color: var(--ink);
 }
 .discord-channel-pill.active {
-  background: var(--tint-strong, #35373C) !important;
-  color: var(--ink, #FFFFFF) !important;
+  background: var(--discord-item-active) !important;
+  color: var(--ink) !important;
   font-weight: 700 !important;
-  box-shadow: inset 3px 0 0 var(--blueprint, #5865F2);
-}
-:root[data-theme="dark"] .discord-channel-pill:hover {
-  background: #35373C !important;
-  color: #DBDEE1 !important;
-}
-:root[data-theme="dark"] .discord-channel-pill.active {
-  background: #35373C !important;
-  color: #FFFFFF !important;
-  box-shadow: inset 3px 0 0 #5865F2 !important;
+  box-shadow: inset 3px 0 0 var(--blueprint);
 }
 
 .discord-channel-left {
@@ -2538,15 +2520,12 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 }
 .discord-sidebar-user-bar {
   padding: 10px 14px;
-  background: var(--card-bg-alt, #232428);
-  border-top: 1px solid var(--rule, #1F2023);
+  background: var(--discord-header-bg);
+  border-top: 1px solid var(--rule);
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-}
-:root[data-theme="dark"] .discord-sidebar-user-bar {
-  background: #232428 !important;
 }
 
 /* Right Chat Main Pane */
@@ -2557,10 +2536,7 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--card-bg, #313338);
-}
-:root[data-theme="dark"] .discord-chat-main {
-  background: #313338 !important;
+  background: var(--discord-main-bg);
 }
 
 .discord-chat-main .full-page-chat-container {
@@ -2577,32 +2553,32 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 
 /* ---- Dedicated Full-Page Chat Room View (Discord Look & Feel) ---- */
 .group-card-discord {
-  background: #2B2D31 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: var(--discord-sidebar-bg) !important;
+  border: 1px solid var(--rule) !important;
   border-radius: 12px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: var(--shadow) !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   position: relative;
   overflow: hidden;
 }
 .group-card-discord:hover {
-  background: #313338 !important;
-  border-color: #5865F2 !important;
+  background: var(--discord-main-bg) !important;
+  border-color: var(--blueprint) !important;
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(88, 101, 242, 0.35) !important;
+  box-shadow: var(--sh2) !important;
 }
 .group-card-discord .group-channel-hash {
-  color: #949BA4;
+  color: var(--text-secondary);
   font-size: 18px;
   font-weight: 700;
   margin-right: 2px;
 }
 .group-card-discord .group-card-title {
-  color: #F2F3F5 !important;
+  color: var(--ink) !important;
   font-weight: 700 !important;
 }
 .group-card-discord .group-card-purpose {
-  color: #949BA4 !important;
+  color: var(--text-secondary) !important;
   font-size: 13.5px !important;
 }
 .group-card-discord .chip.group {
@@ -2635,10 +2611,10 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 .full-page-chat-container {
   display: flex;
   flex-direction: column;
-  background: #313338 !important;
-  border: 1px solid #232428 !important;
+  background: var(--discord-main-bg) !important;
+  border: 1px solid var(--rule) !important;
   border-radius: 14px !important;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: var(--sh2) !important;
   overflow: hidden;
   height: calc(100vh - 250px);
   min-height: 400px;
@@ -2647,13 +2623,13 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 }
 .full-page-chat-header {
   padding: 12px 20px !important;
-  background: #2B2D31 !important;
-  border-bottom: 1px solid #1F2023 !important;
+  background: var(--discord-header-bg) !important;
+  border-bottom: 1px solid var(--rule) !important;
   display: flex;
   flex-direction: column;
   gap: 8px;
   flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 .full-page-chat-header-top {
   display: flex;
@@ -2673,9 +2649,9 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   gap: 6px;
   font-size: 12.5px;
   font-weight: 600;
-  background: #383A40 !important;
-  color: #DBDEE1 !important;
-  border: 1px solid #4E5058 !important;
+  background: var(--discord-input-bg) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--rule) !important;
   border-radius: 6px !important;
   padding: 5px 12px !important;
   cursor: pointer;

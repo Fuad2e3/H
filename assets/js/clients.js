@@ -1187,8 +1187,7 @@ OC.clients = (function () {
                  glance, and the open-task count that actually changes day to
                  day. ID and phone number still show once the client is open. */
               h('div', { class: 'row', style: 'margin:8px 0 6px;gap:6px;flex-wrap:wrap;' }, [
-                (c.client_id || c.client_code) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Client ID: ' + (c.client_id || c.client_code)) : null,
-                h('span', { class: 'chip count' }, activeTaskCount + ' open tasks')
+                (c.client_id || c.client_code) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Client ID: ' + (c.client_id || c.client_code)) : null
               ].filter(Boolean)),
               h('div', { class: 'row', style: 'justify-content:flex-end;margin-top:6px;' }, [
                 h('span', { style: 'font-size:12px;color:var(--blueprint);font-weight:600;' }, 'Open Client Portal & Analytics →')

@@ -351,11 +351,9 @@ OC.clients = (function () {
           h('div', { class: 'user-profile-meta-line' }, [OC.icon('phone'), 'Client Number: ' + (client.client_number || client.contact || 'No phone recorded')])
         ])
       ]),
+      /* the ACTIVE CLIENT / PAUSED badge next to the name already says this;
+         a second "Live Operational" panel over here said it again */
       h('div', { class: 'user-profile-right' }, [
-        h('div', { class: 'user-profile-status-badge' }, [
-          h('div', { class: 'user-profile-status-label' }, 'CLIENT WORKSPACE'),
-          h('div', { class: 'user-profile-status-val' }, client.status === 'active' ? '● Live Operational' : '○ Paused')
-        ]),
         h('button', {
           class: 'btn small primary',
           type: 'button',

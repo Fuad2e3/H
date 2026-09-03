@@ -1036,14 +1036,25 @@ OC.ui = (function () {
     var clientCode = h('input', { type: 'text', placeholder: 'e.g. TFR, ACME' });
     var clientNumber = h('input', { type: 'text', placeholder: 'e.g. 0624, 7781' });
 
+    var canScope = Boolean(user && user.admin);
+    var deptSelect = canScope ? select(
+      [{ value: '', label: 'All departments (visible to everyone)' }].concat(
+        (OC.store.state.departments || []).map(function (d) {
+          return { value: d.id, label: d.name };
+        })
+      ),
+      ''
+    ) : null;
+
     (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
       title: 'Add new client',
       content: h('div', {}, [
         field('1. Client ID', clientId, { required: true, hint: 'Unique client identifier or account number. This one is required.' }),
         field('2. Client number', clientNumber, { hint: 'The client\u2019s own number \u2014 not a phone number (optional).' }),
         field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
-        field('4. Client / Company name', name, { hint: 'Official client or company name for task assignment (optional).' })
-      ]),
+        field('4. Client / Company name', name, { hint: 'Official client or company name for task assignment (optional).' }),
+        canScope ? field('5. Visible to department', deptSelect, { hint: 'Only this department\u2019s people will see this client. System admins always see every client.' }) : null
+      ].filter(Boolean)),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
         {
@@ -1092,6 +1103,7 @@ OC.ui = (function () {
               client_code: cCodeVal,
               client_number: cNumVal,
               contact: cNumVal || cName || cIdVal,
+              department: (canScope && deptSelect) ? (deptSelect.value || '') : '',
               status: 'active'
             };
 

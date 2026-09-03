@@ -625,6 +625,82 @@ OC.people = (function () {
     ], client.status || 'active');
 
     var currentLabel = OC.ui.clientLabel ? OC.ui.clientLabel(client) : client.name;
+    var canDelete = !!(OC.can && OC.can.canDeleteClient ? OC.can.canDeleteClient(user, client) : (user && user.admin));
+    var canScope = Boolean(user && user.admin);
+
+    var deptSelect = OC.ui.select(
+      [{ value: '', label: 'All departments (visible to everyone)' }].concat(
+        (OC.store.state.departments || []).map(function (d) {
+          return { value: d.id, label: d.name };
+        })
+      ),
+      client.department || ''
+    );
+
+    function deptName(id) {
+      var d = id ? OC.store.department(id) : null;
+      return d ? d.name : '';
+    }
+
+    var deptRow = h('div', { class: 'client-dept-row' }, [
+      OC.ui.field('Visible to department (System Admin Only)', deptSelect, {
+        hint: 'Only this department\u2019s people will see this client. System admins always see every client.'
+      })
+    ]);
+
+    var actions = [
+      { label: 'Cancel', onClick: function (close) { close(); } },
+      {
+        label: 'Save', primary: true, onClick: function (close) {
+          var cName = name.value.trim();
+          if (!cName) return 'Client name cannot be empty.';
+          var cIdVal = clientId.value.trim();
+          var cCodeVal = clientCode.value.trim();
+          var cContact = contact.value.trim() || cName;
+
+          OC.store.mutate({
+            actor: user.id, action: 'client.update', target: cName,
+            detail: 'Updated details for ' + client.name
+          }, function () {
+            client.client_id = cIdVal;
+            client.client_code = cCodeVal;
+            client.name = cName;
+            client.contact = cContact;
+            client.status = status.value;
+            if (canScope) client.department = deptSelect.value || '';
+          });
+          OC.ui.toast('Client updated.');
+          close();
+        }
+      }
+    ];
+
+    if (canDelete) {
+      actions.unshift({
+        label: 'Delete client', onClick: function (close) {
+          OC.ui.confirm('Delete client "' + client.name + '"? Existing tasks will remain.', function () {
+            OC.store.mutate({ actor: user.id, action: 'client.delete', target: client.name }, function () {
+              OC.store.state.clients = OC.store.state.clients.filter(function (c) { return c.id !== client.id; });
+            });
+            OC.ui.toast('Client deleted.');
+            close();
+          });
+        }
+      });
+    }
+
+    /* Unshifted to the left of "Delete client" */
+    if (canScope) {
+      actions.unshift({
+        label: 'Department' + (client.department ? ': ' + deptName(client.department) : ''),
+        onClick: function () {
+          if (deptSelect && deptSelect.focus) {
+            deptSelect.focus();
+            deptSelect.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      });
+    }
 
     OC.ui.modal({
       title: 'Edit client: ' + currentLabel,
@@ -633,39 +709,10 @@ OC.people = (function () {
         OC.ui.field('Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
         OC.ui.field('Client / Company name', name, { required: true }),
         OC.ui.field('Primary contact', contact, { hint: 'Contact person name.' }),
-        OC.ui.field('Status', status)
+        OC.ui.field('Status', status),
+        canScope ? deptRow : null
       ]),
-      actions: [
-        {
-          label: 'Delete client', onClick: function (close) {
-            OC.ui.confirm('Delete client "' + client.name + '"? Existing tasks will remain.', function () {
-              OC.store.mutate({ actor: user.id, action: 'client.delete', target: client.name }, function () {
-                OC.store.state.clients = OC.store.state.clients.filter(function (c) { return c.id !== client.id; });
-              });
-              OC.ui.toast('Client deleted.');
-              close();
-            });
-          }
-        },
-        { label: 'Cancel', onClick: function (close) { close(); } },
-        {
-          label: 'Save', primary: true, onClick: function (close) {
-            if (!name.value.trim()) return 'Client name cannot be empty.';
-            OC.store.mutate({
-              actor: user.id, action: 'client.update', target: name.value.trim(),
-              detail: 'Updated details for ' + client.name
-            }, function () {
-              client.client_id = clientId.value.trim();
-              client.client_code = clientCode.value.trim();
-              client.name = name.value.trim();
-              client.contact = contact.value.trim() || client.name;
-              client.status = status.value;
-            });
-            OC.ui.toast('Client updated.');
-            close();
-          }
-        }
-      ]
+      actions: actions
     });
   }
 

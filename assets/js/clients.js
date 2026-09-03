@@ -60,8 +60,8 @@ OC.clients = (function () {
 
     /* The picker is folded away until the admin asks for it, so the form keeps
        the five numbered fields the client edit screen is built around. */
-    var deptRow = h('div', { class: 'client-dept-row', hidden: true }, [
-      OC.ui.field('Visible to department', deptSelect, {
+    var deptRow = h('div', { class: 'client-dept-row', hidden: !client.department }, [
+      OC.ui.field('6. Visible to department (System Admin Only)', deptSelect, {
         hint: 'Only this department\u2019s people will see this client. System admins always see every client.'
       })
     ]);
@@ -160,8 +160,11 @@ OC.clients = (function () {
         onClick: function () {
           /* reveals the picker in place rather than opening a second modal, so
              edits already typed into the other fields are not thrown away */
-          deptRow.hidden = !deptRow.hidden;
-          if (!deptRow.hidden && deptSelect.focus) deptSelect.focus();
+          deptRow.hidden = false;
+          if (deptSelect && deptSelect.focus) {
+            deptSelect.focus();
+            deptRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
         }
       });
     }

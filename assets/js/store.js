@@ -783,6 +783,45 @@ OC.store = (function () {
       return host.reactions;
     },
 
+    /* A direct message is a conversation between exactly two people. It reuses
+       the group record — same messages, replies, reactions, media — but carries
+       dm:true so it never appears among the channels, and its membership is the
+       two participants and nobody else. The pair key is order-independent, so
+       whichever of the two opens it first, both land in the same conversation. */
+    dmKey: function (a, b) {
+      return [String(a), String(b)].sort().join('~');
+    },
+
+    findDirect: function (a, b) {
+      if (!a || !b || a === b) return null;
+      var key = api.dmKey(a, b);
+      return (state.groups || []).find(function (g) {
+        return g.dm === true && g.dm_key === key;
+      }) || null;
+    },
+
+    openDirect: function (a, b) {
+      if (!a || !b || a === b) return null;
+      var existing = api.findDirect(a, b);
+      if (existing) return existing;
+      var convo = {
+        id: api.uid('dm'),
+        dm: true,
+        dm_key: api.dmKey(a, b),
+        name: 'Direct message',
+        purpose: '',
+        status: 'active',
+        created_by: a,
+        created_at: new Date().toISOString(),
+        members: [a, b],
+        messages: []
+      };
+      state.groups = state.groups || [];
+      state.groups.push(convo);
+      write();
+      return convo;
+    },
+
     notify: function (userIds, text, ref) {
       if (!userIds) return;
       if (!Array.isArray(userIds)) userIds = [userIds];

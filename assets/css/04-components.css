@@ -4593,6 +4593,66 @@ dialog.modal.fallback {
   contain: layout paint style;
 }
 
+/* Direct messages: the people list under the channels in the chat sidebar */
+.discord-dm-section {
+  border-top: 1px solid var(--rule);
+  padding-top: 6px;
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.discord-dm-section .discord-sidebar-title-row {
+  padding: 6px 12px 4px;
+}
+.discord-dm-list {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 0 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 34vh;
+}
+.discord-dm-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.discord-dm-pill:hover,
+.discord-dm-pill:focus-visible {
+  background: var(--discord-item-hover, var(--card-bg-alt));
+  color: var(--ink);
+}
+.discord-dm-pill.active {
+  background: var(--discord-item-active, var(--blueprint));
+  color: #ffffff;
+}
+.discord-dm-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.discord-dm-pill .mark-tint {
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+  flex: none;
+}
+
 /* a group member whose account is not loaded on this device */
 .chip.person.is-unresolved {
   opacity: 0.65;

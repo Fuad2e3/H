@@ -257,40 +257,69 @@ OC.can = (function () {
     return !!user && (user.admin || isHead(user, deptId));
   }
 
-  /* Groups: Visible and accessible STRICTLY to assigned members and System Admin */
+  function isDirect(group) { return !!(group && group.dm === true); }
+
+  function inConversation(user, group) {
+    return !!(user && group && Array.isArray(group.members) && group.members.indexOf(user.id) > -1);
+  }
+
+  /* Groups: Visible and accessible STRICTLY to assigned members and System Admin.
+     A direct message is the exception to the System Admin part — it is private
+     to the two people in it, and an admin reading someone else's private
+     messages is not something an admin badge should buy. */
   function seeGroup(user, group) {
     if (!user || !group) return false;
+    if (isDirect(group)) return inConversation(user, group);
     if (user.admin) return true;
-    return Array.isArray(group.members) && group.members.indexOf(user.id) > -1;
+    return inConversation(user, group);
   }
 
   function canPostGroupMessage(user, group) {
     if (!user || !group) return false;
-    return user.admin || (group.members && group.members.indexOf(user.id) > -1);
+    if (isDirect(group)) return inConversation(user, group);
+    return user.admin || inConversation(user, group);
   }
 
   function canReactGroupMessage(user, group) {
     return seeGroup(user, group);
   }
 
+  /* a direct message has no name, purpose or membership to administer */
   function canEditGroup(user, group) {
-    if (!user || !group) return false;
+    if (!user || !group || isDirect(group)) return false;
     return !!user.admin;
   }
 
   function canDeleteGroup(user, group) {
-    if (!user || !group) return false;
+    if (!user || !group || isDirect(group)) return false;
     return !!user.admin;
   }
 
   function canEditGroupMessage(user, msg, group) {
     if (!user || !msg) return false;
-    return user.admin || msg.author === user.id;
+    var mine = msg.author === user.id || msg.author_id === user.id;
+    if (isDirect(group)) return mine;
+    return user.admin || mine;
   }
 
   function canDeleteGroupMessage(user, msg, group) {
     if (!user || !msg) return false;
-    return user.admin || msg.author === user.id || (group && group.created_by === user.id);
+    var mine = msg.author === user.id || msg.author_id === user.id;
+    /* inside a direct message only its author may remove a message */
+    if (isDirect(group)) return mine;
+    return user.admin || mine || (group && group.created_by === user.id);
+  }
+
+  /* Anyone signed in may write to anyone else who has an account. */
+  function canDirectMessage(user, target) {
+    if (!user || !target) return false;
+    if (user.id === target.id) return false;
+    return target.status !== 'invited' || !!user.admin;
+  }
+
+  function directMessageable(user) {
+    if (!user) return [];
+    return (S().state.users || []).filter(function (u) { return canDirectMessage(user, u); });
   }
 
   function invite(user) { return !!user && (user.admin || headOfAny(user)); }
@@ -428,6 +457,7 @@ OC.can = (function () {
     isHead: isHead, isLead: isLead, inDept: inDept, inGroup: inGroup,
     headOfAny: headOfAny, departmentsOf: departmentsOf, roleLabel: roleLabel,
     seeTodo: seeTodo, seeInstruction: seeInstruction, seeGroup: seeGroup,
+    isDirect: isDirect, canDirectMessage: canDirectMessage, directMessageable: directMessageable,
     assignTo: assignTo, assignableUsers: assignableUsers,
     assignToGroup: assignToGroup, assignableGroups: assignableGroups,
     createGroup: createGroup, canEditGroup: canEditGroup, canDeleteGroup: canDeleteGroup,

@@ -27,6 +27,7 @@ OC.app = (function () {
     { id: 'board', label: 'Notice Board', view: function () { return OC.board; } },
     { id: 'activities', label: 'Management', adminOnly: true, view: function () { return OC.activities || OC.groups || OC.people; } },
     { id: 'clients', label: 'Clients Portal', view: function () { return OC.clients; } },
+    { id: 'messages', label: 'Messages', view: function () { return OC.messages || OC.groups; } },
     { id: 'policy', label: 'Policy', view: function () { return OC.policy; } }
   ];
 

@@ -462,6 +462,13 @@ OC.groups = (function () {
        programmatic write is the echo of that write, not the reader */
     var lastAutoScrollAt = 0;
 
+    var isDm = !!(OC.can.isDirect && OC.can.isDirect(group));
+    var dmPartner = isDm
+      ? OC.store.user((group.members || []).filter(function (m) { return m !== user.id; })[0])
+      : null;
+    var dmPartnerId = dmPartner ? dmPartner.id : '';
+    var dmPartnerName = dmPartner ? dmPartner.name : 'Unknown member';
+
     function renderMessages(forceScrollBottom) {
       var prevScrollTop = msgsList ? msgsList.scrollTop : chatScrollTop;
       var wasNearBottom = chatPinnedToBottom;
@@ -496,19 +503,25 @@ OC.groups = (function () {
                 e.preventDefault();
                 if (typeof onBack === 'function') onBack();
               }
-            }, ['← Back to Channels']),
-            h('h2', { style: 'font-size:17px;font-weight:700;color:var(--ink);margin:0;display:flex;align-items:center;gap:6px;' }, [
-              h('span', { class: 'group-channel-hash' }, '#'),
-              h('span', {}, currentGroup.name)
-            ]),
-            h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, [
-              h('span', { class: 'chip ' + (currentGroup.status === 'active' ? 'group' : 'custom') }, currentGroup.status),
-              h('span', { class: 'chip count' }, (currentGroup.members || []).length + ' members')
-            ])
+            }, [isDm ? '← Back' : '← Back to Channels']),
+            h('h2', { style: 'font-size:17px;font-weight:700;color:var(--ink);margin:0;display:flex;align-items:center;gap:6px;' },
+              isDm
+                ? [OC.ui.mark(dmPartnerId), h('span', {}, dmPartnerName)]
+                : [h('span', { class: 'group-channel-hash' }, '#'), h('span', {}, currentGroup.name)]),
+            isDm
+              ? h('span', { class: 'chip custom', title: 'Only the two of you can read this' },
+                  [OC.icon('lock'), 'Private'])
+              : h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, [
+                  h('span', { class: 'chip ' + (currentGroup.status === 'active' ? 'group' : 'custom') }, currentGroup.status),
+                  h('span', { class: 'chip count' }, (currentGroup.members || []).length + ' members')
+                ])
           ]),
-          h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;' }, memberChips)
+          isDm ? null : h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;' }, memberChips)
         ]),
-        h('p', { class: 'muted group-channel-topic', style: 'font-size:13px;margin:2px 0 0;' }, currentGroup.purpose)
+        isDm
+          ? h('p', { class: 'muted group-channel-topic', style: 'font-size:13px;margin:2px 0 0;' },
+              'A private conversation between you and ' + dmPartnerName + '.')
+          : h('p', { class: 'muted group-channel-topic', style: 'font-size:13px;margin:2px 0 0;' }, currentGroup.purpose)
       ]);
 
       msgsList = h('div', { class: 'full-page-chat-messages', 'data-autoscroll': 'bottom' });
@@ -906,9 +919,25 @@ OC.groups = (function () {
     var user = me();
 
     var canCreate = OC.can.createGroup(user);
-    var allGroups = (OC.store.state.groups || []).filter(function (g) {
+    var everything = (OC.store.state.groups || []).filter(function (g) {
       return OC.can.seeGroup(user, g);
     });
+    /* channels and direct messages live in the same records but are listed
+       separately: the counts and filters above are about channels only */
+    var allGroups = everything.filter(function (g) { return !OC.can.isDirect(g); });
+    var myDirects = everything.filter(function (g) { return OC.can.isDirect(g); });
+
+    function otherPersonIn(convo) {
+      var otherId = (convo.members || []).filter(function (m) { return m !== user.id; })[0];
+      return OC.store.user(otherId) || null;
+    }
+
+    function openDirectWith(target) {
+      var convo = OC.store.openDirect(user.id, target.id);
+      if (!convo) return;
+      activeChatGroupId = convo.id;
+      render(host, rerender, hideHead);
+    }
 
     // Filter groups
     var visible = allGroups.filter(function (g) {
@@ -1030,6 +1059,52 @@ OC.groups = (function () {
       }) : [
         h('div', { style: 'padding:24px 12px;text-align:center;color:var(--text-secondary);font-size:13px;' }, 'No channels found.')
       ]),
+
+      /* Direct messages: everyone with an account, one click to a private
+         conversation with them. A conversation is created the first time it is
+         opened, so the list is people rather than a list of threads. */
+      (function () {
+        var people = (OC.can.directMessageable ? OC.can.directMessageable(user) : [])
+          .slice()
+          .sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
+
+        var q = searchQuery.toLowerCase();
+        var shown = q
+          ? people.filter(function (u) {
+              return (u.name || '').toLowerCase().indexOf(q) > -1
+                || (u.email || '').toLowerCase().indexOf(q) > -1;
+            })
+          : people;
+
+        return h('div', { class: 'discord-dm-section' }, [
+          h('div', { class: 'discord-sidebar-title-row' }, [
+            h('span', { class: 'discord-sidebar-title' },
+              [OC.icon('users'), 'DIRECT MESSAGES (' + people.length + ')'])
+          ]),
+          h('div', { class: 'discord-dm-list' }, shown.length ? shown.map(function (person) {
+            var convo = OC.store.findDirect(user.id, person.id);
+            var isSelected = !!(convo && activeChatGroupId === convo.id);
+            var total = convo ? (convo.messages || []).length : 0;
+            var lastRead = convo ? getChannelLastRead(user.id, convo.id) : null;
+            var unread = (!isSelected && convo && total > 0 && lastRead !== null)
+              ? Math.max(0, total - lastRead) : 0;
+
+            return h('button', {
+              class: 'discord-dm-pill' + (isSelected ? ' active' : ''),
+              type: 'button',
+              title: 'Message ' + person.name + ' privately',
+              onClick: function () { openDirectWith(person); }
+            }, [
+              OC.ui.mark(person.id),
+              h('span', { class: 'discord-dm-name' }, person.name),
+              unread > 0 ? h('span', { class: 'discord-channel-badge' }, String(unread)) : null
+            ]);
+          }) : [
+            h('div', { style: 'padding:14px 12px;color:var(--text-secondary);font-size:12.5px;' },
+              q ? 'Nobody matches "' + searchQuery + '".' : 'No one else has an account yet.')
+          ])
+        ]);
+      })(),
 
       /* Bottom User Bar */
       h('div', { class: 'discord-sidebar-user-bar' }, [

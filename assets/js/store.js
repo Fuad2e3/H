@@ -485,6 +485,15 @@ OC.store = (function () {
         return false;
       }
     }
+    if (entry && entry.action === 'group.delete') {
+      var actorUser = user(entry.actor) || user(session());
+      if (!actorUser || !actorUser.admin) {
+        if (typeof OC !== 'undefined' && OC.ui && OC.ui.toast) {
+          OC.ui.toast('Access Denied: Only System Admin can delete groups.', true);
+        }
+        return false;
+      }
+    }
     if (typeof fn === 'function') {
       fn();
     }

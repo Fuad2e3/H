@@ -167,8 +167,13 @@ OC.groups = (function () {
 
 
   function deleteGroupDirect(group, onDone) {
+    var user = me();
+    if (!user || !user.admin) {
+      OC.ui.toast('Access Denied: Only System Admin can delete groups.', true);
+      return;
+    }
     OC.ui.confirm('Permanently delete group "' + group.name + '" and all its discussions? This cannot be undone.', function () {
-      OC.store.mutate({ actor: OC.store.session(), action: 'group.delete', target: group.name }, function () {
+      OC.store.mutate({ actor: user.id, action: 'group.delete', target: group.name }, function () {
         OC.store.deleteGroup(group.id);
       });
       OC.ui.toast('Group permanently deleted.');

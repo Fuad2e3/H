@@ -4562,6 +4562,37 @@ dialog.modal.fallback {
   box-shadow: 0 0 0 1px var(--rule-strong) inset;
 }
 
+/* Rows below the fold cost nothing until they are scrolled to. The browser
+   skips style, layout and paint for anything outside the viewport, which is
+   most of a long board; contain-intrinsic-size gives it a placeholder height
+   in the meantime (and "auto" makes it remember the real one once measured)
+   so the scrollbar does not jump about. */
+.panel--todos .item,
+.panel--instructions .note,
+.dashboard-todo-row,
+.client-item-card {
+  content-visibility: auto;
+}
+.panel--todos .item {
+  contain-intrinsic-size: auto 150px;
+}
+.panel--instructions .note {
+  contain-intrinsic-size: auto 220px;
+}
+.dashboard-todo-row {
+  contain-intrinsic-size: auto 92px;
+}
+.client-item-card {
+  contain-intrinsic-size: auto 170px;
+}
+
+/* a panel's internals cannot affect anything outside it, so the browser can
+   lay each one out on its own instead of reflowing the page */
+.panel--todos,
+.panel--instructions {
+  contain: layout paint style;
+}
+
 /* the "Show more" row that ends a capped list */
 .list-more {
   display: flex;

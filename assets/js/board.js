@@ -1175,10 +1175,29 @@ OC.board = (function () {
         h('button', { class: 'btn small push', type: 'button', onClick: copyYesterday },
           [OC.icon('reset'), 'Copy yesterday'])
       ]),
-      mode === 'panels' ? h('div', { class: 'panel-tabs' }, [
-        h('button', { type: 'button', 'aria-pressed': String(panel === 'todos'), onClick: function () { panel = 'todos'; rerender(); } }, 'Todos'),
-        h('button', { type: 'button', 'aria-pressed': String(panel === 'instructions'), onClick: function () { panel = 'instructions'; rerender(); } }, 'Instructions')
-      ]) : null,
+      mode === 'panels' ? (function () {
+        /* Both panels are already in the DOM — this tab only decides which one
+           shows on a narrow screen, which the data-panel attribute does on its
+           own. Rebuilding the whole board for it threw away and rebuilt every
+           row to change one attribute. */
+        var tabs = h('div', { class: 'panel-tabs' });
+        function showPanel(name) {
+          panel = name;
+          var board = tabs.parentNode && tabs.parentNode.querySelector('.board');
+          if (board) board.setAttribute('data-panel', name);
+          var btns = tabs.querySelectorAll('button');
+          for (var i = 0; i < btns.length; i++) {
+            btns[i].setAttribute('aria-pressed', String(btns[i].getAttribute('data-panel-name') === name));
+          }
+        }
+        tabs.appendChild(h('button', { type: 'button', 'data-panel-name': 'todos',
+          'aria-pressed': String(panel === 'todos'),
+          onClick: function () { showPanel('todos'); } }, 'Todos'));
+        tabs.appendChild(h('button', { type: 'button', 'data-panel-name': 'instructions',
+          'aria-pressed': String(panel === 'instructions'),
+          onClick: function () { showPanel('instructions'); } }, 'Instructions'));
+        return tabs;
+      })() : null,
       mode === 'panels'
         ? h('div', { class: 'board', 'data-panel': panel }, [todoPanel, notePanel])
         : h('section', { class: 'panel panel--timeline' }, [

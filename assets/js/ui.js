@@ -12,21 +12,25 @@ OC.ui = (function () {
   'use strict';
 
   /* ---- element construction -------------------------------------------- */
+  /* This runs once per element on every render, so it is written flat: a for-in
+     rather than Object.keys().forEach avoids allocating a key array and a
+     closure for each element built. */
   function h(tag, attrs, children) {
     var el = document.createElement(tag);
-    attrs = attrs || {};
-    Object.keys(attrs).forEach(function (k) {
-      var v = attrs[k];
-      if (v === null || v === undefined || v === false) return;
-      if (k === 'class') el.className = v;
-      else if (k === 'text') el.textContent = v;
-      else if (k === 'html') el.innerHTML = v;
-      else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2).toLowerCase(), v);
-      else if (k === 'value') el.value = v;
-      else if (v === true) el.setAttribute(k, '');
-      else el.setAttribute(k, v);
-    });
-    append(el, children);
+    if (attrs) {
+      for (var k in attrs) {
+        var v = attrs[k];
+        if (v === null || v === undefined || v === false) continue;
+        if (k === 'class') el.className = v;
+        else if (k === 'text') el.textContent = v;
+        else if (k === 'html') el.innerHTML = v;
+        else if (k.charCodeAt(0) === 111 && k.charCodeAt(1) === 110) el.addEventListener(k.slice(2).toLowerCase(), v);
+        else if (k === 'value') el.value = v;
+        else if (v === true) el.setAttribute(k, '');
+        else el.setAttribute(k, v);
+      }
+    }
+    if (children !== undefined && children !== null && children !== false) append(el, children);
     return el;
   }
 
@@ -830,12 +834,17 @@ OC.ui = (function () {
 
     var mentionHelper = attachMentionAutocomplete(body, null, function (mentionedUser) {});
 
-    var wrap = h('details', { class: 'thread' }, [
-      h('summary', {}, [
-        h('span', {}, count ? count + (count === 1 ? ' comment' : ' comments') : 'Comment'),
-        h('span', { class: 'dept-visibility-tag' }, deptNames + ' & Admin only')
-      ]),
-      h('div', { class: 'thread-body' }, [
+    var bodyWrap = h('div', { class: 'thread-body' });
+    var bodyBuilt = false;
+
+    /* A thread starts closed, so everything inside it — every comment, the
+       reply box, its buttons — is built the first time it is actually opened
+       rather than for every row on the page. On a busy board those unopened
+       threads were the bulk of the DOM and most of the cost of drawing it. */
+    function buildThreadBody() {
+      if (bodyBuilt) return;
+      bodyBuilt = true;
+      append(bodyWrap, [
         h('div', { class: 'dept-visibility-notice' }, [
           OC.icon('lock'),
           h('span', {}, 'Visible to ' + deptNames + ' team members & System Admin only.')
@@ -1020,8 +1029,17 @@ OC.ui = (function () {
             ])
           ]);
         })()
-      ])
+      ]);
+    }
+
+    var wrap = h('details', { class: 'thread' }, [
+      h('summary', {}, [
+        h('span', {}, count ? count + (count === 1 ? ' comment' : ' comments') : 'Comment'),
+        h('span', { class: 'dept-visibility-tag' }, deptNames + ' & Admin only')
+      ]),
+      bodyWrap
     ]);
+    wrap.addEventListener('toggle', function () { if (wrap.open) buildThreadBody(); });
     return wrap;
   }
 

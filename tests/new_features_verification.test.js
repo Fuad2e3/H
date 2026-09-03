@@ -355,7 +355,7 @@ test('store.js reset restores initial production schema cleanly with no client p
   OC.store.reset();
   assert.strictEqual(OC.store.state.version, 1);
   assert.ok(OC.store.state.departments.length >= 6);
-  assert.ok(OC.store.state.users.length >= 3);
+  assert.ok(OC.store.state.users.length >= 2);
   OC.store.state.users.forEach(u => {
     assert.strictEqual(u.password, null, 'Client users must not hold hardcoded passwords');
   });

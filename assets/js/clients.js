@@ -860,12 +860,91 @@ OC.clients = (function () {
           insertFormatting('{' + name + '}', '{/}');
         }
 
+        /* Inline formatter (Bold, Italic, Code) — wraps the selection in
+           prefix+suffix markers.  If the selection is already wrapped the
+           markers are stripped instead (toggle-off). Falls back to the
+           word 'text' when nothing is selected. */
+        function applyInline(prefix, suffix) {
+          var start = editorText.selectionStart || 0;
+          var end   = editorText.selectionEnd   || 0;
+          var text  = editorText.value;
+          var sel   = text.substring(start, end);
+          var suf   = suffix || prefix;  /* Bold uses same marker both sides */
+
+          /* Toggle-off: selection IS the wrapped run, e.g. **word** */
+          if (sel.length > prefix.length + suf.length
+              && sel.substring(0, prefix.length) === prefix
+              && sel.substring(sel.length - suf.length) === suf) {
+            var inner = sel.substring(prefix.length, sel.length - suf.length);
+            editorText.value = text.substring(0, start) + inner + text.substring(end);
+            editorText.focus();
+            editorText.setSelectionRange(start, start + inner.length);
+            syncPreview();
+            return;
+          }
+          /* Toggle-off: markers sit just outside the selection */
+          var before = text.substring(0, start);
+          var after  = text.substring(end);
+          if (before.endsWith(prefix) && after.startsWith(suf)) {
+            editorText.value = before.slice(0, -prefix.length) + (sel || 'text') + after.slice(suf.length);
+            editorText.focus();
+            editorText.setSelectionRange(start - prefix.length, start - prefix.length + (sel || 'text').length);
+            syncPreview();
+            return;
+          }
+          /* Normal wrap */
+          var label   = sel || 'text';
+          var wrapped = prefix + label + suf;
+          editorText.value = text.substring(0, start) + wrapped + text.substring(end);
+          editorText.focus();
+          editorText.setSelectionRange(start + prefix.length, start + prefix.length + label.length);
+          syncPreview();
+        }
+
+        /* Line-level formatter (H2, H3, List, Checklist, Quote) — prepends
+           the prefix to every line in the selection.  If every selected line
+           already starts with the prefix the prefix is stripped (toggle-off). */
+        function applyLinePrefix(prefix) {
+          var start = editorText.selectionStart || 0;
+          var end   = editorText.selectionEnd   || 0;
+          var text  = editorText.value;
+
+          /* Expand selection to cover whole lines */
+          var lineStart = text.lastIndexOf('\n', start - 1) + 1;
+          var lineEnd   = text.indexOf('\n', end);
+          if (lineEnd === -1) lineEnd = text.length;
+
+          var block = text.substring(lineStart, lineEnd);
+          var lines = block.split('\n');
+
+          /* Toggle-off when every line already has the prefix */
+          var allPrefixed = lines.every(function (l) {
+            return l.startsWith(prefix);
+          });
+
+          var newLines;
+          if (allPrefixed) {
+            newLines = lines.map(function (l) { return l.slice(prefix.length); });
+          } else {
+            newLines = lines.map(function (l) {
+              return l.startsWith(prefix) ? l : prefix + l;
+            });
+          }
+
+          var newBlock = newLines.join('\n');
+          editorText.value = text.substring(0, lineStart) + newBlock + text.substring(lineEnd);
+          editorText.focus();
+          editorText.setSelectionRange(lineStart, lineStart + newBlock.length);
+          syncPreview();
+        }
+
+        /* Legacy helper kept for colour-tag use and insertLink */
         function insertFormatting(prefix, suffix) {
           var start = editorText.selectionStart || 0;
-          var end = editorText.selectionEnd || 0;
-          var text = editorText.value;
-          var selected = text.substring(start, end);
-          var replacement = prefix + (selected || 'text') + (suffix || '');
+          var end   = editorText.selectionEnd   || 0;
+          var text  = editorText.value;
+          var sel   = text.substring(start, end);
+          var replacement = prefix + (sel || 'text') + (suffix || '');
           editorText.value = text.substring(0, start) + replacement + text.substring(end);
           editorText.focus();
           editorText.setSelectionRange(start + prefix.length, start + replacement.length - (suffix ? suffix.length : 0));
@@ -918,29 +997,41 @@ OC.clients = (function () {
           ]));
         });
 
+        /* Prevent button mousedown from stealing focus (and thus the
+           selection) away from the textarea.  This single call on each
+           button is what makes "select text → click tool → formatted"
+           work reliably: the selection is still intact when onClick fires. */
+        function noBlur(e) { e.preventDefault(); }
+
         colorBtn = h('button', {
           class: 'client-editor-tool-btn', type: 'button',
           title: 'Colour text — pick a colour, then the selected words are wrapped in {colour}words{/}.',
           'aria-haspopup': 'true', 'aria-expanded': 'false',
+          onMousedown: noBlur,
           onClick: function () { toggleColorMenu(); }
         }, [colorSwatch, 'Colour', h('span', { class: 'md-color-caret', 'aria-hidden': 'true' }, '\u25be')]);
 
+        /* Also prevent mousedown on each colour swatch so the menu click
+           itself does not blur the textarea before applyColor runs. */
+        colorMenu.addEventListener('mousedown', noBlur);
+
         var toolbar = h('div', { class: 'client-editor-toolbar' }, [
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold (**text**)', onClick: function () { insertFormatting('**', '**'); } }, 'Bold'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Italic (*text*)', onClick: function () { insertFormatting('*', '*'); } }, 'Italic'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 2 (## Title)', onClick: function () { insertFormatting('## ', '\n'); } }, 'H2'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 3 (### Title)', onClick: function () { insertFormatting('### ', '\n'); } }, 'H3'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bullet List (- item)', onClick: function () { insertFormatting('- ', '\n'); } }, 'List'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Task Checkbox (- [ ] task)', onClick: function () { insertFormatting('- [ ] ', '\n'); } }, 'Checklist'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Code (`code`)', onClick: function () { insertFormatting('`', '`'); } }, 'Code'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote (> quote)', onClick: function () { insertFormatting('> ', '\n'); } }, 'Quote'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold (**text**)',         onMousedown: noBlur, onClick: function () { applyInline('**', '**'); } }, 'Bold'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Italic (*text*)',        onMousedown: noBlur, onClick: function () { applyInline('*', '*'); } }, 'Italic'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 2 (## Title)',  onMousedown: noBlur, onClick: function () { applyLinePrefix('## '); } }, 'H2'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 3 (### Title)', onMousedown: noBlur, onClick: function () { applyLinePrefix('### '); } }, 'H3'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bullet List (- item)', onMousedown: noBlur, onClick: function () { applyLinePrefix('- '); } }, 'List'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Task Checkbox (- [ ] task)', onMousedown: noBlur, onClick: function () { applyLinePrefix('- [ ] '); } }, 'Checklist'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Code (`code`)',         onMousedown: noBlur, onClick: function () { applyInline('`', '`'); } }, 'Code'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote (> quote)',       onMousedown: noBlur, onClick: function () { applyLinePrefix('> '); } }, 'Quote'),
           h('button', {
             class: 'client-editor-tool-btn', type: 'button',
             title: 'Hidden link — [visible words](https://the-target). The address stays hidden behind the words, which render red.',
+            onMousedown: noBlur,
             onClick: function () { insertLink(); }
           }, [OC.icon('link'), 'Link']),
           h('div', { class: 'md-color-picker' }, [colorBtn, colorMenu]),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear Text', onClick: function () { editorText.value = ''; editorText.focus(); syncPreview(); } }, [OC.icon('trash'), 'Clear']),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear Text', onMousedown: noBlur, onClick: function () { editorText.value = ''; editorText.focus(); syncPreview(); } }, [OC.icon('trash'), 'Clear']),
         ]);
 
         detailsContent = h('div', { class: 'portal-view-content' }, [

@@ -362,8 +362,13 @@ OC.dashboard = (function () {
           ]),
           h('div', { class: 'panel-body' }, notes.length
             ? notes.slice(0, 12).map(function (n) {
+                if (user && user.id && OC.ui.markInstructionRead) {
+                  OC.ui.markInstructionRead(n, user.id);
+                }
                 var isUnread = (n.read_by || []).indexOf(user.id) === -1;
-                var readers = (n.read_by || []).map(OC.ui.personName);
+                var readers = (OC.ui && OC.ui.instructionReaders)
+                  ? OC.ui.instructionReaders(n)
+                  : (n.read_by || []).map(OC.ui.personName);
 
                 var actions = [];
                 if (isUnread) {

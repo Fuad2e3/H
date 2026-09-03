@@ -793,8 +793,13 @@ OC.board = (function () {
   /* ---- instruction item -------------------------------------------------- */
   function instructionItem(note, rerender) {
     var user = me();
+    if (user && user.id && OC.ui.markInstructionRead) {
+      OC.ui.markInstructionRead(note, user.id);
+    }
     var unread = (note.read_by || []).indexOf(user.id) === -1;
-    var readers = (note.read_by || []).map(OC.ui.personName);
+    var readers = (OC.ui && OC.ui.instructionReaders)
+      ? OC.ui.instructionReaders(note)
+      : (note.read_by || []).map(OC.ui.personName);
 
     var actions = [];
     if (unread) {

@@ -267,6 +267,43 @@ OC.ui = (function () {
     return personName(item.assignee);
   }
 
+  function instructionReaders(note) {
+    if (!note) return [];
+    var uids = [];
+    (Array.isArray(note.read_by) ? note.read_by : []).forEach(function (uid) {
+      if (uid && uids.indexOf(uid) === -1) uids.push(uid);
+    });
+    if (note.author && uids.indexOf(note.author) === -1) uids.push(note.author);
+    (note.comments || []).forEach(function (c) {
+      if (c && c.author && uids.indexOf(c.author) === -1) uids.push(c.author);
+    });
+    if (note.reactions) {
+      Object.keys(note.reactions).forEach(function (emoji) {
+        (note.reactions[emoji] || []).forEach(function (uid) {
+          if (uid && uids.indexOf(uid) === -1) uids.push(uid);
+        });
+      });
+    }
+
+    return uids.map(function (uid) {
+      var u = OC.store.user(uid);
+      return u ? u.name : personName(uid);
+    }).filter(function (name) {
+      return name && name !== 'Unknown';
+    });
+  }
+
+  function markInstructionRead(note, userId) {
+    if (!note || !userId) return;
+    note.read_by = Array.isArray(note.read_by) ? note.read_by : [];
+    if (note.read_by.indexOf(userId) === -1) {
+      note.read_by.push(userId);
+      setTimeout(function () {
+        OC.store.mutate(null, function () {});
+      }, 50);
+    }
+  }
+
   /* ---- form pieces ------------------------------------------------------ */
   /* ---- keeping the reader's place across a re-render ----------------------
      A view that rebuilds itself — because a keystroke filtered a list, or
@@ -464,6 +501,9 @@ OC.ui = (function () {
         detail: emoji + ' (' + (had ? 'removed' : 'added') + ') by ' + user.name
       }, function () {
         OC.store.react(kind, item.id, emoji, user.id);
+        if (kind === 'instruction') {
+          markInstructionRead(item, user.id);
+        }
       });
 
       // Targeted notification: Send ONLY to concerned owner/assignee, NOT everyone
@@ -948,6 +988,9 @@ OC.ui = (function () {
               target: item.title || (item.body ? item.body.slice(0, 40) : item.id), detail: text
             }, function () {
               OC.store.comment(kind, item.id, text, user ? user.id : OC.store.session(), extra);
+              if (kind === 'instruction') {
+                markInstructionRead(item, user ? user.id : OC.store.session());
+              }
             });
 
             // Targeted notification: Send to owner, assignee, thread participants & ALL @mentioned users
@@ -1943,6 +1986,7 @@ OC.ui = (function () {
     capturePlace: capturePlace, restorePlace: restorePlace, keepingPlace: keepingPlace,
     assigneePicker: assigneePicker, deptPicker: deptPicker, deptCheckboxGroup: deptCheckboxGroup,
     tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
+    instructionReaders: instructionReaders, markInstructionRead: markInstructionRead,
     formatMentions: formatMentions, extractMentionedUserIds: extractMentionedUserIds, attachMentionAutocomplete: attachMentionAutocomplete,
     modal: modal, confirm: confirm, toast: toast, debounce: debounce,
     playNotificationSound: playNotificationSound

@@ -19,6 +19,9 @@ OC.store = (function () {
   var state = null;
   var listeners = [];
   var sseSource = null;
+  /* Tombstone: group IDs deleted this session so syncWithServer never
+     re-adds them from stale local state on the next sync tick. */
+  var _deletedGroupIds = {};
 
   /* ---- date helpers ---------------------------------------------------- */
   function iso(d) { return d.toISOString().slice(0, 10); }
@@ -168,7 +171,12 @@ OC.store = (function () {
           if (state && Array.isArray(state.groups) && state.groups.length > 0) {
             serverState.groups = serverState.groups || [];
             state.groups.forEach(function (lg) {
-              if (!serverState.groups.some(function (sg) { return sg.id === lg.id; })) {
+              /* Only push a local group to the server when it genuinely does not
+                 exist on the server yet (offline-created).  If the group is in
+                 the _deletedGroupIds set it was intentionally removed — skip it
+                 so the deletion is not undone by the next sync tick. */
+              if (!serverState.groups.some(function (sg) { return sg.id === lg.id; })
+                  && !_deletedGroupIds[lg.id]) {
                 serverState.groups.push(lg);
                 needsPush = true;
               }
@@ -670,6 +678,9 @@ OC.store = (function () {
 
     deleteGroup: function (id) {
       if (!state.groups) return;
+      /* Mark as deleted so syncWithServer never re-pushes this group
+         back to the server from stale local state. */
+      _deletedGroupIds[id] = true;
       state.groups = state.groups.filter(function (g) { return g.id !== id; });
     },
 

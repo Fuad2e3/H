@@ -370,7 +370,7 @@ OC.clients = (function () {
           h('div', { class: 'user-profile-title-row' }, [
             h('h2', { class: 'user-profile-name' }, clientName),
             h('span', { class: 'user-profile-badge' }, client.status === 'active' ? 'ACTIVE CLIENT' : 'PAUSED'),
-            client.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'ID: ' + client.client_id) : null,
+            client.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Client ID: ' + client.client_id) : null,
             client.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null
           ].filter(Boolean))
           /* two details next to the name — ID and Code — same as the grid
@@ -1151,7 +1151,7 @@ OC.clients = (function () {
                  glance, and the open-task count that actually changes day to
                  day. ID and phone number still show once the client is open. */
               h('div', { class: 'row', style: 'margin:8px 0 6px;gap:6px;flex-wrap:wrap;' }, [
-                (c.client_code || c.client_id) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Code: ' + (c.client_code || c.client_id)) : null,
+                (c.client_id || c.client_code) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Client ID: ' + (c.client_id || c.client_code)) : null,
                 h('span', { class: 'chip count' }, activeTaskCount + ' open tasks')
               ].filter(Boolean)),
               h('div', { class: 'row', style: 'justify-content:flex-end;margin-top:6px;' }, [

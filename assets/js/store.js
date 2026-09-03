@@ -3,7 +3,7 @@
    Owns every entity in section 5.0 of the OM SRS 001 specification:
    - Seeds a realistic dataset on first run
    - Synchronizes with dev3 manual API server (/api/*) in real-time
-   - Auto-refreshes every 5 seconds (5000ms) with network auto-reconnect
+   - Auto-refreshes every 2 seconds (2000ms) with network auto-reconnect
    - Fallback to localStorage for offline resilience
    - Every write goes through mutate(), which stamps the audit log (5.1)
    Originate Command · application
@@ -180,7 +180,7 @@ OC.store = (function () {
           if (state && Array.isArray(state.groups) && state.groups.length > 0) {
             serverState.groups = serverState.groups || [];
             state.groups.forEach(function (lg) {
-              if (!serverState.groups.some(function (sg) { return sg.id === lg.id || sg.name === lg.name; })) {
+              if (!serverState.groups.some(function (sg) { return sg.id === lg.id; })) {
                 serverState.groups.push(lg);
                 needsPush = true;
               }
@@ -216,6 +216,26 @@ OC.store = (function () {
                 if (lu.avatar && !su.avatar) { su.avatar = lu.avatar; needsPush = true; }
                 if (lu.scheduled_in && !su.scheduled_in) { su.scheduled_in = lu.scheduled_in; needsPush = true; }
                 if (lu.scheduled_out && !su.scheduled_out) { su.scheduled_out = lu.scheduled_out; needsPush = true; }
+              }
+            });
+          }
+          // Merge offline-created clients back so they aren't lost when the server state overwrites local state
+          if (state && Array.isArray(state.clients) && state.clients.length > 0) {
+            serverState.clients = serverState.clients || [];
+            state.clients.forEach(function (lc) {
+              if (!serverState.clients.some(function (sc) { return sc.id === lc.id; })) {
+                serverState.clients.push(lc);
+                needsPush = true;
+              }
+            });
+          }
+          // Merge offline-queued notifications back so unread counts survive a sync
+          if (state && Array.isArray(state.notifications) && state.notifications.length > 0) {
+            serverState.notifications = serverState.notifications || [];
+            state.notifications.forEach(function (ln) {
+              if (!serverState.notifications.some(function (sn) { return sn.id === ln.id; })) {
+                serverState.notifications.unshift(ln);
+                needsPush = true;
               }
             });
           }
@@ -297,14 +317,15 @@ OC.store = (function () {
   }
 
   function load() {
+    var defaultSeed = seed(); // single seed() call — reused for both reset and seedUsers check
     state = read();
     if (!state || state.version !== 1 || (state.departments && state.departments.some(function (d) { return d.name === 'Web Development' || (d.levels && d.levels.length > 2); }))) {
-      state = seed();
+      state = defaultSeed;
       write();
     }
     // Clean legacy removed users and ensure clean system admins are present
     if (state && Array.isArray(state.users)) {
-      var seedUsers = seed().users;
+      var seedUsers = defaultSeed.users; // reuse the already-computed seed — no second seed() call
       var modified = false;
       // Filter out removed legacy test users
       var filtered = state.users.filter(function (u) {
@@ -364,6 +385,7 @@ OC.store = (function () {
       if (modified) write();
     }
     syncWithServer();
+    initSSE(); // start SSE immediately in parallel with first sync poll — don't wait for fetch to succeed
     fetchClientIp();
     return state;
   }
@@ -434,7 +456,8 @@ OC.store = (function () {
   }
 
   function uid(prefix) {
-    return prefix + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    // 8 random chars (~2.8 trillion combinations) — much lower collision risk than 4 chars
+    return prefix + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   }
 
   /* ---- lookups --------------------------------------------------------- */
@@ -712,7 +735,7 @@ OC.store = (function () {
       state.notifications = state.notifications || [];
       userIds.forEach(function (uid_) {
         state.notifications.unshift({
-          id: 'nt-' + Date.now() + '-' + uid_ + Math.random().toString(36).slice(2, 5),
+          id: 'nt-' + Date.now() + '-' + uid_ + Math.random().toString(36).slice(2, 7),
           user: uid_, text: msg, ref: ref || null, at: at, read: false
         });
       });

@@ -628,23 +628,22 @@ OC.people = (function () {
     var canDelete = !!(OC.can && OC.can.canDeleteClient ? OC.can.canDeleteClient(user, client) : (user && user.admin));
     var canScope = Boolean(user && user.admin);
 
-    var deptSelect = OC.ui.select(
-      [{ value: '', label: 'All departments (visible to everyone)' }].concat(
-        (OC.store.state.departments || []).map(function (d) {
-          return { value: d.id, label: d.name };
-        })
-      ),
-      client.department || ''
-    );
+    var initialDepts = Array.isArray(client.departments) && client.departments.length
+      ? client.departments
+      : (client.department ? [client.department] : []);
+    var deptCheckboxes = OC.ui.deptCheckboxGroup(initialDepts);
 
-    function deptName(id) {
-      var d = id ? OC.store.department(id) : null;
-      return d ? d.name : '';
+    function deptNames(ids) {
+      if (!ids || !ids.length) return 'all departments';
+      return ids.map(function (id) {
+        var d = OC.store.department(id);
+        return d ? d.name : id;
+      }).join(', ');
     }
 
-    var deptRow = h('div', { class: 'client-dept-row' }, [
-      OC.ui.field('Visible to department (System Admin Only)', deptSelect, {
-        hint: 'Only this department\u2019s people will see this client. System admins always see every client.'
+    var deptRow = h('div', { class: 'client-dept-row', hidden: !initialDepts.length }, [
+      OC.ui.field('Visible to department(s) (System Admin Only)', deptCheckboxes.node, {
+        hint: 'Check departments allowed to see this client. Leave unchecked for all departments (visible to everyone).'
       })
     ]);
 
@@ -658,16 +657,23 @@ OC.people = (function () {
           var cCodeVal = clientCode.value.trim();
           var cContact = contact.value.trim() || cName;
 
+          var selectedDepts = canScope ? deptCheckboxes.getDepartments() : (client.departments || []);
+          var primaryDept = selectedDepts.length ? selectedDepts[0] : '';
+          var deptNote = '; visible to ' + deptNames(selectedDepts);
+
           OC.store.mutate({
             actor: user.id, action: 'client.update', target: cName,
-            detail: 'Updated details for ' + client.name
+            detail: 'Updated details for ' + client.name + deptNote
           }, function () {
             client.client_id = cIdVal;
             client.client_code = cCodeVal;
             client.name = cName;
             client.contact = cContact;
             client.status = status.value;
-            if (canScope) client.department = deptSelect.value || '';
+            if (canScope) {
+              client.departments = selectedDepts;
+              client.department = primaryDept;
+            }
           });
           OC.ui.toast('Client updated.');
           close();
@@ -691,13 +697,18 @@ OC.people = (function () {
 
     /* Unshifted to the left of "Delete client" */
     if (canScope) {
+      var btnLabel = 'Department';
+      if (initialDepts.length === 1) {
+        var dObj = OC.store.department(initialDepts[0]);
+        btnLabel = 'Dept: ' + (dObj ? dObj.name : initialDepts[0]);
+      } else if (initialDepts.length > 1) {
+        btnLabel = 'Depts (' + initialDepts.length + ')';
+      }
       actions.unshift({
-        label: 'Department' + (client.department ? ': ' + deptName(client.department) : ''),
+        label: btnLabel,
         onClick: function () {
-          if (deptSelect && deptSelect.focus) {
-            deptSelect.focus();
-            deptSelect.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
+          deptRow.hidden = false;
+          deptRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       });
     }

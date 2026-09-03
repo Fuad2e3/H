@@ -14,6 +14,8 @@ OC.app = (function () {
   function h() { return OC.ui.h.apply(null, arguments); }
 
   var route = 'dashboard';
+  /* the path under the current section, e.g. ['c-a12', 'todos'] */
+  var subPath = [];
   var AUTH_KEY = 'oc-authenticated-user';
   var isAuthenticated = false;
   /* set when an invite link has just been opened, so the login screen can
@@ -803,31 +805,48 @@ OC.app = (function () {
   }
 
   /* ---- routing ---------------------------------------------------------- */
-  function setHash(id) {
+  /* The hash is "<section>" or "<section>/<sub>/<sub>". Sections keep the URL
+     they always had; anything a view opens on top of itself — a client's
+     workspace, a Management tab — rides along after it, so a reload comes back
+     to the same place instead of the section's front page. */
+  function parseHash(raw) {
+    var parts = String(raw || '').split('/').filter(Boolean);
+    return { id: parts[0] || '', sub: parts.slice(1) };
+  }
+
+  function hashFor(id, sub) {
+    return '#' + id + (sub && sub.length ? '/' + sub.join('/') : '');
+  }
+
+  function setHash(id, sub) {
     if (typeof location === 'undefined') return;
+    var target = hashFor(id, sub);
     try {
-      if (history.replaceState) history.replaceState(null, '', '#' + id);
-      else location.hash = id;
+      if (history.replaceState) history.replaceState(null, '', target);
+      else location.hash = target;
     } catch (_) {
-      location.hash = id;
+      location.hash = target;
     }
   }
 
-  function go(id) {
+  function go(id, sub) {
     var asked = id;
     if (id === 'groups' || id === 'people' || id === 'reports') {
-      if (!canUseRoute('activities')) id = 'dashboard';
+      if (!canUseRoute('activities')) { id = 'dashboard'; sub = []; }
     } else if (!canUseRoute(id)) {
       id = 'dashboard';
+      sub = [];
     }
-    if (route === id) {
+    var nextSub = (sub || []).filter(Boolean).map(String);
+    if (route === id && subPath.join('/') === nextSub.join('/')) {
       /* the address named a section they may not open; put the bar back to the
          page they are actually looking at instead of leaving it lying */
-      if (asked !== id) setHash(id);
+      if (asked !== id) setHash(id, nextSub);
       return;
     }
     route = id;
-    setHash(id);
+    subPath = nextSub;
+    setHash(id, subPath);
     render();
   }
 
@@ -914,28 +933,36 @@ OC.app = (function () {
     applyTheme(null);
 
     if (typeof location !== 'undefined') {
-      var hash = location.hash.slice(1);
-      if (hash && hash.indexOf('claim=') === 0) {
+      var rawHash = location.hash.slice(1);
+      /* an invite token is not a path — read it before anything splits on "/" */
+      if (rawHash && rawHash.indexOf('claim=') === 0) {
         checkClaimToken();
-      } else if (hash === 'groups' || hash === 'people' || hash === 'reports') {
-        route = canUseRoute('activities') ? 'activities' : 'dashboard';
-      } else if (hash === 'profile' || hash === 'employee-portal') {
-        route = 'profile';
-      } else if (hash && ROUTES.some(function (r) { return r.id === hash; })) {
-        route = canUseRoute(hash) ? hash : 'dashboard';
+      } else {
+        var boot = parseHash(rawHash);
+        if (boot.id === 'groups' || boot.id === 'people' || boot.id === 'reports') {
+          route = canUseRoute('activities') ? 'activities' : 'dashboard';
+          subPath = route === 'activities' ? boot.sub : [];
+        } else if (boot.id === 'profile' || boot.id === 'employee-portal') {
+          route = 'profile';
+          subPath = boot.sub;
+        } else if (boot.id && ROUTES.some(function (r) { return r.id === boot.id; })) {
+          var allowed = canUseRoute(boot.id);
+          route = allowed ? boot.id : 'dashboard';
+          subPath = allowed ? boot.sub : [];
+        }
       }
 
       window.addEventListener('hashchange', function () {
-        var id = location.hash.slice(1);
-        if (id && id.indexOf('claim=') === 0) {
-          checkClaimToken();
-        } else if ((id === 'groups' || id === 'people' || id === 'reports') && route !== 'activities') {
-          go('activities');
-        } else if ((id === 'profile' || id === 'employee-portal') && route !== 'profile') {
-          go('profile');
-        } else if (id && ROUTES.some(function (r) { return r.id === id; }) && id !== route) {
-          go(id);
-        }
+        var raw = location.hash.slice(1);
+        if (raw && raw.indexOf('claim=') === 0) { checkClaimToken(); return; }
+        var next = parseHash(raw);
+        var id = next.id;
+        if (id === 'groups' || id === 'people' || id === 'reports') id = 'activities';
+        else if (id === 'employee-portal') id = 'profile';
+        if (!id) return;
+        var known = id === 'profile' || ROUTES.some(function (r) { return r.id === id; });
+        if (!known) return;
+        if (id !== route || next.sub.join('/') !== subPath.join('/')) go(id, next.sub);
       });
     }
 
@@ -946,6 +973,13 @@ OC.app = (function () {
   return {
     start: start,
     go: go,
+    /* the path under the current section, for views that open something on top
+       of themselves and want a reload to come back to it */
+    sub: function () { return subPath.slice(); },
+    setSub: function (parts) {
+      subPath = (parts || []).filter(Boolean).map(String);
+      setHash(route, subPath);
+    },
     logout: logout,
     openProfileModal: openProfileModal,
     renderLogin: function () {

@@ -11,6 +11,19 @@ OC.activities = (function () {
   'use strict';
 
   var activeTab = 'departments'; /* departments | accounts | reports | history | invites | groups */
+  var TABS = ['departments', 'accounts', 'reports', 'history', 'invites', 'groups'];
+
+  /* The open tab rides in the address as #activities/<tab>, so a reload comes
+     back to it instead of dropping onto Departments. */
+  function syncTabToUrl() {
+    if (OC.app && OC.app.setSub) OC.app.setSub(activeTab === 'departments' ? [] : [activeTab]);
+  }
+
+  function readTabFromUrl() {
+    if (!OC.app || !OC.app.sub) return;
+    var sub = OC.app.sub();
+    activeTab = (sub[0] && TABS.indexOf(sub[0]) > -1) ? sub[0] : 'departments';
+  }
   var groupSearchQuery = '';
   var groupFilterStatus = 'all'; /* all | active | archived | mine */
 
@@ -22,6 +35,9 @@ OC.activities = (function () {
   function render(host, rerender) {
     var h = OC.ui.h;
     var user = me();
+    /* the address decides which tab is open, so a reload or a pasted link
+       lands on the same one */
+    readTabFromUrl();
 
     var allGroups = OC.store.state.groups || [];
     var myGroups = allGroups.filter(function (g) { return (g.members || []).indexOf(user.id) > -1; });
@@ -52,6 +68,7 @@ OC.activities = (function () {
           title: 'Return to Management workspace',
           onClick: function () {
             activeTab = 'departments';
+            syncTabToUrl();
             render(host, rerender);
           }
         }, ['← Back to Management']),
@@ -95,6 +112,7 @@ OC.activities = (function () {
           'aria-pressed': String(activeTab === opt[0]),
           onClick: function () {
             activeTab = opt[0];
+            syncTabToUrl();
             render(host, rerender);
           }
         }, opt[1]);
@@ -106,6 +124,7 @@ OC.activities = (function () {
         title: 'Open full screen Groups & Discussions workspace',
         onClick: function () {
           activeTab = 'groups';
+          syncTabToUrl();
           render(host, rerender);
         }
       }, [OC.icon('chat'), 'Groups & Discussions (' + allGroups.length + ')']);

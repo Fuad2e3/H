@@ -15,6 +15,11 @@ OC.dashboard = (function () {
 
   var showUpcoming = true;
 
+  /* The instruction panel already stops at 12; the todo panel did not, so a
+     person with hundreds of open tasks paid for all of them on every render. */
+  var TODO_PAGE = 40;
+  var todoLimit = TODO_PAGE;
+
   function allMyTodos(user) {
     if (!user || !OC.store.state.todos) return [];
     return OC.store.state.todos.filter(function (t) {
@@ -327,14 +332,26 @@ OC.dashboard = (function () {
               style: 'margin-left:auto;',
               onClick: function () {
                 showUpcoming = !showUpcoming;
+                todoLimit = TODO_PAGE;
                 rerender();
               }
             }, showUpcoming ? 'Show Today & Overdue only' : 'Show Upcoming (' + upcoming.length + ')') : null
           ]),
           h('div', { class: 'panel-body', style: 'padding:12px;' }, todos.length
-            ? todos.map(function (t) {
-                return dashboardTodoRow(t, user, rerender);
-              })
+            ? (function () {
+                var rows = todos.slice(0, todoLimit).map(function (t) {
+                  return dashboardTodoRow(t, user, rerender);
+                });
+                if (todos.length > todoLimit) {
+                  rows.push(h('div', { class: 'list-more' }, [
+                    h('button', { class: 'btn small', type: 'button', onClick: function () {
+                      todoLimit += TODO_PAGE;
+                      rerender();
+                    } }, [OC.icon('down'), 'Show ' + (todos.length - todoLimit) + ' more'])
+                  ]));
+                }
+                return rows;
+              })()
             : h('div', { class: 'empty' }, [OC.icon('check'), 'Nothing assigned to you right now.']))
         ]),
 

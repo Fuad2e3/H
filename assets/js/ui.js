@@ -1217,7 +1217,9 @@ OC.ui = (function () {
             var at = chosen.indexOf(c.id);
             if (e.target.checked && at === -1) chosen.push(c.id);
             if (!e.target.checked && at > -1) chosen.splice(at, 1);
-            render();
+            /* chips only — rebuilding the list under the pointer swallows the
+               click, see the note in assigneePicker */
+            renderChips();
             if (onChange) onChange(getClients());
           }
         });
@@ -1330,7 +1332,9 @@ OC.ui = (function () {
             var at = chosen.indexOf(d.id);
             if (e.target.checked && at === -1) chosen.push(d.id);
             if (!e.target.checked && at > -1) chosen.splice(at, 1);
-            render();
+            /* chips only — rebuilding the list under the pointer swallows the
+               click, see the note in assigneePicker */
+            renderChips();
             if (onChange) onChange(getDepartments());
           }
         });
@@ -1464,7 +1468,14 @@ OC.ui = (function () {
             var at = chosen.indexOf(val);
             if (e.target.checked && at === -1) chosen.push(val);
             if (!e.target.checked && at > -1) chosen.splice(at, 1);
-            render();
+            /* Only the chips are redrawn. The list must NOT be rebuilt here:
+               each checkbox sits inside the <label> that wraps it, so the click
+               that fired this change is still travelling, and replacing the row
+               under it lands the label's activation on a detached node — which
+               toggled the tick straight back off and swallowed the click. The
+               browser has already set the checkbox correctly; only the chips
+               above the list are out of date. */
+            renderChips();
             if (onChange) onChange(getAssignees());
           }
         });

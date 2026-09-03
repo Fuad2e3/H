@@ -4562,6 +4562,13 @@ dialog.modal.fallback {
   box-shadow: 0 0 0 1px var(--rule-strong) inset;
 }
 
+/* the "Show more" row that ends a capped list */
+.list-more {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 4px;
+}
+
 /* the Colour toolbar button and the swatch strip it drops down */
 .md-color-picker {
   position: relative;

@@ -18,6 +18,22 @@ OC.clients = (function () {
   var filterStatus = 'all'; /* all | active | paused */
   var activePortalClientId = null;
   var activePortalTab = 'report'; /* report | todos | instructions | details */
+
+  var PORTAL_TABS = ['details', 'todos', 'instructions', 'report'];
+
+  /* The open workspace and its tab live in the address as #clients/<id>/<tab>,
+     so a reload comes back to the workspace instead of the client list. */
+  function syncPortalToUrl() {
+    if (!OC.app || !OC.app.setSub) return;
+    OC.app.setSub(activePortalClientId ? [activePortalClientId, activePortalTab] : []);
+  }
+
+  function readPortalFromUrl() {
+    if (!OC.app || !OC.app.sub) return;
+    var sub = OC.app.sub();
+    activePortalClientId = sub[0] || null;
+    if (sub[1] && PORTAL_TABS.indexOf(sub[1]) > -1) activePortalTab = sub[1];
+  }
   var activeTimeframe = 'month'; /* day | month | year | all */
   var todoFilterState = 'all'; /* all | open | progress | done | blocked */
   var isDetailsEditing = false; /* view mode vs edit mode in Details tab */
@@ -144,6 +160,7 @@ OC.clients = (function () {
               });
               OC.ui.toast('Client "' + currentLabel + '" deleted.');
               activePortalClientId = null;
+              syncPortalToUrl();
               // Always navigate to the list after deletion — never call onDone which may re-render the deleted client's portal
               var host = document.getElementById('page');
               if (host) render(host);
@@ -370,6 +387,7 @@ OC.clients = (function () {
           class: 'portal-nav-btn' + (isActive ? ' active' : ''),
           onClick: function () {
             activePortalTab = item.id;
+            syncPortalToUrl();
             renderClientPortal(host, client, onBack);
           }
         }, [
@@ -914,6 +932,9 @@ OC.clients = (function () {
   function render(host) {
     var h = OC.ui.h;
     var user = me();
+    /* the address is the source of truth for which workspace is open, so a
+       reload, a back button, or a pasted link all land in the same place */
+    readPortalFromUrl();
     var clients = (OC.can && OC.can.visibleClients)
       ? OC.can.visibleClients(user)
       : (OC.store.state.clients || []);
@@ -925,10 +946,12 @@ OC.clients = (function () {
     if (activeClient && OC.can && OC.can.seeClient && !OC.can.seeClient(user, activeClient)) {
       activeClient = null;
       activePortalClientId = null;
+      syncPortalToUrl();
     }
     if (activeClient) {
       renderClientPortal(host, activeClient, function () {
         activePortalClientId = null;
+        syncPortalToUrl();
         render(host);
       });
       return;
@@ -1032,6 +1055,7 @@ OC.clients = (function () {
               onClick: function () {
                 activePortalClientId = c.id;
                 isDetailsEditing = false;
+                syncPortalToUrl();
                 render(host);
               }
             }, [
@@ -1071,6 +1095,7 @@ OC.clients = (function () {
 
   function openClientPortal(clientId) {
     activePortalClientId = clientId;
+    syncPortalToUrl();
     var host = document.getElementById('page');
     if (host) render(host);
   }

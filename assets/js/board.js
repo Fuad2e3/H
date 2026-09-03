@@ -26,6 +26,23 @@ OC.board = (function () {
   var showArchived = false;
   var panel = 'todos';           /* small screens only */
 
+  /* Both panels used to build a row for every todo and every instruction the
+     person could see. Each row carries a comment thread and a reactions bar, so
+     a busy workspace was minting tens of thousands of nodes on every render and
+     every click paid for it. Only a screenful is built; "Show more" adds
+     another. The counts in the panel heads still report the true totals. */
+  var TODO_PAGE = 60, NOTE_PAGE = 40;
+  var todoLimit = TODO_PAGE, noteLimit = NOTE_PAGE;
+
+  function resetListLimits() { todoLimit = TODO_PAGE; noteLimit = NOTE_PAGE; }
+
+  function showMoreRow(remaining, onMore) {
+    return h('div', { class: 'list-more' }, [
+      h('button', { class: 'btn small', type: 'button', onClick: onMore },
+        [OC.icon('down'), 'Show ' + remaining + ' more'])
+    ]);
+  }
+
   function me() { return OC.store.user(OC.store.session()); }
 
   /* the client filter only offers clients this person is allowed to see */
@@ -127,7 +144,7 @@ OC.board = (function () {
       : OC.store.state.departments.filter(function (d) { return OC.can.inDept(user, d.id); });
 
     function set(key) {
-      return function (e) { filters[key] = e.target.value; rerender(); };
+      return function (e) { filters[key] = e.target.value; resetListLimits(); rerender(); };
     }
 
     var active = Object.keys(filters).filter(function (k) { return filters[k]; }).length;
@@ -829,7 +846,9 @@ OC.board = (function () {
         (Array.isArray(note.departments) && note.departments.length > 1)
           ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, note.departments.map(OC.ui.deptChip))
           : OC.ui.deptChip(note.department),
-        note.tags.map(OC.ui.tagChip)
+        /* a notice that arrives from the backend without tags must not take
+           the whole board down with it */
+        (note.tags || []).map(OC.ui.tagChip)
       ]),
       h('div', { class: 'readers' }, readers.length
         ? 'Read by ' + readers.length + ': ' + readers.join(', ')
@@ -1077,14 +1096,30 @@ OC.board = (function () {
         ])
       ]),
       h('div', { class: 'panel-body scroll' }, todos.length
-        ? groupTodos(todos).map(function (bucket) {
-            return h('div', { class: 'stack' }, [
-              h('div', { class: 'group-head' }, [bucket.key, h('span', { class: 'n push' }, bucket.items.length)]),
-              bucket.items
-                .sort(function (a, b) { return (a.due || '').localeCompare(b.due || ''); })
-                .map(todoItem)
-            ]);
-          })
+        ? (function () {
+            var buckets = groupTodos(todos);
+            var nodes = [];
+            var shown = 0;
+            for (var bi = 0; bi < buckets.length && shown < todoLimit; bi++) {
+              var bucket = buckets[bi];
+              var ordered = bucket.items.slice().sort(function (a, b) {
+                return (a.due || '').localeCompare(b.due || '');
+              });
+              var slice = ordered.slice(0, todoLimit - shown);
+              shown += slice.length;
+              nodes.push(h('div', { class: 'stack' }, [
+                h('div', { class: 'group-head' }, [bucket.key, h('span', { class: 'n push' }, bucket.items.length)]),
+                slice.map(todoItem)
+              ]));
+            }
+            if (todos.length > shown) {
+              nodes.push(showMoreRow(todos.length - shown, function () {
+                todoLimit += TODO_PAGE;
+                rerender();
+              }));
+            }
+            return nodes;
+          })()
         : h('div', { class: 'empty' }, [OC.icon('filter'), 'No todos match these filters.']))
     ]);
 
@@ -1099,7 +1134,16 @@ OC.board = (function () {
         ])
       ]),
       h('div', { class: 'panel-body scroll' }, notes.length
-        ? notes.map(function (n) { return instructionItem(n, rerender); })
+        ? (function () {
+            var nodes = notes.slice(0, noteLimit).map(function (n) { return instructionItem(n, rerender); });
+            if (notes.length > noteLimit) {
+              nodes.push(showMoreRow(notes.length - noteLimit, function () {
+                noteLimit += NOTE_PAGE;
+                rerender();
+              }));
+            }
+            return nodes;
+          })()
         : h('div', { class: 'empty' }, [OC.icon('filter'), 'No instructions match these filters.']))
     ]);
 

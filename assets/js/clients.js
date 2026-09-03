@@ -318,6 +318,24 @@ OC.clients = (function () {
     return html.join('');
   }
 
+  /* Detect whether a stored string is HTML (produced by the new WYSIWYG
+     editor) or plain markdown (produced by the old textarea editor).
+     We look for a leading HTML tag — any string that begins with a real
+     HTML open-tag is treated as HTML; everything else falls back to the
+     markdown renderer so old client notes display correctly. */
+  function isHtmlContent(s) {
+    return /^\s*<[a-zA-Z]/.test(s);
+  }
+
+  /* Single entry-point for the view mode: routes to the right renderer
+     depending on whether the stored content is HTML or old markdown. */
+  function renderClientDetailsHtml(raw) {
+    if (!raw || !raw.trim()) {
+      return '<p class="muted">No details or notes added yet. Use the editor to add customized notes, specifications, or contracts.</p>';
+    }
+    return isHtmlContent(raw) ? raw : renderMarkdownPreview(raw);
+  }
+
   /* ---- Dedicated Client Portal View -------------------------------------- */
   function renderClientPortal(host, client, onBack) {
     var h = OC.ui.h;
@@ -753,7 +771,7 @@ OC.clients = (function () {
             hasDetails
               ? h('div', {
                   class: 'client-details-text-view',
-                  html: renderMarkdownPreview(client.details || client.notes)
+                  html: renderClientDetailsHtml(client.details || client.notes)
                 })
               : h('div', { style: 'text-align:center;padding:36px 20px;' }, [
                   h('p', { class: 'muted', style: 'font-size:14px;margin-bottom:14px;' }, 'No customized details or documentation added for this client yet.'),
@@ -769,213 +787,103 @@ OC.clients = (function () {
           ])
         ]);
       } else {
-        /* EDIT MODE: Rich markdown text editor with interactive formatting toolbar */
-        var editorText = h('textarea', {
-          class: 'client-rich-textarea',
-          style: 'width:100%;min-height:300px;padding:16px;background:var(--card-bg-alt);border:1px solid var(--rule);border-radius:var(--r1);color:var(--ink);font-size:14px;line-height:1.65;resize:vertical;outline:none;font-family:inherit;box-shadow:inset 0 1px 3px rgba(0,0,0,0.3);',
-          placeholder: 'Write any client notes, requirements, specifications, contracts, or details here...',
-          'aria-label': 'Client Notes'
-        });
-        editorText.value = client.details || client.notes || '';
+        /* ── EDIT MODE: WYSIWYG contenteditable editor ──────────────────────
+           The editor IS the rendered view — no textarea, no raw markdown, no
+           separate preview box.  Select text, click Bold → it goes bold.
+           Data is stored as HTML; old markdown strings are converted on first
+           load so existing client notes migrate transparently.             */
 
-        /* A textarea can only ever show literal characters — clicking Bold
-           makes the box read "**word**", not word in bold, because that is
-           all a plain text box is capable of. This live preview is what
-           makes the toolbar actually feel like "select it, click the tool,
-           it's done": it re-renders through the exact same function the
-           saved view uses, on every keystroke and after every toolbar click,
-           so a bold word looks bold, a link looks like a link, and a colour
-           shows as that colour immediately — no need to save first to see
-           it. */
-        var livePreview = h('div', {
-          class: 'client-details-text-view client-details-live-preview',
-          'aria-live': 'polite'
-        });
-        function syncPreview() {
-          var val = editorText.value;
-          livePreview.innerHTML = val.trim()
-            ? renderMarkdownPreview(val)
-            : '<p class="muted" style="margin:0;">Nothing written yet — the preview appears here as you type.</p>';
+        var editorDiv = document.createElement('div');
+        editorDiv.className = 'client-wysiwyg-editor';
+        editorDiv.contentEditable = 'true';
+        editorDiv.setAttribute('aria-label', 'Client Notes');
+        editorDiv.setAttribute('spellcheck', 'true');
+        editorDiv.setAttribute('data-placeholder', 'Write any client notes, requirements, specifications, contracts, or details here…');
+
+        /* Populate: if the stored value is old markdown convert it to HTML
+           so the editor opens in formatted form even for legacy clients. */
+        var storedRaw = (client.details || client.notes || '').trim();
+        editorDiv.innerHTML = storedRaw
+          ? (isHtmlContent(storedRaw) ? storedRaw : renderMarkdownPreview(storedRaw))
+          : '';
+
+        /* ── toolbar helpers ──────────────────────────────────────────────── */
+
+        /* Keep focus+selection inside the editor when a button is pressed.
+           Without this, mousedown on a button blurs the editor and the
+           selection is gone before execCommand ever fires. */
+        function noBlur(e) { e.preventDefault(); }
+
+        function cmd(command, value) {
+          editorDiv.focus();
+          document.execCommand(command, false, value || null);
         }
-        editorText.addEventListener('input', syncPreview);
-        syncPreview();
 
-        /* Drops [words](https://) in and selects the visible words, the same
-           way every other button leaves its own placeholder selected. The
-           caret used to sit inside the URL instead, ready to type the
-           address straight away — but that left an unprotected empty
-           selection there, and clicking any other tool next (Colour, Bold,
-           anything) inserted its own placeholder into the middle of the URL
-           rather than at the words, splitting it in two. Selecting the words
-           means the next click — whatever it is — wraps them correctly, and
-           composes: Link then Colour makes a coloured link, not broken
-           syntax. The address still needs a person to type it, over the
-           "https://" placeholder inside the parentheses. */
+        /* Wrap the current selection in a <span style="color:…">.  If the
+           selection is already wrapped in a colour span the colour is swapped
+           instead of nested. */
+        function applyColor(cssValue) {
+          editorDiv.focus();
+          document.execCommand('styleWithCSS', false, true);
+          document.execCommand('foreColor', false, cssValue);
+          document.execCommand('styleWithCSS', false, false);
+        }
+
+        /* Insert a checklist item at the cursor / replacing the selection. */
+        function insertChecklist() {
+          editorDiv.focus();
+          var sel = window.getSelection();
+          if (!sel || !sel.rangeCount) return;
+          var range = sel.getRangeAt(0);
+          range.deleteContents();
+          var label = document.createElement('label');
+          label.style.cssText = 'display:flex;align-items:center;gap:6px;margin:4px 0;cursor:pointer;';
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          var span = document.createElement('span');
+          span.textContent = 'Task item';
+          label.appendChild(cb); label.appendChild(span);
+          range.insertNode(label);
+          /* move caret inside the span */
+          range.setStart(span, 0); range.collapse(true);
+          sel.removeAllRanges(); sel.addRange(range);
+        }
+
+        /* Insert a link around the selection (or a placeholder). */
         function insertLink() {
-          var start = editorText.selectionStart || 0;
-          var end = editorText.selectionEnd || 0;
-          var text = editorText.value;
-          var label = text.substring(start, end) || 'link text';
-          var snippet = '[' + label + '](https://)';
-          editorText.value = text.substring(0, start) + snippet + text.substring(end);
-          editorText.focus();
-          editorText.setSelectionRange(start + 1, start + 1 + label.length);
-          syncPreview();
+          editorDiv.focus();
+          var sel = window.getSelection();
+          var label = (sel && sel.toString().trim()) || 'link text';
+          var url = window.prompt('Enter URL:', 'https://');
+          if (!url) return;
+          document.execCommand('insertHTML', false,
+            '<a href="' + url + '" target="_blank" rel="noopener noreferrer" class="md-link">' + label + '</a>');
         }
 
-        /* Colours the selection. If those words are already coloured — whether the
-           tags sit just outside the selection or the selection is the whole
-           coloured run — the existing colour is swapped instead of a second one
-           being nested around it, so picking again recolours rather than layers. */
-        function applyColor(name) {
-          var start = editorText.selectionStart || 0;
-          var end = editorText.selectionEnd || 0;
-          var text = editorText.value;
-          var before = text.substring(0, start);
-          var selected = text.substring(start, end);
-          var after = text.substring(end);
-
-          /* {blue}[selected]{/} — the tags sit immediately either side */
-          var openTag = before.match(/\{([a-z]+)\}$/i);
-          if (openTag && MD_COLORS[openTag[1].toLowerCase()] && after.indexOf('{/}') === 0) {
-            var head = before.substring(0, before.length - openTag[0].length) + '{' + name + '}';
-            editorText.value = head + selected + after;
-            editorText.focus();
-            editorText.setSelectionRange(head.length, head.length + selected.length);
-            syncPreview();
-            return;
-          }
-
-          /* [{blue}words{/}] — the selection is the whole coloured run */
-          var wholeRun = selected.match(/^\{([a-z]+)\}([\s\S]*)\{\/\}$/i);
-          if (wholeRun && MD_COLORS[wholeRun[1].toLowerCase()]) {
-            var swapped = '{' + name + '}' + wholeRun[2] + '{/}';
-            editorText.value = before + swapped + after;
-            editorText.focus();
-            editorText.setSelectionRange(start, start + swapped.length);
-            syncPreview();
-            return;
-          }
-
-          insertFormatting('{' + name + '}', '{/}');
-        }
-
-        /* Inline formatter (Bold, Italic, Code) — wraps the selection in
-           prefix+suffix markers.  If the selection is already wrapped the
-           markers are stripped instead (toggle-off). Falls back to the
-           word 'text' when nothing is selected. */
-        function applyInline(prefix, suffix) {
-          var start = editorText.selectionStart || 0;
-          var end   = editorText.selectionEnd   || 0;
-          var text  = editorText.value;
-          var sel   = text.substring(start, end);
-          var suf   = suffix || prefix;  /* Bold uses same marker both sides */
-
-          /* Toggle-off: selection IS the wrapped run, e.g. **word** */
-          if (sel.length > prefix.length + suf.length
-              && sel.substring(0, prefix.length) === prefix
-              && sel.substring(sel.length - suf.length) === suf) {
-            var inner = sel.substring(prefix.length, sel.length - suf.length);
-            editorText.value = text.substring(0, start) + inner + text.substring(end);
-            editorText.focus();
-            editorText.setSelectionRange(start, start + inner.length);
-            syncPreview();
-            return;
-          }
-          /* Toggle-off: markers sit just outside the selection */
-          var before = text.substring(0, start);
-          var after  = text.substring(end);
-          if (before.endsWith(prefix) && after.startsWith(suf)) {
-            editorText.value = before.slice(0, -prefix.length) + (sel || 'text') + after.slice(suf.length);
-            editorText.focus();
-            editorText.setSelectionRange(start - prefix.length, start - prefix.length + (sel || 'text').length);
-            syncPreview();
-            return;
-          }
-          /* Normal wrap */
-          var label   = sel || 'text';
-          var wrapped = prefix + label + suf;
-          editorText.value = text.substring(0, start) + wrapped + text.substring(end);
-          editorText.focus();
-          editorText.setSelectionRange(start + prefix.length, start + prefix.length + label.length);
-          syncPreview();
-        }
-
-        /* Line-level formatter (H2, H3, List, Checklist, Quote) — prepends
-           the prefix to every line in the selection.  If every selected line
-           already starts with the prefix the prefix is stripped (toggle-off). */
-        function applyLinePrefix(prefix) {
-          var start = editorText.selectionStart || 0;
-          var end   = editorText.selectionEnd   || 0;
-          var text  = editorText.value;
-
-          /* Expand selection to cover whole lines */
-          var lineStart = text.lastIndexOf('\n', start - 1) + 1;
-          var lineEnd   = text.indexOf('\n', end);
-          if (lineEnd === -1) lineEnd = text.length;
-
-          var block = text.substring(lineStart, lineEnd);
-          var lines = block.split('\n');
-
-          /* Toggle-off when every line already has the prefix */
-          var allPrefixed = lines.every(function (l) {
-            return l.startsWith(prefix);
-          });
-
-          var newLines;
-          if (allPrefixed) {
-            newLines = lines.map(function (l) { return l.slice(prefix.length); });
-          } else {
-            newLines = lines.map(function (l) {
-              return l.startsWith(prefix) ? l : prefix + l;
-            });
-          }
-
-          var newBlock = newLines.join('\n');
-          editorText.value = text.substring(0, lineStart) + newBlock + text.substring(lineEnd);
-          editorText.focus();
-          editorText.setSelectionRange(lineStart, lineStart + newBlock.length);
-          syncPreview();
-        }
-
-        /* Legacy helper kept for colour-tag use and insertLink */
-        function insertFormatting(prefix, suffix) {
-          var start = editorText.selectionStart || 0;
-          var end   = editorText.selectionEnd   || 0;
-          var text  = editorText.value;
-          var sel   = text.substring(start, end);
-          var replacement = prefix + (sel || 'text') + (suffix || '');
-          editorText.value = text.substring(0, start) + replacement + text.substring(end);
-          editorText.focus();
-          editorText.setSelectionRange(start + prefix.length, start + replacement.length - (suffix ? suffix.length : 0));
-          syncPreview();
-        }
-
-        /* The colour picker: a swatch strip that drops out of the Colour button,
-           so every colour the renderer understands is one click away instead of
-           blue being the only one on the toolbar. */
+        /* ── colour picker ────────────────────────────────────────────────── */
         var colorSwatch = h('span', { class: 'md-color-swatch' });
-        var colorMenu = h('div', { class: 'md-color-menu', hidden: true });
+        var colorMenu   = h('div',  { class: 'md-color-menu', hidden: true });
         var colorBtn;
 
         function closeColorMenu() {
           colorMenu.hidden = true;
           if (colorBtn) colorBtn.setAttribute('aria-expanded', 'false');
           document.removeEventListener('mousedown', onDocDownForColor, true);
-          document.removeEventListener('keydown', onEscForColor, true);
+          document.removeEventListener('keydown',   onEscForColor,     true);
         }
         function onDocDownForColor(e) {
-          if (!colorMenu.contains(e.target) && !(colorBtn && colorBtn.contains(e.target))) closeColorMenu();
+          if (!colorMenu.contains(e.target) && !(colorBtn && colorBtn.contains(e.target)))
+            closeColorMenu();
         }
         function onEscForColor(e) {
-          if (e.key === 'Escape') { closeColorMenu(); editorText.focus(); }
+          if (e.key === 'Escape') { closeColorMenu(); editorDiv.focus(); }
         }
         function toggleColorMenu() {
           if (colorMenu.hidden) {
             colorMenu.hidden = false;
             if (colorBtn) colorBtn.setAttribute('aria-expanded', 'true');
             document.addEventListener('mousedown', onDocDownForColor, true);
-            document.addEventListener('keydown', onEscForColor, true);
+            document.addEventListener('keydown',   onEscForColor,     true);
           } else {
             closeColorMenu();
           }
@@ -985,11 +893,19 @@ OC.clients = (function () {
           colorMenu.appendChild(h('button', {
             class: 'md-color-option',
             type: 'button',
-            title: 'Colour the selected words ' + c.label.toLowerCase() + ' — {' + c.name + '}words{/}',
+            title: 'Colour text ' + c.label,
+            onMousedown: noBlur,
             onClick: function () {
               colorSwatch.style.background = c.css;
               closeColorMenu();
-              applyColor(c.name);
+              /* execCommand foreColor needs a concrete hex/rgb value;
+                 resolve the CSS variable to its computed colour first. */
+              var tmp = document.createElement('span');
+              tmp.style.color = c.css;
+              document.body.appendChild(tmp);
+              var computed = window.getComputedStyle(tmp).color;
+              document.body.removeChild(tmp);
+              applyColor(computed);
             }
           }, [
             h('span', { class: 'md-color-swatch', style: 'background:' + c.css + ';' }),
@@ -997,41 +913,40 @@ OC.clients = (function () {
           ]));
         });
 
-        /* Prevent button mousedown from stealing focus (and thus the
-           selection) away from the textarea.  This single call on each
-           button is what makes "select text → click tool → formatted"
-           work reliably: the selection is still intact when onClick fires. */
-        function noBlur(e) { e.preventDefault(); }
-
         colorBtn = h('button', {
           class: 'client-editor-tool-btn', type: 'button',
-          title: 'Colour text — pick a colour, then the selected words are wrapped in {colour}words{/}.',
+          title: 'Colour selected text',
           'aria-haspopup': 'true', 'aria-expanded': 'false',
           onMousedown: noBlur,
           onClick: function () { toggleColorMenu(); }
         }, [colorSwatch, 'Colour', h('span', { class: 'md-color-caret', 'aria-hidden': 'true' }, '\u25be')]);
 
-        /* Also prevent mousedown on each colour swatch so the menu click
-           itself does not blur the textarea before applyColor runs. */
         colorMenu.addEventListener('mousedown', noBlur);
 
+        /* ── toolbar ──────────────────────────────────────────────────────── */
         var toolbar = h('div', { class: 'client-editor-toolbar' }, [
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold (**text**)',         onMousedown: noBlur, onClick: function () { applyInline('**', '**'); } }, 'Bold'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Italic (*text*)',        onMousedown: noBlur, onClick: function () { applyInline('*', '*'); } }, 'Italic'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 2 (## Title)',  onMousedown: noBlur, onClick: function () { applyLinePrefix('## '); } }, 'H2'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 3 (### Title)', onMousedown: noBlur, onClick: function () { applyLinePrefix('### '); } }, 'H3'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bullet List (- item)', onMousedown: noBlur, onClick: function () { applyLinePrefix('- '); } }, 'List'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Task Checkbox (- [ ] task)', onMousedown: noBlur, onClick: function () { applyLinePrefix('- [ ] '); } }, 'Checklist'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Code (`code`)',         onMousedown: noBlur, onClick: function () { applyInline('`', '`'); } }, 'Code'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote (> quote)',       onMousedown: noBlur, onClick: function () { applyLinePrefix('> '); } }, 'Quote'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold',      onMousedown: noBlur, onClick: function () { cmd('bold'); } }, 'Bold'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Italic',    onMousedown: noBlur, onClick: function () { cmd('italic'); } }, 'Italic'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 2', onMousedown: noBlur, onClick: function () { cmd('formatBlock', 'h2'); } }, 'H2'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 3', onMousedown: noBlur, onClick: function () { cmd('formatBlock', 'h3'); } }, 'H3'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bullet List', onMousedown: noBlur, onClick: function () { cmd('insertUnorderedList'); } }, 'List'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Checklist', onMousedown: noBlur, onClick: function () { insertChecklist(); } }, 'Checklist'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Code',      onMousedown: noBlur, onClick: function () {
+            var sel = window.getSelection();
+            var txt = sel ? sel.toString() : '';
+            document.execCommand('insertHTML', false, '<code>' + (txt || 'code') + '</code>');
+          } }, 'Code'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote',     onMousedown: noBlur, onClick: function () { cmd('formatBlock', 'blockquote'); } }, 'Quote'),
           h('button', {
-            class: 'client-editor-tool-btn', type: 'button',
-            title: 'Hidden link — [visible words](https://the-target). The address stays hidden behind the words, which render red.',
+            class: 'client-editor-tool-btn', type: 'button', title: 'Insert link',
             onMousedown: noBlur,
             onClick: function () { insertLink(); }
           }, [OC.icon('link'), 'Link']),
           h('div', { class: 'md-color-picker' }, [colorBtn, colorMenu]),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear Text', onMousedown: noBlur, onClick: function () { editorText.value = ''; editorText.focus(); syncPreview(); } }, [OC.icon('trash'), 'Clear']),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear all text',
+            onMousedown: noBlur,
+            onClick: function () { if (window.confirm('Clear all content?')) { editorDiv.innerHTML = ''; editorDiv.focus(); } }
+          }, [OC.icon('trash'), 'Clear']),
         ]);
 
         detailsContent = h('div', { class: 'portal-view-content' }, [
@@ -1039,7 +954,7 @@ OC.clients = (function () {
             h('div', {}, [
               h('h2', { class: 'portal-view-title' }, [OC.icon('edit'), 'Edit Client Details']),
               h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-                'Write notes for ' + clientName + ' and click "Save Details" when finished.')
+                'Write notes for ' + clientName + ' and click “Save Details” when finished.')
             ]),
             h('div', { class: 'row', style: 'gap:8px;' }, [
               h('button', {
@@ -1055,18 +970,15 @@ OC.clients = (function () {
                 type: 'button',
                 style: 'font-weight:700;',
                 onClick: function () {
-                  var val = editorText.value.trim();
+                  var val = editorDiv.innerHTML;
                   OC.store.mutate({
                     actor: user.id, action: 'client.details.update', target: clientName,
                     detail: 'Updated documentation notes for ' + clientName
                   }, function () {
                     client.details = val;
-                    client.notes = val;
+                    client.notes   = val;
                     var target = (OC.store.state.clients || []).find(function (c) { return c.id === client.id; });
-                    if (target) {
-                      target.details = val;
-                      target.notes = val;
-                    }
+                    if (target) { target.details = val; target.notes = val; }
                   });
                   OC.ui.toast('Client details saved successfully.');
                   isDetailsEditing = false;
@@ -1077,9 +989,7 @@ OC.clients = (function () {
           ]),
           h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;display:flex;flex-direction:column;gap:12px;' }, [
             toolbar,
-            editorText,
-            h('div', { class: 'client-editor-preview-label' }, [OC.icon('check'), 'Preview — this is exactly how it will look once saved']),
-            livePreview
+            editorDiv
           ])
         ]);
       }

@@ -266,12 +266,19 @@ OC.clients = (function () {
 
   function renderMarkdownPreview(rawText) {
     if (!rawText) return '<p class="muted">No details or notes added yet. Use the editor to add customized notes, specifications, or contracts.</p>';
-    var escaped = rawText
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
 
-    var lines = escaped.split('\n');
+    /* Escaping used to run once, up front, over the whole text — which turned
+       every "> quote" line's leading > into &gt; before the block parser
+       below ever got to look at it, so "> " could never match and Quote
+       silently fell through to an ordinary paragraph, forever, even after
+       Save. Block markers (##, - , > , …) are ASCII punctuation the parser
+       needs to see raw; only each line's actual content is escaped, right
+       where it is pulled out for rendering. */
+    function esc(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    var lines = String(rawText).split('\n');
     var html = [];
     var inList = false;
 
@@ -279,31 +286,31 @@ OC.clients = (function () {
       var trimmed = line.trim();
       if (trimmed.indexOf('### ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<h3>' + renderInline(trimmed.slice(4)) + '</h3>');
+        html.push('<h3>' + renderInline(esc(trimmed.slice(4))) + '</h3>');
       } else if (trimmed.indexOf('## ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<h2>' + renderInline(trimmed.slice(3)) + '</h2>');
+        html.push('<h2>' + renderInline(esc(trimmed.slice(3))) + '</h2>');
       } else if (trimmed.indexOf('# ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<h2>' + renderInline(trimmed.slice(2)) + '</h2>');
+        html.push('<h2>' + renderInline(esc(trimmed.slice(2))) + '</h2>');
       } else if (trimmed.indexOf('- [ ] ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><input type="checkbox" disabled /> <span>' + renderInline(trimmed.slice(6)) + '</span></div>');
+        html.push('<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><input type="checkbox" disabled /> <span>' + renderInline(esc(trimmed.slice(6))) + '</span></div>');
       } else if (trimmed.indexOf('- [x] ') === 0 || trimmed.indexOf('- [X] ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><input type="checkbox" checked disabled /> <span style="text-decoration:line-through;color:var(--text-secondary);">' + renderInline(trimmed.slice(6)) + '</span></div>');
+        html.push('<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><input type="checkbox" checked disabled /> <span style="text-decoration:line-through;color:var(--text-secondary);">' + renderInline(esc(trimmed.slice(6))) + '</span></div>');
       } else if (trimmed.indexOf('- ') === 0 || trimmed.indexOf('* ') === 0) {
         if (!inList) { html.push('<ul>'); inList = true; }
-        html.push('<li>' + renderInline(trimmed.slice(2)) + '</li>');
+        html.push('<li>' + renderInline(esc(trimmed.slice(2))) + '</li>');
       } else if (trimmed.indexOf('> ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<blockquote>' + renderInline(trimmed.slice(2)) + '</blockquote>');
+        html.push('<blockquote>' + renderInline(esc(trimmed.slice(2))) + '</blockquote>');
       } else if (!trimmed) {
         if (inList) { html.push('</ul>'); inList = false; }
         html.push('<br/>');
       } else {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<p style="margin:4px 0;">' + renderInline(line) + '</p>');
+        html.push('<p style="margin:4px 0;">' + renderInline(esc(line)) + '</p>');
       }
     });
 
@@ -763,8 +770,28 @@ OC.clients = (function () {
         });
         editorText.value = client.details || client.notes || '';
 
-        /* Drops [words](https://) in and leaves the caret on the address, so the
-           visible words stay put and only the hidden target is typed. */
+        /* A textarea can only ever show literal characters — clicking Bold
+           makes the box read "**word**", not word in bold, because that is
+           all a plain text box is capable of. This live preview is what
+           makes the toolbar actually feel like "select it, click the tool,
+           it's done": it re-renders through the exact same function the
+           saved view uses, on every keystroke and after every toolbar click,
+           so a bold word looks bold, a link looks like a link, and a colour
+           shows as that colour immediately — no need to save first to see
+           it. */
+        var livePreview = h('div', {
+          class: 'client-details-text-view client-details-live-preview',
+          'aria-live': 'polite'
+        });
+        function syncPreview() {
+          var val = editorText.value;
+          livePreview.innerHTML = val.trim()
+            ? renderMarkdownPreview(val)
+            : '<p class="muted" style="margin:0;">Nothing written yet — the preview appears here as you type.</p>';
+        }
+        editorText.addEventListener('input', syncPreview);
+        syncPreview();
+
         /* Drops [words](https://) in and selects the visible words, the same
            way every other button leaves its own placeholder selected. The
            caret used to sit inside the URL instead, ready to type the
@@ -785,6 +812,7 @@ OC.clients = (function () {
           editorText.value = text.substring(0, start) + snippet + text.substring(end);
           editorText.focus();
           editorText.setSelectionRange(start + 1, start + 1 + label.length);
+          syncPreview();
         }
 
         /* Colours the selection. If those words are already coloured — whether the
@@ -806,6 +834,7 @@ OC.clients = (function () {
             editorText.value = head + selected + after;
             editorText.focus();
             editorText.setSelectionRange(head.length, head.length + selected.length);
+            syncPreview();
             return;
           }
 
@@ -816,6 +845,7 @@ OC.clients = (function () {
             editorText.value = before + swapped + after;
             editorText.focus();
             editorText.setSelectionRange(start, start + swapped.length);
+            syncPreview();
             return;
           }
 
@@ -831,6 +861,7 @@ OC.clients = (function () {
           editorText.value = text.substring(0, start) + replacement + text.substring(end);
           editorText.focus();
           editorText.setSelectionRange(start + prefix.length, start + replacement.length - (suffix ? suffix.length : 0));
+          syncPreview();
         }
 
         /* The colour picker: a swatch strip that drops out of the Colour button,
@@ -901,7 +932,7 @@ OC.clients = (function () {
             onClick: function () { insertLink(); }
           }, [OC.icon('link'), 'Link']),
           h('div', { class: 'md-color-picker' }, [colorBtn, colorMenu]),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear Text', onClick: function () { editorText.value = ''; editorText.focus(); } }, [OC.icon('trash'), 'Clear']),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear Text', onClick: function () { editorText.value = ''; editorText.focus(); syncPreview(); } }, [OC.icon('trash'), 'Clear']),
         ]);
 
         detailsContent = h('div', { class: 'portal-view-content' }, [
@@ -947,7 +978,9 @@ OC.clients = (function () {
           ]),
           h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;display:flex;flex-direction:column;gap:12px;' }, [
             toolbar,
-            editorText
+            editorText,
+            h('div', { class: 'client-editor-preview-label' }, [OC.icon('check'), 'Preview — this is exactly how it will look once saved']),
+            livePreview
           ])
         ]);
       }
@@ -1145,6 +1178,9 @@ OC.clients = (function () {
   return {
     render: render,
     editClient: editClient,
-    openClientPortal: openClientPortal
+    openClientPortal: openClientPortal,
+    /* the same sanitising markdown renderer the client notes editor writes
+       with, so other surfaces can render the identical syntax the same way */
+    renderMarkdown: renderMarkdownPreview
   };
 })();

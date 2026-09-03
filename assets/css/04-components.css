@@ -4666,6 +4666,34 @@ dialog.modal.fallback {
   padding: 10px 0 4px;
 }
 
+/* the live preview under the client notes editor: a caption, then the same
+   rendered look as the saved view, so a bold word actually looks bold the
+   moment the tool is clicked, not just after Save */
+.client-editor-preview-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.client-editor-preview-label .icon {
+  width: 13px;
+  height: 13px;
+  color: var(--success);
+}
+.client-details-live-preview {
+  padding: 14px 16px;
+  background: var(--card-bg-alt);
+  border: 1px solid var(--rule);
+  border-radius: var(--r1);
+  min-height: 64px;
+}
+
 /* the Colour toolbar button and the swatch strip it drops down */
 .md-color-picker {
   position: relative;

@@ -17,7 +17,7 @@ OC.clients = (function () {
   var searchQuery = '';
   var filterStatus = 'all'; /* all | active | paused */
   var activePortalClientId = null;
-  var activePortalTab = 'report'; /* report | todos | instructions | details */
+  var activePortalTab = 'details'; /* report | todos | instructions | details */
 
   var PORTAL_TABS = ['details', 'todos', 'instructions', 'report'];
 
@@ -348,7 +348,6 @@ OC.clients = (function () {
             client.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'ID: ' + client.client_id) : null,
             client.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null
           ].filter(Boolean)),
-          h('div', { class: 'user-profile-role-line' }, 'Official Client Account · ' + clientTodos.length + ' Total Tasks Assigned (' + openTaskCount + ' Open)'),
           h('div', { class: 'user-profile-meta-line' }, [OC.icon('phone'), 'Client Number: ' + (client.client_number || client.contact || 'No phone recorded')])
         ])
       ]),
@@ -1065,13 +1064,13 @@ OC.clients = (function () {
                 h('h3', { style: 'margin:0;font-size:16px;color:var(--ink);' }, displayTitle),
                 h('span', { class: 'chip ' + (c.status === 'active' ? 'dept' : 'custom') + ' push' }, c.status)
               ]),
+              /* the card keeps two details — the code people recognize at a
+                 glance, and the open-task count that actually changes day to
+                 day. ID and phone number still show once the client is open. */
               h('div', { class: 'row', style: 'margin:8px 0 6px;gap:6px;flex-wrap:wrap;' }, [
-                c.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'ID: ' + c.client_id) : null,
-                c.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Code: ' + c.client_code) : null,
-                (c.client_number || c.contact) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, [OC.icon('phone'), (c.client_number || c.contact)]) : null,
+                (c.client_code || c.client_id) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Code: ' + (c.client_code || c.client_id)) : null,
                 h('span', { class: 'chip count' }, activeTaskCount + ' open tasks')
               ].filter(Boolean)),
-              h('p', { class: 'muted', style: 'font-size:13px;margin:6px 0 4px;' }, 'Client number: ' + (c.client_number || c.contact || 'N/A')),
               h('div', { class: 'row', style: 'justify-content:flex-end;margin-top:6px;' }, [
                 h('span', { style: 'font-size:12px;color:var(--blueprint);font-weight:600;' }, 'Open Client Portal & Analytics →')
               ])

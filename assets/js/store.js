@@ -182,6 +182,19 @@ OC.store = (function () {
               }
             });
           }
+          /* Strip any tombstoned groups from serverState before we adopt it.
+             This handles the race window where the 1-second sync fires BEFORE
+             the async delete push has reached the server, so the server still
+             returns the old group — without this strip, state = serverState
+             would put the deleted group back into local state and re-show it
+             in the UI even though the user just deleted it. */
+          if (serverState.groups) {
+            var tombstoneCount = serverState.groups.filter(function (g) { return _deletedGroupIds[g.id]; }).length;
+            if (tombstoneCount > 0) {
+              serverState.groups = serverState.groups.filter(function (g) { return !_deletedGroupIds[g.id]; });
+              needsPush = true; /* push the corrected state so server DB is updated */
+            }
+          }
           if (state && Array.isArray(state.attendance) && state.attendance.length > 0) {
             serverState.attendance = serverState.attendance || [];
             state.attendance.forEach(function (la) {

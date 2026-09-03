@@ -16,6 +16,9 @@ OC.app = (function () {
   var route = 'dashboard';
   var AUTH_KEY = 'oc-authenticated-user';
   var isAuthenticated = false;
+  /* set when an invite link has just been opened, so the login screen can
+     greet the invitee and fill their address in for them */
+  var invitedSignIn = null;
 
   var ROUTES = [
     { id: 'dashboard', label: 'Dashboard', view: function () { return OC.dashboard; } },
@@ -263,11 +266,34 @@ OC.app = (function () {
     }
   }
 
+  /* Every sign-in path ends here, so an invited account is promoted to active
+     exactly once no matter which route the person came in by. */
+  function completeSignIn(found, greeting) {
+    if (found.status === 'invited') {
+      OC.store.mutate({
+        actor: found.id, action: 'user.invite.claim', target: found.name,
+        detail: 'Account activated on first sign-in'
+      }, function () {
+        found.status = 'active';
+        if (found.invite && !found.invite.claimed_at) {
+          found.invite.claimed_at = new Date().toISOString();
+        }
+      });
+    }
+    invitedSignIn = null;
+    isAuthenticated = true;
+    try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
+    OC.store.setSession(found.id);
+    OC.ui.toast(greeting || ('Connected successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')'));
+    render();
+  }
+
   function renderLoginScreen(host) {
     OC.ui.clear(host);
 
     var errorBox = h('div', { class: 'error', style: 'display:none;margin-bottom:16px;' });
-    var emailInput = h('input', { type: 'email', placeholder: 'Enter your Gmail address' });
+    var emailInput = h('input', { type: 'email', placeholder: 'Enter your Gmail address',
+                                  value: invitedSignIn ? invitedSignIn.email : '' });
     var passInput = h('input', { type: 'password', placeholder: 'Enter 72-hour password / passcode' });
 
     function performLogin(email) {
@@ -290,11 +316,7 @@ OC.app = (function () {
         return;
       }
 
-      isAuthenticated = true;
-      try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
-      OC.store.setSession(found.id);
-      OC.ui.toast('Connected successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
-      render();
+      completeSignIn(found);
     }
 
     function handlePasswordLogin(e) {
@@ -340,11 +362,7 @@ OC.app = (function () {
         .then(function (res) { return res.json(); })
         .then(function (data) {
           if (data && data.ok) {
-            isAuthenticated = true;
-            try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
-            OC.store.setSession(found.id);
-            OC.ui.toast('Connected successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
-            render();
+            completeSignIn(found);
           } else {
             errorBox.innerHTML = '<strong>Access Denied:</strong> ' + ((data && data.error) || 'Invalid credentials.');
             errorBox.style.display = 'flex';
@@ -364,17 +382,10 @@ OC.app = (function () {
             errorBox.style.display = 'flex';
             return;
           }
-          isAuthenticated = true;
-          try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
-          OC.store.setSession(found.id);
-          OC.ui.toast('Logged in successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
-          render();
+          completeSignIn(found, 'Logged in successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
         });
       } else {
-        isAuthenticated = true;
-        try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
-        OC.store.setSession(found.id);
-        render();
+        completeSignIn(found);
       }
     }
 
@@ -396,14 +407,23 @@ OC.app = (function () {
 
       errorBox,
 
-      h('div', { class: 'authorized-notice-box' }, [
-        h('div', { class: 'authorized-notice-head' }, [
-          OC.icon('alert'),
-          h('strong', {}, 'Authorized Personnel Only')
-        ]),
-        h('p', { class: 'authorized-notice-text' },
-          'Access is restricted to invited team members and authorized staff. Log in with your Gmail & password.')
-      ]),
+      invitedSignIn
+        ? h('div', { class: 'authorized-notice-box is-invite' }, [
+            h('div', { class: 'authorized-notice-head' }, [
+              OC.icon('check'),
+              h('strong', {}, 'Invite accepted — ' + (invitedSignIn.name || 'welcome'))
+            ]),
+            h('p', { class: 'authorized-notice-text' },
+              'Your address is filled in below. Sign in with the 72-hour password from your invite to finish setting up your account.')
+          ])
+        : h('div', { class: 'authorized-notice-box' }, [
+            h('div', { class: 'authorized-notice-head' }, [
+              OC.icon('alert'),
+              h('strong', {}, 'Authorized Personnel Only')
+            ]),
+            h('p', { class: 'authorized-notice-text' },
+              'Access is restricted to invited team members and authorized staff. Log in with your Gmail & password.')
+          ]),
 
       h('form', { class: 'portal-form', onSubmit: handlePasswordLogin }, [
         h('div', { class: 'portal-field' }, [
@@ -501,56 +521,42 @@ OC.app = (function () {
         return;
       }
 
-      var nameInput = h('input', { type: 'text', value: target.name });
-      var passInput = h('input', { type: 'password', value: target.invite.passcode || '', placeholder: 'Choose a password' });
-
-      OC.ui.modal({
-        title: 'Complete your profile',
-        content: h('div', {}, [
-          h('p', { class: 'muted', style: 'font-size:13.5px;margin-bottom:12px' },
-            'Welcome to Originate Command! Confirm your details to activate your account.'),
-          OC.ui.field('Full Name', nameInput, { required: true }),
-          OC.ui.field('Permanent Password', passInput, { required: true, hint: 'You will use this password for all future logins.' }),
-          OC.ui.field('Email', h('input', { type: 'text', value: target.email, disabled: true }))
-        ]),
-        actions: [
-          {
-            label: 'Activate Account', primary: true, onClick: function (close) {
-              if (!nameInput.value.trim()) return 'Name is required.';
-              var chosenPass = passInput.value.trim() || (target.invite ? target.invite.passcode : 'admin');
-              OC.store.mutate({
-                actor: target.id, action: 'user.invite.claim', target: nameInput.value.trim(),
-                detail: 'Account activated via invite token'
-              }, function () {
-                target.name = nameInput.value.trim();
-                target.status = 'active';
-                if (target.invite) target.invite.claimed_at = new Date().toISOString();
-              });
-
-              // Persist password directly into MySQL database
-              var baseApi = (typeof OC.people !== 'undefined' && OC.people.getApiEndpoint)
-                ? OC.people.getApiEndpoint('/api/auth/set-password')
-                : '/api/auth/set-password';
-
-              if (typeof fetch === 'function') {
-                fetch(baseApi, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': 'true' },
-                  body: JSON.stringify({ email: target.email, password: chosenPass, token: target.invite ? target.invite.token : '', name: nameInput.value.trim() })
-                }).catch(function () {});
-              }
-
-              close();
-              isAuthenticated = true;
-              try { localStorage.setItem(AUTH_KEY, target.id); } catch (e) { }
-              OC.store.setSession(target.id);
-              location.hash = '#dashboard';
-              OC.ui.toast('Account activated! Password securely saved in MySQL database.');
-              render();
-            }
-          }
-        ]
+      /* Opening the link accepts the invite: it stops being pending, and the
+         invite passcode is registered as the account password so the same
+         person can sign in with it on the login screen. No session is created
+         here — they sign in themselves, like anyone else. */
+      var passcode = (target.invite && target.invite.passcode) || '';
+      OC.store.mutate({
+        actor: target.id, action: 'user.invite.open', target: target.name,
+        detail: 'Invite link opened; awaiting sign-in'
+      }, function () {
+        if (target.invite && !target.invite.claimed_at) {
+          target.invite.claimed_at = new Date().toISOString();
+        }
       });
+
+      var baseApi = (typeof OC.people !== 'undefined' && OC.people.getApiEndpoint)
+        ? OC.people.getApiEndpoint('/api/auth/set-password')
+        : '/api/auth/set-password';
+      if (typeof fetch === 'function' && passcode) {
+        fetch(baseApi, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': 'true' },
+          body: JSON.stringify({
+            email: target.email, password: passcode,
+            token: target.invite ? target.invite.token : '', name: target.name
+          })
+        }).catch(function () {});
+      }
+
+      invitedSignIn = { email: target.email, name: target.name, passcode: passcode };
+      isAuthenticated = false;
+      try { localStorage.removeItem(AUTH_KEY); } catch (e) { }
+      try {
+        if (history.replaceState) history.replaceState(null, '', location.pathname + location.search);
+        else location.hash = '';
+      } catch (_) { location.hash = ''; }
+      render();
     }
   }
 

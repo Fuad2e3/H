@@ -4561,3 +4561,13 @@ dialog.modal.fallback {
   background: var(--blueprint);
   box-shadow: 0 0 0 1px var(--rule-strong) inset;
 }
+
+/* the same notice box, in the affirmative, when an invite link has just been
+   opened and the person only has to sign in */
+.authorized-notice-box.is-invite {
+  border-left-color: var(--success);
+  background: var(--success-soft);
+}
+.authorized-notice-box.is-invite .authorized-notice-head .icon {
+  color: var(--success);
+}

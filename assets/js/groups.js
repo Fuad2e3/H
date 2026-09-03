@@ -967,7 +967,12 @@ OC.groups = (function () {
     }
 
     var activeCount = allGroups.filter(function (g) { return g.status === 'active'; }).length;
-    var myCount = allGroups.filter(function (g) { return (g.members || []).indexOf(user.id) > -1; }).length;
+    /* "Mine" is the people tab: it lists who you can write to, not channels */
+    var dmPeople = (OC.can.directMessageable ? OC.can.directMessageable(user) : [])
+      .slice()
+      .sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
+    var myCount = dmPeople.length;
+    var showingPeople = (filterStatus === 'mine');
 
     /* ---- 1. Discord Channels Left Sidebar ---- */
     var sidebar = h('div', { class: 'discord-channels-sidebar' }, [
@@ -988,7 +993,7 @@ OC.groups = (function () {
         h('input', {
           class: 'discord-sidebar-search',
           type: 'search',
-          placeholder: 'Filter #channels...',
+          placeholder: showingPeople ? 'Filter people...' : 'Filter #channels...',
           value: searchQuery,
           onInput: OC.ui.debounce(function (e) {
             searchQuery = e.target.value;
@@ -1012,8 +1017,8 @@ OC.groups = (function () {
         }))
       ]),
 
-      /* Channel Items List */
-      h('div', { class: 'discord-channels-list' }, visible.length ? visible.map(function (g) {
+      /* Channel Items List — hidden while the people tab is showing */
+      showingPeople ? null : h('div', { class: 'discord-channels-list' }, visible.length ? visible.map(function (g) {
         var isSelected = (activeChatGroupId === g.id);
         var totalMsgs = (g.messages || []).length;
         if (isSelected) {
@@ -1063,11 +1068,8 @@ OC.groups = (function () {
       /* Direct messages: everyone with an account, one click to a private
          conversation with them. A conversation is created the first time it is
          opened, so the list is people rather than a list of threads. */
-      (function () {
-        var people = (OC.can.directMessageable ? OC.can.directMessageable(user) : [])
-          .slice()
-          .sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
-
+      !showingPeople ? null : (function () {
+        var people = dmPeople;
         var q = searchQuery.toLowerCase();
         var shown = q
           ? people.filter(function (u) {

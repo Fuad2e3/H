@@ -152,12 +152,27 @@ OC.clients = (function () {
     return String(value || '').replace(/"/g, '%22').replace(/'/g, '%27');
   }
 
-  /* a fixed palette — a colour name never reaches CSS unless it is on this list */
-  var MD_COLORS = {
-    red: 'var(--signal)', blue: 'var(--blueprint)', green: 'var(--success)',
-    orange: 'var(--brand-orange)', purple: 'var(--purple)', grey: 'var(--text-secondary)',
-    gray: 'var(--text-secondary)', yellow: 'var(--brass)'
-  };
+  /* a fixed palette — a colour name never reaches CSS unless it is on this list.
+     The editor's colour picker is built from this same list, so the swatches on
+     offer and the names the renderer accepts can never drift apart. */
+  var MD_COLOR_SWATCHES = [
+    { name: 'red', label: 'Red', css: 'var(--signal)' },
+    { name: 'blue', label: 'Blue', css: 'var(--blueprint)' },
+    { name: 'green', label: 'Green', css: 'var(--success)' },
+    { name: 'orange', label: 'Orange', css: 'var(--brand-orange)' },
+    { name: 'purple', label: 'Purple', css: 'var(--purple)' },
+    { name: 'yellow', label: 'Yellow', css: 'var(--brass)' },
+    { name: 'grey', label: 'Grey', css: 'var(--text-secondary)' }
+  ];
+
+  var MD_COLORS = (function () {
+    var map = {};
+    for (var i = 0; i < MD_COLOR_SWATCHES.length; i++) {
+      map[MD_COLOR_SWATCHES[i].name] = MD_COLOR_SWATCHES[i].css;
+    }
+    map.gray = map.grey;   /* the American spelling still renders; it just isn't offered */
+    return map;
+  })();
 
   /* inline formatting shared by every block type, so a link works in a bullet
      or a heading and not only in a plain paragraph */
@@ -657,6 +672,41 @@ OC.clients = (function () {
           editorText.setSelectionRange(caret, caret);
         }
 
+        /* Colours the selection. If those words are already coloured — whether the
+           tags sit just outside the selection or the selection is the whole
+           coloured run — the existing colour is swapped instead of a second one
+           being nested around it, so picking again recolours rather than layers. */
+        function applyColor(name) {
+          var start = editorText.selectionStart || 0;
+          var end = editorText.selectionEnd || 0;
+          var text = editorText.value;
+          var before = text.substring(0, start);
+          var selected = text.substring(start, end);
+          var after = text.substring(end);
+
+          /* {blue}[selected]{/} — the tags sit immediately either side */
+          var openTag = before.match(/\{([a-z]+)\}$/i);
+          if (openTag && MD_COLORS[openTag[1].toLowerCase()] && after.indexOf('{/}') === 0) {
+            var head = before.substring(0, before.length - openTag[0].length) + '{' + name + '}';
+            editorText.value = head + selected + after;
+            editorText.focus();
+            editorText.setSelectionRange(head.length, head.length + selected.length);
+            return;
+          }
+
+          /* [{blue}words{/}] — the selection is the whole coloured run */
+          var wholeRun = selected.match(/^\{([a-z]+)\}([\s\S]*)\{\/\}$/i);
+          if (wholeRun && MD_COLORS[wholeRun[1].toLowerCase()]) {
+            var swapped = '{' + name + '}' + wholeRun[2] + '{/}';
+            editorText.value = before + swapped + after;
+            editorText.focus();
+            editorText.setSelectionRange(start, start + swapped.length);
+            return;
+          }
+
+          insertFormatting('{' + name + '}', '{/}');
+        }
+
         function insertFormatting(prefix, suffix) {
           var start = editorText.selectionStart || 0;
           var end = editorText.selectionEnd || 0;
@@ -667,6 +717,59 @@ OC.clients = (function () {
           editorText.focus();
           editorText.setSelectionRange(start + prefix.length, start + replacement.length - (suffix ? suffix.length : 0));
         }
+
+        /* The colour picker: a swatch strip that drops out of the Colour button,
+           so every colour the renderer understands is one click away instead of
+           blue being the only one on the toolbar. */
+        var colorSwatch = h('span', { class: 'md-color-swatch' });
+        var colorMenu = h('div', { class: 'md-color-menu', hidden: true });
+        var colorBtn;
+
+        function closeColorMenu() {
+          colorMenu.hidden = true;
+          if (colorBtn) colorBtn.setAttribute('aria-expanded', 'false');
+          document.removeEventListener('mousedown', onDocDownForColor, true);
+          document.removeEventListener('keydown', onEscForColor, true);
+        }
+        function onDocDownForColor(e) {
+          if (!colorMenu.contains(e.target) && !(colorBtn && colorBtn.contains(e.target))) closeColorMenu();
+        }
+        function onEscForColor(e) {
+          if (e.key === 'Escape') { closeColorMenu(); editorText.focus(); }
+        }
+        function toggleColorMenu() {
+          if (colorMenu.hidden) {
+            colorMenu.hidden = false;
+            if (colorBtn) colorBtn.setAttribute('aria-expanded', 'true');
+            document.addEventListener('mousedown', onDocDownForColor, true);
+            document.addEventListener('keydown', onEscForColor, true);
+          } else {
+            closeColorMenu();
+          }
+        }
+
+        MD_COLOR_SWATCHES.forEach(function (c) {
+          colorMenu.appendChild(h('button', {
+            class: 'md-color-option',
+            type: 'button',
+            title: 'Colour the selected words ' + c.label.toLowerCase() + ' — {' + c.name + '}words{/}',
+            onClick: function () {
+              colorSwatch.style.background = c.css;
+              closeColorMenu();
+              applyColor(c.name);
+            }
+          }, [
+            h('span', { class: 'md-color-swatch', style: 'background:' + c.css + ';' }),
+            c.label
+          ]));
+        });
+
+        colorBtn = h('button', {
+          class: 'client-editor-tool-btn', type: 'button',
+          title: 'Colour text — pick a colour, then the selected words are wrapped in {colour}words{/}.',
+          'aria-haspopup': 'true', 'aria-expanded': 'false',
+          onClick: function () { toggleColorMenu(); }
+        }, [colorSwatch, 'Colour', h('span', { class: 'md-color-caret', 'aria-hidden': 'true' }, '\u25be')]);
 
         var toolbar = h('div', { class: 'client-editor-toolbar' }, [
           h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold (**text**)', onClick: function () { insertFormatting('**', '**'); } }, 'Bold'),
@@ -682,11 +785,7 @@ OC.clients = (function () {
             title: 'Hidden link — [visible words](https://the-target). The address stays hidden behind the words, which render red.',
             onClick: function () { insertLink(); }
           }, [OC.icon('link'), 'Link']),
-          h('button', {
-            class: 'client-editor-tool-btn', type: 'button',
-            title: 'Colour text — {blue}words{/}. Also red, green, orange, purple, yellow, grey.',
-            onClick: function () { insertFormatting('{blue}', '{/}'); }
-          }, [h('span', { class: 'md-color-swatch' }), 'Colour']),
+          h('div', { class: 'md-color-picker' }, [colorBtn, colorMenu]),
           h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear Text', onClick: function () { editorText.value = ''; editorText.focus(); } }, [OC.icon('trash'), 'Clear']),
         ]);
 

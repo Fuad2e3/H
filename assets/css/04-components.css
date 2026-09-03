@@ -4562,6 +4562,65 @@ dialog.modal.fallback {
   box-shadow: 0 0 0 1px var(--rule-strong) inset;
 }
 
+/* the Colour toolbar button and the swatch strip it drops down */
+.md-color-picker {
+  position: relative;
+  display: inline-flex;
+}
+.md-color-caret {
+  font-size: 9px;
+  line-height: 1;
+  opacity: 0.65;
+}
+.md-color-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 132px;
+  padding: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r2);
+  box-shadow: var(--sh3);
+}
+.md-color-menu[hidden] {
+  display: none;
+}
+.md-color-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r1);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.md-color-option:hover,
+.md-color-option:focus-visible {
+  background: var(--card-bg-alt);
+}
+.md-color-option .md-color-swatch {
+  width: 13px;
+  height: 13px;
+}
+
+/* the toolbar button fills with blue on hover, which would swallow a blue
+   swatch — a light ring keeps whichever colour is showing readable on it */
+.client-editor-tool-btn:hover .md-color-swatch {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9) inset, 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
 /* the same notice box, in the affirmative, when an invite link has just been
    opened and the person only has to sign in */
 .authorized-notice-box.is-invite {

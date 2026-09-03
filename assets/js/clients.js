@@ -347,8 +347,9 @@ OC.clients = (function () {
             h('span', { class: 'user-profile-badge' }, client.status === 'active' ? 'ACTIVE CLIENT' : 'PAUSED'),
             client.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'ID: ' + client.client_id) : null,
             client.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null
-          ].filter(Boolean)),
-          h('div', { class: 'user-profile-meta-line' }, [OC.icon('phone'), 'Client Number: ' + (client.client_number || client.contact || 'No phone recorded')])
+          ].filter(Boolean))
+          /* two details next to the name — ID and Code — same as the grid
+             card's two chips; the phone number still shows in Edit Client */
         ])
       ]),
       /* the ACTIVE CLIENT / PAUSED badge next to the name already says this;

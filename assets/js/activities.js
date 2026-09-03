@@ -118,20 +118,8 @@ OC.activities = (function () {
         }, opt[1]);
       }));
 
-      var separateGroupsBtn = h('button', {
-        class: 'groups-discord-open-btn',
-        type: 'button',
-        title: 'Open full screen Groups & Discussions workspace',
-        onClick: function () {
-          activeTab = 'groups';
-          syncTabToUrl();
-          render(host, rerender);
-        }
-      }, [OC.icon('chat'), 'Groups & Discussions (' + allGroups.length + ')']);
-
       var subNavRow = h('div', { class: 'activities-subnav-row' }, [
-        subNavSegment,
-        separateGroupsBtn
+        subNavSegment
       ]);
 
       content.push(pageHead, subNavRow);

@@ -762,6 +762,17 @@ OC.clients = (function () {
 
         /* Drops [words](https://) in and leaves the caret on the address, so the
            visible words stay put and only the hidden target is typed. */
+        /* Drops [words](https://) in and selects the visible words, the same
+           way every other button leaves its own placeholder selected. The
+           caret used to sit inside the URL instead, ready to type the
+           address straight away — but that left an unprotected empty
+           selection there, and clicking any other tool next (Colour, Bold,
+           anything) inserted its own placeholder into the middle of the URL
+           rather than at the words, splitting it in two. Selecting the words
+           means the next click — whatever it is — wraps them correctly, and
+           composes: Link then Colour makes a coloured link, not broken
+           syntax. The address still needs a person to type it, over the
+           "https://" placeholder inside the parentheses. */
         function insertLink() {
           var start = editorText.selectionStart || 0;
           var end = editorText.selectionEnd || 0;
@@ -770,8 +781,7 @@ OC.clients = (function () {
           var snippet = '[' + label + '](https://)';
           editorText.value = text.substring(0, start) + snippet + text.substring(end);
           editorText.focus();
-          var caret = start + snippet.length - 1;      /* just before the closing bracket */
-          editorText.setSelectionRange(caret, caret);
+          editorText.setSelectionRange(start + 1, start + 1 + label.length);
         }
 
         /* Colours the selection. If those words are already coloured — whether the

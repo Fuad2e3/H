@@ -165,15 +165,6 @@ OC.groups = (function () {
     });
   }
 
-  function archive(group, onDone) {
-    OC.ui.confirm('Archive "' + group.name + '"? Groups are archived, never deleted, so their history stays for reporting (6.5).', function () {
-      OC.store.mutate({ actor: OC.store.session(), action: 'group.archive', target: group.name }, function () {
-        group.status = 'archived';
-      });
-      OC.ui.toast('Group archived.');
-      if (onDone) onDone();
-    });
-  }
 
   function deleteGroupDirect(group, onDone) {
     OC.ui.confirm('Permanently delete group "' + group.name + '" and all its discussions? This cannot be undone.', function () {

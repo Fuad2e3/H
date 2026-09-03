@@ -18,7 +18,7 @@ OC.clients = (function () {
   var filterStatus = 'all'; /* all | active | paused */
   var activePortalClientId = null;
   var activePortalTab = 'report'; /* report | todos | instructions | details */
-  var activeTimeframe = 'month'; /* day | month | year */
+  var activeTimeframe = 'month'; /* day | month | year | all */
   var todoFilterState = 'all'; /* all | open | progress | done | blocked */
   var isDetailsEditing = false; /* view mode vs edit mode in Details tab */
 
@@ -139,11 +139,9 @@ OC.clients = (function () {
               });
               OC.ui.toast('Client "' + client.name + '" deleted.');
               activePortalClientId = null;
-              if (onDone) onDone();
-              else {
-                var host = document.getElementById('page');
-                if (host) render(host);
-              }
+              // Always navigate to the list after deletion — never call onDone which may re-render the deleted client's portal
+              var host = document.getElementById('page');
+              if (host) render(host);
             });
           }, 50);
         }
@@ -375,6 +373,7 @@ OC.clients = (function () {
           type: 'button',
           style: 'width:100%;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600;',
           onClick: function () {
+            isDetailsEditing = false; // reset so next client doesn't open in edit mode
             if (onBack) onBack();
           }
         }, ['← Back to Clients'])
@@ -411,10 +410,10 @@ OC.clients = (function () {
       var blockedT = filteredTodos.filter(function (t) { return t.state === 'blocked'; }).length;
       var rate = totalT > 0 ? Math.round((doneT / totalT) * 100) : 0;
 
-      var donePct = totalT > 0 ? (doneT / totalT) * 100 : 0;
-      var progPct = totalT > 0 ? (progT / totalT) * 100 : 0;
-      var openPct = totalT > 0 ? (openT / totalT) * 100 : 0;
-      var blockPct = totalT > 0 ? (blockedT / totalT) * 100 : 0;
+      var donePct = totalT > 0 ? Math.min(100, (doneT / totalT) * 100) : 0;
+      var progPct = totalT > 0 ? Math.min(100, (progT / totalT) * 100) : 0;
+      var openPct = totalT > 0 ? Math.min(100, (openT / totalT) * 100) : 0;
+      var blockPct = totalT > 0 ? Math.min(100, (blockedT / totalT) * 100) : 0;
 
       var reportContent = h('div', { class: 'portal-view-content' }, [
         h('div', { class: 'portal-header-box' }, [

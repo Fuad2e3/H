@@ -226,7 +226,15 @@ OC.dashboard = (function () {
       }, function () {
         var existing = (OC.store.state.attendance || []).find(function (a) { return a.user_id === user.id && a.date === todayStr; });
         if (!existing) {
-          var isLate = new Date().getHours() >= 10 && new Date().getMinutes() > 15;
+            // Use the user's own scheduled_in time for late detection, not a hardcoded 10:15
+            var schedParts = (schedIn || '09:00 AM').match(/(\d+):(\d+)\s*(AM|PM)?/i);
+            var schedHour = schedParts ? parseInt(schedParts[1], 10) : 9;
+            var schedMin = schedParts ? parseInt(schedParts[2], 10) : 0;
+            if (schedParts && /PM/i.test(schedParts[3] || '') && schedHour !== 12) schedHour += 12;
+            if (schedParts && /AM/i.test(schedParts[3] || '') && schedHour === 12) schedHour = 0;
+            var nowH = new Date().getHours();
+            var nowM = new Date().getMinutes();
+            var isLate = (nowH > schedHour) || (nowH === schedHour && nowM > schedMin + 15);
           OC.store.state.attendance.unshift({
             id: OC.store.uid('att'),
             user_id: user.id,

@@ -299,9 +299,15 @@ OC.people = (function () {
       OC.ui.toast('Access Denied: Only System Admin and Department Heads can resend invitations.', true);
       return;
     }
+    // Pass the account's existing meta so the new invite token carries correct email/name/dept
     OC.store.mutate({ actor: user.id, action: 'user.invite.resend', target: account.name,
                       detail: 'new single use link and 72-hr password' }, function () {
-      account.invite = OC.store.issueInvite(user.id);
+      account.invite = OC.store.issueInvite(user.id, {
+        email: account.email,
+        name: account.name,
+        department: account.departments && account.departments[0] ? account.departments[0].department : '',
+        level: account.departments && account.departments[0] ? account.departments[0].level : 'member'
+      });
     });
     dispatchInviteEmail(account, true);
     showInviteSuccessModal(account);
@@ -736,7 +742,11 @@ OC.people = (function () {
             }
             account.status = statusSelect.value;
             if (deptSelect.value && levelSelect.value) {
-              account.departments = [{ department: deptSelect.value, level: levelSelect.value }];
+              // Preserve all other department memberships — only update or insert the selected dept
+              var otherDepts = (account.departments || []).filter(function (m) {
+                return m.department !== deptSelect.value;
+              });
+              account.departments = otherDepts.concat([{ department: deptSelect.value, level: levelSelect.value }]);
             } else if (user.admin && !deptSelect.value) {
               account.departments = [];
             }
@@ -749,13 +759,30 @@ OC.people = (function () {
 
     if (OC.can.deleteAccount(user, account)) {
       actions.unshift({
-        label: 'Delete account', onClick: function (close) {
-          OC.ui.confirm('Delete account "' + account.name + '"? This user will be permanently removed and cannot log in.', function () {
-            OC.store.mutate({ actor: user.id, action: 'user.delete', target: account.name }, function () {
+        label: 'Delete user', onClick: function (close) {
+          var isSelf = Boolean(user && user.id === account.id);
+          var confirmMsg = isSelf
+            ? 'Are you sure you want to permanently delete your own account "' + account.name + '"? You will be logged out immediately.'
+            : 'Permanently delete user "' + account.name + '"? This user will be removed and cannot log in.';
+
+          OC.ui.confirm(confirmMsg, function () {
+            OC.store.mutate({
+              actor: user.id,
+              action: 'user.delete',
+              target: account.name,
+              detail: 'Permanently deleted user account ' + account.name
+            }, function () {
               OC.store.state.users = OC.store.state.users.filter(function (u) { return u.id !== account.id; });
             });
-            OC.ui.toast('Account permanently deleted.');
+            OC.ui.toast('User account permanently deleted.');
             close();
+
+            if (isSelf && OC.app && OC.app.logout) {
+              OC.app.logout();
+            } else {
+              var host = document.querySelector('main.content') || document.querySelector('#content');
+              if (host && typeof render === 'function') render(host);
+            }
           });
         }
       });

@@ -3,7 +3,7 @@
    Owns every entity in section 5.0 of the OM SRS 001 specification:
    - Seeds a realistic dataset on first run
    - Synchronizes with dev3 manual API server (/api/*) in real-time
-   - Auto-refreshes every 5 seconds (5000ms) with network auto-reconnect
+   - Auto-refreshes every 2 seconds (2000ms) with network auto-reconnect
    - Fallback to localStorage for offline resilience
    - Every write goes through mutate(), which stamps the audit log (5.1)
    Originate Command · application
@@ -66,18 +66,6 @@ OC.store = (function () {
         title: 'System Admin',
         admin: true,
         departments: [],
-        status: 'active',
-        password: null,
-        prefs: { push: true, email: true, discord: true },
-        invite: null
-      },
-      {
-        id: 'u-fuadogt',
-        name: 'Abdullah Al Fuad',
-        email: 'fuadogt@gmail.com',
-        title: 'Full Stack Developer',
-        admin: false,
-        departments: [{ department: 'd-web', level: 'head' }],
         status: 'active',
         password: null,
         prefs: { push: true, email: true, discord: true },
@@ -180,7 +168,7 @@ OC.store = (function () {
           if (state && Array.isArray(state.groups) && state.groups.length > 0) {
             serverState.groups = serverState.groups || [];
             state.groups.forEach(function (lg) {
-              if (!serverState.groups.some(function (sg) { return sg.id === lg.id || sg.name === lg.name; })) {
+              if (!serverState.groups.some(function (sg) { return sg.id === lg.id; })) {
                 serverState.groups.push(lg);
                 needsPush = true;
               }
@@ -216,6 +204,50 @@ OC.store = (function () {
                 if (lu.avatar && !su.avatar) { su.avatar = lu.avatar; needsPush = true; }
                 if (lu.scheduled_in && !su.scheduled_in) { su.scheduled_in = lu.scheduled_in; needsPush = true; }
                 if (lu.scheduled_out && !su.scheduled_out) { su.scheduled_out = lu.scheduled_out; needsPush = true; }
+              }
+            });
+          }
+          // Merge offline-created clients back so they aren't lost when the server state overwrites local state
+          if (state && Array.isArray(state.clients) && state.clients.length > 0) {
+            serverState.clients = serverState.clients || [];
+            state.clients.forEach(function (lc) {
+              if (!serverState.clients.some(function (sc) { return sc.id === lc.id; })) {
+                serverState.clients.push(lc);
+                needsPush = true;
+              }
+            });
+          }
+          // Merge offline-created todos back so they survive a sync
+          if (state && Array.isArray(state.todos) && state.todos.length > 0) {
+            serverState.todos = serverState.todos || [];
+            state.todos.forEach(function (lt) {
+              if (!serverState.todos.some(function (st) { return st.id === lt.id; })) {
+                serverState.todos.push(lt);
+                needsPush = true;
+              }
+            });
+          }
+          // Merge offline-created instructions back so they survive a sync
+          if (state && Array.isArray(state.instructions) && state.instructions.length > 0) {
+            serverState.instructions = serverState.instructions || [];
+            state.instructions.forEach(function (li) {
+              if (!serverState.instructions.some(function (si) { return si.id === li.id; })) {
+                serverState.instructions.push(li);
+                needsPush = true;
+              }
+            });
+          }
+          // Merge offline-queued notifications and synchronize read state
+          if (state && Array.isArray(state.notifications) && state.notifications.length > 0) {
+            serverState.notifications = serverState.notifications || [];
+            state.notifications.forEach(function (ln) {
+              var sn = serverState.notifications.find(function (n) { return n.id === ln.id; });
+              if (!sn) {
+                serverState.notifications.unshift(ln);
+                needsPush = true;
+              } else if (ln.read && !sn.read) {
+                sn.read = true;
+                needsPush = true;
               }
             });
           }
@@ -297,14 +329,15 @@ OC.store = (function () {
   }
 
   function load() {
+    var defaultSeed = seed(); // single seed() call — reused for both reset and seedUsers check
     state = read();
     if (!state || state.version !== 1 || (state.departments && state.departments.some(function (d) { return d.name === 'Web Development' || (d.levels && d.levels.length > 2); }))) {
-      state = seed();
+      state = defaultSeed;
       write();
     }
     // Clean legacy removed users and ensure clean system admins are present
     if (state && Array.isArray(state.users)) {
-      var seedUsers = seed().users;
+      var seedUsers = defaultSeed.users; // reuse the already-computed seed — no second seed() call
       var modified = false;
       // Filter out removed legacy test users
       var filtered = state.users.filter(function (u) {
@@ -315,11 +348,22 @@ OC.store = (function () {
         modified = true;
       }
       seedUsers.forEach(function (su) {
-        var existing = state.users.find(function (u) { return u.id === su.id; });
+        var existing = state.users.find(function (u) {
+          return u.id === su.id || (u.email && su.email && u.email.trim().toLowerCase() === su.email.trim().toLowerCase());
+        });
         if (!existing) {
           state.users.push(su);
           modified = true;
         } else {
+          if (su.status === 'active' && existing.status !== 'active') {
+            existing.status = 'active';
+            if (existing.invite) existing.invite.claimed_at = existing.invite.claimed_at || new Date().toISOString();
+            modified = true;
+          }
+          if (su.password && !existing.password) {
+            existing.password = su.password;
+            modified = true;
+          }
           // Ensure system admin superuser flag integrity without wiping custom avatar/title
           if (su.admin && !existing.admin) {
             existing.admin = true;
@@ -364,6 +408,7 @@ OC.store = (function () {
       if (modified) write();
     }
     syncWithServer();
+    initSSE(); // start SSE immediately in parallel with first sync poll — don't wait for fetch to succeed
     fetchClientIp();
     return state;
   }
@@ -404,6 +449,15 @@ OC.store = (function () {
   function emit() { listeners.forEach(function (fn) { fn(); }); }
 
   function mutate(entry, fn) {
+    if (entry && entry.action === 'user.delete') {
+      var actorUser = user(entry.actor) || user(session());
+      if (!actorUser || !actorUser.admin) {
+        if (typeof OC !== 'undefined' && OC.ui && OC.ui.toast) {
+          OC.ui.toast('Access Denied: Only System Admin can delete user accounts.', true);
+        }
+        return false;
+      }
+    }
     if (typeof fn === 'function') {
       fn();
     }
@@ -434,7 +488,8 @@ OC.store = (function () {
   }
 
   function uid(prefix) {
-    return prefix + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    // 8 random chars (~2.8 trillion combinations) — much lower collision risk than 4 chars
+    return prefix + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   }
 
   /* ---- lookups --------------------------------------------------------- */
@@ -712,7 +767,7 @@ OC.store = (function () {
       state.notifications = state.notifications || [];
       userIds.forEach(function (uid_) {
         state.notifications.unshift({
-          id: 'nt-' + Date.now() + '-' + uid_ + Math.random().toString(36).slice(2, 5),
+          id: 'nt-' + Date.now() + '-' + uid_ + Math.random().toString(36).slice(2, 7),
           user: uid_, text: msg, ref: ref || null, at: at, read: false
         });
       });

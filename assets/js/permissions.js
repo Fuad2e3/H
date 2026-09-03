@@ -91,6 +91,7 @@ OC.can = (function () {
       if (!best || r < best.r) best = { r: r, level: m.level };
     });
     if (best && best.r === 0) return 'Department Head';
+    if (best && best.r === 1) return 'Team Lead';
     return 'Member';
   }
 
@@ -290,8 +291,8 @@ OC.can = (function () {
 
   function invite(user) { return !!user && (user.admin || headOfAny(user)); }
   function createClient(user) { return !!user && (user.admin || headOfAny(user)); }
-  function editClient(user, client) { return Boolean(user); }
   function canEditClient(user, client) { return Boolean(user); }
+  var editClient = canEditClient; // alias — identical logic, kept for backwards compat
   function canDeleteClient(user, client) { return !!(user && user.admin); }
 
   /* A client may be scoped to one department. Left unscoped it stays visible to
@@ -332,7 +333,6 @@ OC.can = (function () {
 
   function canDeleteAccount(actor, targetAccount) {
     if (!actor || !targetAccount) return false;
-    if (actor.id === targetAccount.id) return false; // Cannot delete self
     return Boolean(actor.admin);
   }
 
@@ -380,19 +380,19 @@ OC.can = (function () {
         if (typeof aid === 'string' && aid.indexOf('user:') === 0) {
           assignees.push(aid.slice(5));
         } else if (typeof aid === 'string' && aid.indexOf('group:') === 0) {
-          var g = S().group(aid.slice(6));
-          if (g && g.members) assignees = assignees.concat(g.members);
+          var gPrefixed = S().group(aid.slice(6)); // renamed from 'g' to avoid duplicate var in same scope
+          if (gPrefixed && gPrefixed.members) assignees = assignees.concat(gPrefixed.members);
         } else {
-          var g = S().group(aid);
-          if (g && g.members) assignees = assignees.concat(g.members);
+          var gGeneric = S().group(aid);           // renamed from 'g'
+          if (gGeneric && gGeneric.members) assignees = assignees.concat(gGeneric.members);
           else assignees.push(aid);
         }
       });
     } else if (todo.assignee_type === 'user') {
       assignees = [todo.assignee];
     } else {
-      var g = S().group(todo.assignee);
-      assignees = g ? g.members.slice() : [];
+      var gAssignee = S().group(todo.assignee);   // renamed from 'g'
+      assignees = gAssignee ? gAssignee.members.slice() : [];
     }
     chain.push({ step: 'Assignee', users: assignees });
 

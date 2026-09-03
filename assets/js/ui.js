@@ -145,7 +145,9 @@ OC.ui = (function () {
       if (obj) c = obj;
       else return c;
     }
-    return c.client_code || c.name || 'No client';
+    /* a client may now be saved with only a Client ID, so that is the last
+       thing standing between a blank name and an unlabelled chip */
+    return c.client_code || c.name || c.client_id || 'No client';
   }
 
   function clientChip(id) {
@@ -1032,30 +1034,34 @@ OC.ui = (function () {
     var name = h('input', { type: 'text', placeholder: 'e.g. Acme Corp, Apex Solutions' });
     var clientId = h('input', { type: 'text', placeholder: 'e.g. 0583, CL-101' });
     var clientCode = h('input', { type: 'text', placeholder: 'e.g. TFR, ACME' });
-    var clientNumber = h('input', { type: 'text', placeholder: 'e.g. +880 1700-000000, 01712345678' });
+    var clientNumber = h('input', { type: 'text', placeholder: 'e.g. 0624, 7781' });
 
     (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
       title: 'Add new client',
       content: h('div', {}, [
-        field('1. Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
-        field('2. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' }),
+        field('1. Client ID', clientId, { required: true, hint: 'Unique client identifier or account number. This one is required.' }),
+        field('2. Client number', clientNumber, { hint: 'The client\u2019s own number \u2014 not a phone number (optional).' }),
         field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
-        field('4. Client / Company name', name, { required: true, hint: 'Official client or company name for task assignment.' })
+        field('4. Client / Company name', name, { hint: 'Official client or company name for task assignment (optional).' })
       ]),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
         {
           label: 'Add client', primary: true, onClick: function (close) {
             var cName = name.value.trim();
-            if (!cName) return 'Please enter a client name.';
             var cIdVal = clientId.value.trim();
             var cCodeVal = clientCode.value.trim();
             var cNumVal = clientNumber.value.trim();
 
-            var exists = OC.store.state.clients.some(function (c) {
-              return c.name && c.name.toLowerCase().trim() === cName.toLowerCase();
-            });
-            if (exists) return 'A client with this name already exists.';
+            /* the Client ID is the one field a client cannot go without */
+            if (!cIdVal) return 'Please enter a Client ID.';
+
+            if (cName) {
+              var exists = OC.store.state.clients.some(function (c) {
+                return c.name && c.name.toLowerCase().trim() === cName.toLowerCase();
+              });
+              if (exists) return 'A client with this name already exists.';
+            }
 
             if (cIdVal) {
               var idExists = OC.store.state.clients.some(function (c) {
@@ -1085,14 +1091,14 @@ OC.ui = (function () {
               client_id: cIdVal,
               client_code: cCodeVal,
               client_number: cNumVal,
-              contact: cNumVal || cName,
+              contact: cNumVal || cName || cIdVal,
               status: 'active'
             };
 
             OC.store.mutate({
               actor: user ? user.id : 'u-shohag',
               action: 'client.create',
-              target: newClient.name,
+              target: clientLabel(newClient),
               detail: 'Added client ' + clientLabel(newClient)
             }, function () {
               OC.store.state.clients.push(newClient);

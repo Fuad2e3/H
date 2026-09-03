@@ -71,15 +71,19 @@ OC.clients = (function () {
       {
         label: 'Save', primary: true, onClick: function (close) {
           var cName = name.value.trim();
-          if (!cName) return 'Client name cannot be empty.';
           var cIdVal = clientId.value.trim();
           var cCodeVal = clientCode.value.trim();
           var cNumVal = clientNumber.value.trim();
 
-          var nameExists = OC.store.state.clients.some(function (c) {
-            return c.id !== client.id && c.name && c.name.toLowerCase().trim() === cName.toLowerCase();
-          });
-          if (nameExists) return 'A client with this name already exists.';
+          /* the Client ID is the one field a client cannot go without */
+          if (!cIdVal) return 'A client needs a Client ID.';
+
+          if (cName) {
+            var nameExists = OC.store.state.clients.some(function (c) {
+              return c.id !== client.id && c.name && c.name.toLowerCase().trim() === cName.toLowerCase();
+            });
+            if (nameExists) return 'A client with this name already exists.';
+          }
 
           if (cIdVal) {
             var idExists = OC.store.state.clients.some(function (c) {
@@ -108,15 +112,16 @@ OC.clients = (function () {
             ? '; visible to ' + (deptSelect.value ? deptName(deptSelect.value) : 'all departments')
             : '';
 
+          var auditLabel = cCodeVal || cName || cIdVal;
           OC.store.mutate({
-            actor: user.id, action: 'client.update', target: cName,
-            detail: 'Updated details for ' + client.name + deptNote
+            actor: user.id, action: 'client.update', target: auditLabel,
+            detail: 'Updated details for ' + currentLabel + deptNote
           }, function () {
             client.name = cName;
             client.client_id = cIdVal;
             client.client_code = cCodeVal;
             client.client_number = cNumVal;
-            client.contact = cNumVal || cName;
+            client.contact = cNumVal || cName || cIdVal;
             client.status = status.value;
             if (canScope) client.department = deptSelect.value || '';
           });
@@ -133,11 +138,11 @@ OC.clients = (function () {
         onClick: function (closeModal) {
           closeModal();
           setTimeout(function () {
-            OC.ui.confirm('Permanently delete client "' + client.name + '"? Existing tasks will remain.', function () {
-              OC.store.mutate({ actor: user.id, action: 'client.delete', target: client.name }, function () {
+            OC.ui.confirm('Permanently delete client "' + currentLabel + '"? Existing tasks will remain.', function () {
+              OC.store.mutate({ actor: user.id, action: 'client.delete', target: currentLabel }, function () {
                 OC.store.state.clients = (OC.store.state.clients || []).filter(function (c) { return c.id !== client.id; });
               });
-              OC.ui.toast('Client "' + client.name + '" deleted.');
+              OC.ui.toast('Client "' + currentLabel + '" deleted.');
               activePortalClientId = null;
               // Always navigate to the list after deletion — never call onDone which may re-render the deleted client's portal
               var host = document.getElementById('page');
@@ -164,10 +169,10 @@ OC.clients = (function () {
     OC.ui.modal({
       title: 'Edit client: ' + currentLabel,
       content: h('div', {}, [
-        OC.ui.field('1. Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
-        OC.ui.field('2. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' }),
+        OC.ui.field('1. Client ID', clientId, { required: true, hint: 'Unique client identifier or account number. This one is required.' }),
+        OC.ui.field('2. Client number', clientNumber, { hint: 'The client\u2019s own number \u2014 not a phone number (optional).' }),
         OC.ui.field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
-        OC.ui.field('4. Client / Company name', name, { required: true }),
+        OC.ui.field('4. Client / Company name', name, { hint: 'Official client or company name (optional).' }),
         OC.ui.field('5. Status', status),
         canScope ? deptRow : null
       ]),
@@ -289,6 +294,9 @@ OC.clients = (function () {
   function renderClientPortal(host, client, onBack) {
     var h = OC.ui.h;
     var user = me();
+    /* the name is optional now, so prose falls back to the code or the ID
+       rather than printing an empty string mid-sentence */
+    var clientName = OC.ui.clientLabel ? OC.ui.clientLabel(client) : (client.name || client.client_id);
     var canCreate = !!(OC.can && OC.can.createClient ? OC.can.createClient(user) : (user && user.admin));
 
     var clientTodos = OC.store.state.todos.filter(function (t) {
@@ -306,7 +314,7 @@ OC.clients = (function () {
     var openTaskCount = clientTodos.filter(function (t) { return !t.archived && t.state !== 'done'; }).length;
 
     /* 1. Top Executive Hero Banner */
-    var initials = (client.client_code || client.name || 'CL').slice(0, 3).toUpperCase();
+    var initials = (client.client_code || client.name || client.client_id || 'CL').slice(0, 3).toUpperCase();
     var heroBanner = h('div', { class: 'user-profile-banner' }, [
       h('div', { class: 'user-profile-banner-left' }, [
         h('div', { class: 'user-profile-avatar-wrap' }, [
@@ -314,7 +322,7 @@ OC.clients = (function () {
         ]),
         h('div', { class: 'user-profile-info' }, [
           h('div', { class: 'user-profile-title-row' }, [
-            h('h2', { class: 'user-profile-name' }, client.name),
+            h('h2', { class: 'user-profile-name' }, clientName),
             h('span', { class: 'user-profile-badge' }, client.status === 'active' ? 'ACTIVE CLIENT' : 'PAUSED'),
             client.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'ID: ' + client.client_id) : null,
             client.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null
@@ -420,7 +428,7 @@ OC.clients = (function () {
           h('div', {}, [
             h('h2', { class: 'portal-view-title' }, [OC.icon('stats'), 'Task Completion Analytics & Reports']),
             h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-              'Review completion velocity, active task breakdowns, and SLA performance metrics for ' + client.name + '.')
+              'Review completion velocity, active task breakdowns, and SLA performance metrics for ' + clientName + '.')
           ]),
           h('div', { class: 'segmented', role: 'group', 'aria-label': 'Select timeframe' }, [
             ['day', 'Today', 'calendar'],
@@ -497,7 +505,7 @@ OC.clients = (function () {
           h('div', {}, [
             h('h2', { class: 'portal-view-title' }, ['Client Tasks & Workload (' + clientTodos.length + ')']),
             h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-              'Manage and track all deliverables and assigned tasks for ' + client.name + '.')
+              'Manage and track all deliverables and assigned tasks for ' + clientName + '.')
           ]),
           h('button', {
             class: 'btn primary small',
@@ -510,7 +518,7 @@ OC.clients = (function () {
                 OC.dashboard.newTodo(function () { renderClientPortal(host, client, onBack); });
               }
             }
-          }, ['+ Add Task for ' + client.name])
+          }, ['+ Add Task for ' + clientName])
         ]),
 
         h('div', { class: 'row', style: 'margin-bottom:14px;justify-content:space-between;align-items:center;' }, [
@@ -574,7 +582,7 @@ OC.clients = (function () {
           h('div', {}, [
             h('h2', { class: 'portal-view-title' }, [OC.icon('file'), 'Client Instructions (' + clientInstructions.length + ')']),
             h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-              'Specific workflow directives, briefs, and team guidelines for ' + client.name + '.')
+              'Specific workflow directives, briefs, and team guidelines for ' + clientName + '.')
           ]),
           h('button', {
             class: 'btn primary small',
@@ -662,7 +670,7 @@ OC.clients = (function () {
             h('div', {}, [
               h('h2', { class: 'portal-view-title' }, [OC.icon('edit'), 'Details & Documentation']),
               h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-                'Custom specifications, contracts, and notes for ' + client.name + '.')
+                'Custom specifications, contracts, and notes for ' + clientName + '.')
             ]),
             h('button', {
               class: 'btn primary small',
@@ -839,7 +847,7 @@ OC.clients = (function () {
             h('div', {}, [
               h('h2', { class: 'portal-view-title' }, [OC.icon('edit'), 'Edit Client Details']),
               h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
-                'Write notes for ' + client.name + ' and click "Save Details" when finished.')
+                'Write notes for ' + clientName + ' and click "Save Details" when finished.')
             ]),
             h('div', { class: 'row', style: 'gap:8px;' }, [
               h('button', {
@@ -857,8 +865,8 @@ OC.clients = (function () {
                 onClick: function () {
                   var val = editorText.value.trim();
                   OC.store.mutate({
-                    actor: user.id, action: 'client.details.update', target: client.name,
-                    detail: 'Updated documentation notes for ' + client.name
+                    actor: user.id, action: 'client.details.update', target: clientName,
+                    detail: 'Updated documentation notes for ' + clientName
                   }, function () {
                     client.details = val;
                     client.notes = val;
@@ -1017,7 +1025,7 @@ OC.clients = (function () {
 
             return h('div', {
               class: 'card client-item-card',
-              title: 'Click to open ' + c.name + ' workspace portal & reports',
+              title: 'Click to open ' + displayTitle + ' workspace portal & reports',
               onClick: function () {
                 activePortalClientId = c.id;
                 isDetailsEditing = false;

@@ -219,7 +219,7 @@ OC.clients = (function () {
             client.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null
           ].filter(Boolean)),
           h('div', { class: 'user-profile-role-line' }, 'Official Client Account · ' + clientTodos.length + ' Total Tasks Assigned (' + openTaskCount + ' Open)'),
-          h('div', { class: 'user-profile-meta-line' }, '📞 Client Number: ' + (client.client_number || client.contact || 'No phone recorded'))
+          h('div', { class: 'user-profile-meta-line' }, [OC.icon('phone'), 'Client Number: ' + (client.client_number || client.contact || 'No phone recorded')])
         ])
       ]),
       h('div', { class: 'user-profile-right' }, [
@@ -240,10 +240,10 @@ OC.clients = (function () {
 
     /* 2. Sidebar Navigation Items */
     var sidebarItems = [
-      { id: 'details', label: 'Details & Workspace', icon: 'edit', emoji: '📝' },
-      { id: 'todos', label: 'Todos & Tasks', icon: 'check', emoji: '✅', badge: openTaskCount > 0 ? openTaskCount : null },
-      { id: 'instructions', label: 'Instructions', icon: 'file', emoji: '📋', badge: clientInstructions.length > 0 ? clientInstructions.length : null },
-      { id: 'report', label: 'Report & Analytics', icon: 'stats', emoji: '📊' }
+      { id: 'details', label: 'Details & Workspace', icon: 'edit' },
+      { id: 'todos', label: 'Todos & Tasks', icon: 'check', badge: openTaskCount > 0 ? openTaskCount : null },
+      { id: 'instructions', label: 'Instructions', icon: 'file', badge: clientInstructions.length > 0 ? clientInstructions.length : null },
+      { id: 'report', label: 'Report & Analytics', icon: 'stats' }
     ];
 
     var sidebar = h('aside', { class: 'portal-sidebar' }, [
@@ -261,7 +261,7 @@ OC.clients = (function () {
             renderClientPortal(host, client, onBack);
           }
         }, [
-          h('span', { class: 'portal-nav-icon' }, item.emoji),
+          h('span', { class: 'portal-nav-icon' }, OC.icon(item.icon)),
           h('span', { class: 'portal-nav-label' }, item.label),
           item.badge ? h('span', { class: 'chip count', style: 'margin-left:auto;font-size:10.5px;padding:2px 7px;' }, String(item.badge)) : null
         ]);
@@ -312,15 +312,15 @@ OC.clients = (function () {
       var reportContent = h('div', { class: 'portal-view-content' }, [
         h('div', { class: 'portal-header-box' }, [
           h('div', {}, [
-            h('h2', { class: 'portal-view-title' }, ['📊 Task Completion Analytics & Reports']),
+            h('h2', { class: 'portal-view-title' }, [OC.icon('stats'), 'Task Completion Analytics & Reports']),
             h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
               'Review completion velocity, active task breakdowns, and SLA performance metrics for ' + client.name + '.')
           ]),
           h('div', { class: 'segmented', role: 'group', 'aria-label': 'Select timeframe' }, [
-            ['day', '📅 Today (Day)'],
-            ['month', '🗓️ This Month'],
-            ['year', '📊 This Year'],
-            ['all', '🌐 All Time']
+            ['day', 'Today', 'calendar'],
+            ['month', 'This Month', 'calendar'],
+            ['year', 'This Year', 'stats'],
+            ['all', 'All Time', 'globe']
           ].map(function (opt) {
             return h('button', {
               type: 'button',
@@ -329,27 +329,27 @@ OC.clients = (function () {
                 activeTimeframe = opt[0];
                 renderClientPortal(host, client, onBack);
               }
-            }, opt[1]);
+            }, [OC.icon(opt[2]), opt[1]]);
           }))
         ]),
 
         /* 4 KPI Cards */
-        h('div', { class: 'stats-grid', style: 'display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:14px;margin-bottom:18px;' }, [
-          h('div', { class: 'card stat-card' }, [
-            h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Total Tasks (' + activeTimeframe.toUpperCase() + ')'),
-            h('div', { class: 'v tabular', style: 'font-size:24px;font-weight:700;' }, String(totalT))
+        h('div', { class: 'stats' }, [
+          h('div', { class: 'stat' }, [
+            h('span', { class: 'k' }, 'Total Tasks (' + activeTimeframe.toUpperCase() + ')'),
+            h('div', { class: 'v tabular' }, String(totalT))
           ]),
-          h('div', { class: 'card stat-card' }, [
-            h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Completion Rate'),
-            h('div', { class: 'v tabular', style: 'font-size:24px;font-weight:700;color:#10b981;' }, rate + '%')
+          h('div', { class: 'stat' }, [
+            h('span', { class: 'k' }, 'Completion Rate'),
+            h('div', { class: 'v tabular' }, rate + '%')
           ]),
-          h('div', { class: 'card stat-card' }, [
-            h('span', { class: 'k muted', style: 'font-size:12px;' }, 'In Progress'),
-            h('div', { class: 'v tabular', style: 'font-size:24px;font-weight:700;color:#38bdf8;' }, String(progT))
+          h('div', { class: 'stat' }, [
+            h('span', { class: 'k' }, 'In Progress'),
+            h('div', { class: 'v tabular' }, String(progT))
           ]),
-          h('div', { class: 'card stat-card' }, [
-            h('span', { class: 'k muted', style: 'font-size:12px;' }, 'Pending / Blocked'),
-            h('div', { class: 'v tabular', style: 'font-size:24px;font-weight:700;color:#f59e0b;' }, String(openT + blockedT))
+          h('div', { class: 'stat' }, [
+            h('span', { class: 'k' }, 'Pending / Blocked'),
+            h('div', { class: 'v tabular' }, String(openT + blockedT))
           ])
         ]),
 
@@ -359,17 +359,17 @@ OC.clients = (function () {
             h('div', { style: 'font-weight:700;font-size:14.5px;color:var(--ink);' }, 'Task Progress Breakdown (' + activeTimeframe.toUpperCase() + ')'),
             h('span', { class: 'chip count' }, totalT + ' Total Tracked')
           ]),
-          h('div', { class: 'client-velocity-bar-wrap', style: 'height:22px;margin:14px 0 16px;' }, [
-            h('div', { class: 'client-velocity-segment', style: 'width:' + donePct + '%;background:#10b981;', title: 'Done: ' + doneT + ' (' + Math.round(donePct) + '%)' }),
-            h('div', { class: 'client-velocity-segment', style: 'width:' + progPct + '%;background:#38bdf8;', title: 'In Progress: ' + progT + ' (' + Math.round(progPct) + '%)' }),
-            h('div', { class: 'client-velocity-segment', style: 'width:' + openPct + '%;background:#f59e0b;', title: 'Open: ' + openT + ' (' + Math.round(openPct) + '%)' }),
-            h('div', { class: 'client-velocity-segment', style: 'width:' + blockPct + '%;background:#ef4444;', title: 'Blocked: ' + blockedT + ' (' + Math.round(blockPct) + '%)' })
+          h('div', { class: 'client-velocity-bar-wrap', style: 'margin:16px 0 14px;' }, [
+            h('div', { class: 'client-velocity-segment', style: 'width:' + donePct + '%;background:var(--state-done);', title: 'Done: ' + doneT + ' (' + Math.round(donePct) + '%)' }),
+            h('div', { class: 'client-velocity-segment', style: 'width:' + progPct + '%;background:var(--state-progress);', title: 'In Progress: ' + progT + ' (' + Math.round(progPct) + '%)' }),
+            h('div', { class: 'client-velocity-segment', style: 'width:' + openPct + '%;background:var(--state-open);', title: 'Open: ' + openT + ' (' + Math.round(openPct) + '%)' }),
+            h('div', { class: 'client-velocity-segment', style: 'width:' + blockPct + '%;background:var(--state-blocked);', title: 'Blocked: ' + blockedT + ' (' + Math.round(blockPct) + '%)' })
           ]),
           h('div', { class: 'client-graphic-legend', style: 'font-size:12.5px;gap:20px;' }, [
-            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#10b981;' }), 'Completed: ' + doneT + ' (' + Math.round(donePct) + '%)']),
-            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#38bdf8;' }), 'In Progress: ' + progT + ' (' + Math.round(progPct) + '%)']),
-            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#f59e0b;' }), 'Open: ' + openT + ' (' + Math.round(openPct) + '%)']),
-            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:#ef4444;' }), 'Blocked: ' + blockedT + ' (' + Math.round(blockPct) + '%)'])
+            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:var(--state-done);' }), 'Completed: ' + doneT + ' (' + Math.round(donePct) + '%)']),
+            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:var(--state-progress);' }), 'In Progress: ' + progT + ' (' + Math.round(progPct) + '%)']),
+            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:var(--state-open);' }), 'Open: ' + openT + ' (' + Math.round(openPct) + '%)']),
+            h('span', {}, [h('span', { class: 'client-legend-dot', style: 'background:var(--state-blocked);' }), 'Blocked: ' + blockedT + ' (' + Math.round(blockPct) + '%)'])
           ])
         ])
       ]);
@@ -466,7 +466,7 @@ OC.clients = (function () {
       var insContent = h('div', { class: 'portal-view-content' }, [
         h('div', { class: 'portal-header-box' }, [
           h('div', {}, [
-            h('h2', { class: 'portal-view-title' }, ['📋 Client Instructions (' + clientInstructions.length + ')']),
+            h('h2', { class: 'portal-view-title' }, [OC.icon('file'), 'Client Instructions (' + clientInstructions.length + ')']),
             h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
               'Specific workflow directives, briefs, and team guidelines for ' + client.name + '.')
           ]),
@@ -515,7 +515,7 @@ OC.clients = (function () {
                   renderClientPortal(host, client, onBack);
                 });
               }
-            }, '🗑️ Delete'));
+            }, [OC.icon('trash'), 'Delete']));
           }
 
           return h('div', { class: 'client-instruction-item-card' }, [
@@ -554,7 +554,7 @@ OC.clients = (function () {
         detailsContent = h('div', { class: 'portal-view-content' }, [
           h('div', { class: 'portal-header-box' }, [
             h('div', {}, [
-              h('h2', { class: 'portal-view-title' }, ['📝 Details & Documentation']),
+              h('h2', { class: 'portal-view-title' }, [OC.icon('edit'), 'Details & Documentation']),
               h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
                 'Custom specifications, contracts, and notes for ' + client.name + '.')
             ]),
@@ -609,21 +609,21 @@ OC.clients = (function () {
         }
 
         var toolbar = h('div', { class: 'client-editor-toolbar' }, [
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold (**text**)', onClick: function () { insertFormatting('**', '**'); } }, '𝗕 Bold'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Italic (*text*)', onClick: function () { insertFormatting('*', '*'); } }, '𝐼 Italic'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bold (**text**)', onClick: function () { insertFormatting('**', '**'); } }, 'Bold'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Italic (*text*)', onClick: function () { insertFormatting('*', '*'); } }, 'Italic'),
           h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 2 (## Title)', onClick: function () { insertFormatting('## ', '\n'); } }, 'H2'),
           h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Heading 3 (### Title)', onClick: function () { insertFormatting('### ', '\n'); } }, 'H3'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bullet List (- item)', onClick: function () { insertFormatting('- ', '\n'); } }, '• List'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Task Checkbox (- [ ] task)', onClick: function () { insertFormatting('- [ ] ', '\n'); } }, '☑ Checklist'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Code (`code`)', onClick: function () { insertFormatting('`', '`'); } }, '⌨ Code'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote (> quote)', onClick: function () { insertFormatting('> ', '\n'); } }, '❝ Quote'),
-          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear Text', onClick: function () { editorText.value = ''; editorText.focus(); } }, '🗑️ Clear')
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Bullet List (- item)', onClick: function () { insertFormatting('- ', '\n'); } }, 'List'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Task Checkbox (- [ ] task)', onClick: function () { insertFormatting('- [ ] ', '\n'); } }, 'Checklist'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Code (`code`)', onClick: function () { insertFormatting('`', '`'); } }, 'Code'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote (> quote)', onClick: function () { insertFormatting('> ', '\n'); } }, 'Quote'),
+          h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear Text', onClick: function () { editorText.value = ''; editorText.focus(); } }, [OC.icon('trash'), 'Clear']),
         ]);
 
         detailsContent = h('div', { class: 'portal-view-content' }, [
           h('div', { class: 'portal-header-box' }, [
             h('div', {}, [
-              h('h2', { class: 'portal-view-title' }, ['📝 Edit Client Details']),
+              h('h2', { class: 'portal-view-title' }, [OC.icon('edit'), 'Edit Client Details']),
               h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
                 'Write notes for ' + client.name + ' and click "Save Details" when finished.')
             ]),
@@ -654,11 +654,11 @@ OC.clients = (function () {
                       target.notes = val;
                     }
                   });
-                  OC.ui.toast('Client details saved successfully! 💾');
+                  OC.ui.toast('Client details saved successfully.');
                   isDetailsEditing = false;
                   renderClientPortal(host, client, onBack);
                 }
-              }, '💾 Save Details')
+              }, [OC.icon('save'), 'Save Details'])
             ])
           ]),
           h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;display:flex;flex-direction:column;gap:12px;' }, [
@@ -809,7 +809,7 @@ OC.clients = (function () {
               h('div', { class: 'row', style: 'margin:8px 0 6px;gap:6px;flex-wrap:wrap;' }, [
                 c.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'ID: ' + c.client_id) : null,
                 c.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Code: ' + c.client_code) : null,
-                (c.client_number || c.contact) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, '📞 ' + (c.client_number || c.contact)) : null,
+                (c.client_number || c.contact) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, [OC.icon('phone'), (c.client_number || c.contact)]) : null,
                 h('span', { class: 'chip count' }, activeTaskCount + ' open tasks')
               ].filter(Boolean)),
               h('p', { class: 'muted', style: 'font-size:13px;margin:6px 0 4px;' }, 'Client number: ' + (c.client_number || c.contact || 'N/A')),

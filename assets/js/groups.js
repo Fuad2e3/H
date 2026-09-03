@@ -232,7 +232,7 @@ OC.groups = (function () {
               e.preventDefault();
               setReplyContext(null, null);
             }
-          }, '✕')
+          }, OC.icon('close'))
         ]));
       } else {
         replyingBadgeWrap.style.display = 'none';
@@ -247,13 +247,13 @@ OC.groups = (function () {
         mediaPreviewWrap.style.display = 'block';
         var thumb = media.type === 'image'
           ? h('img', { class: 'chat-media-preview-thumb', src: media.url, alt: media.name })
-          : h('div', { class: 'chat-media-preview-thumb', style: 'display:flex;align-items:center;justify-content:center;background:var(--paper);color:var(--ink);font-size:16px;' }, '🎬');
+          : h('div', { class: 'chat-media-preview-thumb', style: 'display:flex;align-items:center;justify-content:center;background:var(--paper);color:var(--ink);font-size:16px;' }, OC.icon('video'));
 
         mediaPreviewWrap.appendChild(h('div', { class: 'chat-media-preview-bar' }, [
           thumb,
           h('div', { class: 'chat-media-preview-info' }, [
             h('span', { class: 'chat-media-preview-name' }, media.name),
-            h('span', { class: 'chat-media-preview-size' }, (media.type === 'image' ? '🖼️ Optimized Image · ' : '🎬 Video · ') + media.size)
+            h('span', { class: 'chat-media-preview-size' }, (media.type === 'image' ? 'Optimized image · ' : 'Video · ') + media.size)
           ]),
           h('button', {
             type: 'button',
@@ -263,7 +263,7 @@ OC.groups = (function () {
               e.preventDefault();
               setMediaAttachment(null);
             }
-          }, '✕')
+          }, OC.icon('close'))
         ]));
       } else {
         mediaPreviewWrap.style.display = 'none';
@@ -312,7 +312,7 @@ OC.groups = (function () {
               name: file.name,
               size: approxMb + ' MB'
             });
-            OC.ui.toast('Video attached successfully! 🎬');
+            OC.ui.toast('Video attached successfully.');
           };
           reader.readAsDataURL(file);
         } else {
@@ -332,7 +332,7 @@ OC.groups = (function () {
                 name: file.name,
                 size: approxKb + ' KB'
               });
-              OC.ui.toast('Image optimized & attached! 🖼️');
+              OC.ui.toast('Image optimized and attached.');
             };
             img.src = ev.target.result;
           };
@@ -367,7 +367,7 @@ OC.groups = (function () {
               if (idx > -1) optionInputs.splice(idx, 1);
               row.remove();
             }
-          }, '✕') : null
+          }, OC.icon('close')) : null
         ]);
         optionInputs.push(optInput);
         optionsListWrap.appendChild(row);
@@ -386,7 +386,7 @@ OC.groups = (function () {
       }, [OC.icon('plus'), 'Add option']);
 
       OC.ui.modal({
-        title: '📊 Create Interactive Poll in ' + currentGroup.name,
+        title: 'Create Interactive Poll in ' + currentGroup.name,
         content: h('div', {}, [
           OC.ui.field('Question / Topic', qInput, { required: true }),
           OC.ui.field('Poll Options', h('div', {}, [
@@ -441,7 +441,7 @@ OC.groups = (function () {
                 OC.store.notify(targets, user.name + ' started a new poll in ' + currentGroup.name + ': "' + qVal.slice(0, 35) + '"', currentGroup.id);
               }
 
-              OC.ui.toast('Poll created successfully! 📊');
+              OC.ui.toast('Poll created successfully.');
               renderMessages();
               close();
             }
@@ -492,7 +492,7 @@ OC.groups = (function () {
               h('span', {}, currentGroup.name)
             ]),
             h('div', { class: 'row', style: 'gap:6px;align-items:center;' }, [
-              h('span', { class: 'chip ' + (currentGroup.status === 'active' ? 'group' : 'custom') }, (currentGroup.status === 'active' ? '🟢 ' : '') + currentGroup.status),
+              h('span', { class: 'chip ' + (currentGroup.status === 'active' ? 'group' : 'custom') }, currentGroup.status),
               h('span', { class: 'chip count' }, (currentGroup.members || []).length + ' members')
             ])
           ]),
@@ -604,7 +604,7 @@ OC.groups = (function () {
                 onClick: function (e) {
                   e.preventDefault();
                   OC.ui.modal({
-                    title: '🖼️ ' + (m.media.name || 'Image Preview'),
+                    title: (m.media.name || 'Image Preview'),
                     content: h('div', { style: 'text-align:center;' }, [h('img', { src: m.media.url, style: 'max-width:100%;max-height:75vh;border-radius:6px;' })]),
                     actions: [{ label: 'Close', onClick: function (close) { close(); } }]
                   });
@@ -649,13 +649,13 @@ OC.groups = (function () {
                   h('span', { class: 'group-msg-poll-opt-text' }, opt.text),
                   h('span', { class: 'group-msg-poll-opt-stats' }, voteCount + ' vote' + (voteCount === 1 ? '' : 's') + (voterNames ? ' · ' + voterNames : ''))
                 ]),
-                h('button', { type: 'button', class: 'btn small ' + (hasVoted ? 'primary' : 'outline') }, hasVoted ? '✓ Voted' : 'Vote')
+                h('button', { type: 'button', class: 'btn small ' + (hasVoted ? 'primary' : 'outline') }, hasVoted ? [OC.icon('check'), 'Voted'] : 'Vote')
               ]);
             });
 
             pollNode = h('div', { class: 'group-msg-poll' }, [
               h('div', { class: 'group-msg-poll-head' }, [
-                h('span', { class: 'group-msg-poll-title' }, [h('span', {}, '📊'), h('span', {}, m.poll.question)]),
+                h('span', { class: 'group-msg-poll-title' }, [OC.icon('poll'), h('span', {}, m.poll.question)]),
                 h('span', { class: 'chip count' }, totalPollVotes + ' vote' + (totalPollVotes === 1 ? '' : 's'))
               ]),
               h('div', { class: 'group-msg-poll-options' }, optionNodes)
@@ -806,8 +806,8 @@ OC.groups = (function () {
         mediaFileInput,
         h('div', { class: 'comment-form-row' }, [
           msgInput,
-          h('button', { class: 'mention-btn-trigger', type: 'button', title: 'Attach Photo/Video', onClick: function () { mediaFileInput.click(); } }, '📷'),
-          h('button', { class: 'mention-btn-trigger', type: 'button', title: 'Create Poll', onClick: openCreatePollModal }, '📊'),
+          h('button', { class: 'mention-btn-trigger', type: 'button', title: 'Attach Photo/Video', onClick: function () { mediaFileInput.click(); } }, OC.icon('image')),
+          h('button', { class: 'mention-btn-trigger', type: 'button', title: 'Create Poll', onClick: openCreatePollModal }, OC.icon('poll')),
           h('button', { class: 'btn small primary', type: 'button', onClick: submitGroupMessage }, 'Send')
         ])
       ]);
@@ -964,7 +964,7 @@ OC.groups = (function () {
           h('div', { class: 'discord-channel-left' }, [
             h('span', { class: 'discord-channel-hash' }, '#'),
             h('span', { class: 'discord-channel-name' }, g.name),
-            g.status === 'active' ? h('span', { style: 'font-size:8px;color:var(--success);' }, '🟢') : null
+            g.status === 'active' ? h('span', { class: 'dot', style: 'color:var(--success);' }) : null
           ]),
           h('div', { class: 'row', style: 'align-items:center;gap:6px;' }, [
             unreadCount > 0 ? h('span', { class: 'discord-channel-badge' }, String(unreadCount)) : null,
@@ -978,7 +978,7 @@ OC.groups = (function () {
                 class: 'discord-channel-tool-btn',
                 title: 'Delete channel',
                 onClick: function () { deleteGroupDirect(g, function () { render(host, rerender, hideHead); }); }
-              }, '🗑️') : null
+              }, OC.icon('trash')) : null
             ].filter(Boolean))
           ])
         ]);

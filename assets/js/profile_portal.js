@@ -226,7 +226,7 @@ OC.profilePortal = (function () {
       return h('div', { class: 'portal-credential-card' }, [
         h('div', { class: 'portal-card-header' }, [
           h('div', { class: 'portal-card-title' }, [
-            h('span', { class: 'portal-card-icon' }, OC.icon(iconKey) || '📋'),
+            h('span', { class: 'portal-card-icon' }, OC.icon(iconKey)),
             h('span', { class: 'portal-card-heading-text' }, title)
           ]),
           h('button', {
@@ -407,7 +407,7 @@ OC.profilePortal = (function () {
       var outInput = h('input', { type: 'text', value: schedOut, placeholder: 'e.g. 06:30 PM', style: 'font-weight:700;' });
 
       OC.ui.modal({
-        title: '⚙️ Set Scheduled In/Out Times (System Admin Only)',
+        title: 'Set Scheduled In/Out Times (System Admin Only)',
         content: h('div', { class: 'form-body', style: 'display:flex;flex-direction:column;gap:12px;' }, [
           h('div', { class: 'callout info', style: 'font-size:12.5px;padding:10px 14px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);border-radius:6px;' },
             'System Admin Policy: Configure expected work hours and late thresholds for ' + user.name + '.'
@@ -445,7 +445,7 @@ OC.profilePortal = (function () {
                 user.office_details.scheduled_out = newOut;
               });
 
-              OC.ui.toast('Scheduled In/Out times updated successfully! ✅');
+              OC.ui.toast('Scheduled In/Out times updated successfully.');
               rerender();
               close();
             }
@@ -458,7 +458,7 @@ OC.profilePortal = (function () {
       var latestAtt = OC.store.state.attendance || [];
       var currentLog = latestAtt.find(function (a) { return a.user_id === user.id && a.date === todayStr; });
       if (currentLog && currentLog.punch_in && currentLog.punch_out) {
-        OC.ui.toast('🔒 Your attendance for today is already completed and locked.', true);
+        OC.ui.toast('Your attendance for today is already completed and locked.', true);
         return;
       }
 
@@ -484,10 +484,10 @@ OC.profilePortal = (function () {
             status: isLate ? 'Late' : 'Present',
             note: 'Auto Quick Punch In'
           });
-          OC.ui.toast('Punch In recorded with date ' + todayStr + ' at ' + nowTime + ' ✅');
+          OC.ui.toast('Punch In recorded with date ' + todayStr + ' at ' + nowTime + '.');
         } else if (!existing.punch_out) {
           existing.punch_out = nowTime;
-          OC.ui.toast('Punch Out recorded with date ' + todayStr + ' at ' + nowTime + ' 🏁');
+          OC.ui.toast('Punch Out recorded with date ' + todayStr + ' at ' + nowTime + '.');
         }
       });
       rerender();
@@ -495,8 +495,8 @@ OC.profilePortal = (function () {
 
     var isComplete = Boolean(todayLog && todayLog.punch_in && todayLog.punch_out);
     var punchBtnLabel = isComplete
-      ? '🔒 Completed (' + todayLog.punch_in + ' - ' + todayLog.punch_out + ')'
-      : (!todayLog ? '⏱️ Quick Punch In' : '🏁 Quick Punch Out (' + todayLog.punch_in + ')');
+      ? 'Completed (' + todayLog.punch_in + ' - ' + todayLog.punch_out + ')'
+      : (!todayLog ? 'Quick Punch In' : 'Quick Punch Out (' + todayLog.punch_in + ')');
 
     var monthNavControls = h('div', { class: 'row', style: 'gap:8px;align-items:center;flex-wrap:wrap;' }, [
       h('button', {
@@ -508,7 +508,7 @@ OC.profilePortal = (function () {
           selectedMonth = shiftMonth(selectedMonth, -1);
           rerender();
         }
-      }, ['◀ Prev']),
+      }, [OC.icon('left'), 'Prev']),
       h('input', {
         type: 'month',
         value: selectedMonth,
@@ -529,7 +529,7 @@ OC.profilePortal = (function () {
           selectedMonth = shiftMonth(selectedMonth, 1);
           rerender();
         }
-      }, ['Next ▶']),
+      }, ['Next', OC.icon('right')]),
       (selectedMonth !== currentMonthStr)
         ? h('button', {
             class: 'btn small',
@@ -546,7 +546,7 @@ OC.profilePortal = (function () {
     return h('div', { class: 'portal-view-content' }, [
       h('div', { class: 'portal-header-box' }, [
         h('div', {}, [
-          h('h2', { class: 'portal-view-title' }, [OC.icon('clock') || '🕒', ' My Attendance Record']),
+          h('h2', { class: 'portal-view-title' }, [OC.icon('clock'), 'My Attendance Record']),
           h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
             'Punch machine & checkin logs for ' + user.name + (user.employee_id ? ' (' + user.employee_id + ')' : '') + '. Standard Scheduled In-Time: ' + schedIn + '.'
           )
@@ -558,7 +558,7 @@ OC.profilePortal = (function () {
             style: 'font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;',
             title: 'System Admin: Set standard scheduled in/out work hours',
             onClick: openAdminScheduleModal
-          }, ['⚙️ Set In/Out Time (Admin)']) : null,
+          }, [OC.icon('settings'), 'Set In/Out Time (Admin)']) : null,
           h('button', {
             class: 'btn primary',
             type: 'button',
@@ -748,7 +748,7 @@ OC.profilePortal = (function () {
       wpInput.value = '0';
       reasonInput.value = '';
 
-      OC.ui.toast('🎉 Leave application submitted & sent to ' + (mgrUser ? mgrUser.name : 'Manager') + ' for approval.');
+      OC.ui.toast('Leave application submitted & sent to ' + (mgrUser ? mgrUser.name : 'Manager') + ' for approval.');
       rerender();
 
       setTimeout(function () {
@@ -777,7 +777,7 @@ OC.profilePortal = (function () {
         OC.store.notify([app.user_id], 'Your leave application for ' + app.from_date + ' to ' + app.to_date + ' has been APPROVED.', '#profile');
       }
 
-      OC.ui.toast('Leave application approved successfully! ✅');
+      OC.ui.toast('Leave application approved successfully.');
       rerender();
     }
 
@@ -836,7 +836,7 @@ OC.profilePortal = (function () {
     return h('div', { class: 'portal-view-content' }, [
       h('div', { class: 'portal-header-box' }, [
         h('div', {}, [
-          h('h2', { class: 'portal-view-title' }, [OC.icon('send') || '✈️', ' Leave Portal & Formal Applications']),
+          h('h2', { class: 'portal-view-title' }, [OC.icon('send'), 'Leave Portal & Formal Applications']),
           h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
             'Apply for leave, track real-time credit balances, and review team approval requests for ' + user.name + '.'
           )
@@ -871,7 +871,7 @@ OC.profilePortal = (function () {
       incomingLeaves.length > 0 ? h('div', { class: 'portal-table-container', style: 'margin-bottom:24px;border:1px solid rgba(56,189,248,0.3);background:rgba(15,23,42,0.4);' }, [
         h('div', { class: 'portal-table-head', style: 'background:rgba(56,189,248,0.08);' }, [
           h('div', { style: 'display:flex;align-items:center;gap:10px;' }, [
-            h('h3', { style: 'color:var(--cyan, #38bdf8);margin:0;' }, '📥 Incoming Leave Requests for My Approval'),
+            h('h3', { style: 'margin:0;' }, 'Incoming Leave Requests for My Approval'),
             pendingIncoming.length > 0
               ? h('span', { class: 'chip alert', style: 'font-weight:700;' }, pendingIncoming.length + ' Pending Action')
               : h('span', { class: 'chip success' }, 'All Reviewed')
@@ -914,10 +914,10 @@ OC.profilePortal = (function () {
                       style: 'font-weight:600;padding:4px 10px;font-size:11.5px;',
                       title: 'Reject this leave request',
                       onClick: function () { rejectLeave(app); }
-                    }, ['❌ Reject'])
+                    }, [OC.icon('close'), 'Reject'])
                   ])
                 : h('span', { class: 'chip', style: 'font-size:11px;' },
-                    (app.status === 'Approved' ? '✅ Approved' : '❌ Rejected') + (app.reviewed_by_name ? ' by ' + app.reviewed_by_name : '')
+                    (app.status === 'Approved' ? 'Approved' : 'Rejected') + (app.reviewed_by_name ? ' by ' + app.reviewed_by_name : '')
                   );
 
               return h('tr', {}, [
@@ -1098,7 +1098,7 @@ OC.profilePortal = (function () {
       style: 'margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);border-radius:10px;'
     }, [
       h('div', { style: 'display:flex;align-items:center;gap:10px;' }, [
-        h('span', { style: 'font-size:18px;' }, '👤'),
+        OC.icon('user'),
         h('div', {}, [
           h('div', { style: 'font-weight:700;font-size:14px;color:var(--cyan, #38bdf8);' }, 'Managing Employee Portal: ' + user.name + (user.employee_id ? ' (' + user.employee_id + ')' : '')),
           h('div', { class: 'muted', style: 'font-size:12px;' }, 'Viewing and managing details as Administrator / Team Lead.')
@@ -1112,7 +1112,7 @@ OC.profilePortal = (function () {
           targetUserId = null;
           render(host, rerender);
         }
-      }, ['🔄 Back to My Profile'])
+      }, [OC.icon('left'), 'Back to My Profile'])
     ]) : null;
 
     var layout = h('div', { class: 'portal-layout-container' }, [

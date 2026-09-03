@@ -501,7 +501,7 @@ OC.ui = (function () {
         parts.push(h('span', {
           class: 'mention-tag everyone',
           title: 'Notifies all team members in this group'
-        }, '📢 @everyone'));
+        }, [OC.icon ? OC.icon('users') : null, '@everyone']));
         lastIdx = match.index + match[0].length;
       } else if (foundUser) {
         if (match.index > lastIdx) {
@@ -578,7 +578,7 @@ OC.ui = (function () {
 
       filtered.forEach(function (u, i) {
         var markNode = u.isEveryone
-          ? h('div', { class: 'mention-everyone-badge', style: 'width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;' }, '📢')
+          ? h('div', { class: 'mention-everyone-badge mark-tint', style: 'width:24px;height:24px;background:var(--brand-orange);' }, OC.icon('users'))
           : mark(u.id);
 
         var item = h('div', {
@@ -709,7 +709,7 @@ OC.ui = (function () {
               e.preventDefault();
               setReplyContext(null, null);
             }
-          }, '✕')
+          }, OC.icon('close'))
         ]));
       } else {
         replyingBadgeWrap.style.display = 'none';
@@ -958,7 +958,7 @@ OC.ui = (function () {
 
     dlg.appendChild(h('div', { class: 'modal-head' }, [
       h('h2', {}, opts.title),
-      h('button', { class: 'iconbtn push', type: 'button', 'aria-label': 'Close', onClick: close }, '✕')
+      h('button', { class: 'iconbtn push', type: 'button', 'aria-label': 'Close', onClick: close }, OC.icon('close'))
     ]));
     var bodyClass = 'modal-body' + (opts.bodyClass ? ' ' + opts.bodyClass : '');
     dlg.appendChild(h('div', { class: bodyClass }, [errorBox, opts.content]));
@@ -1144,7 +1144,7 @@ OC.ui = (function () {
             render();
             if (onChange) onChange(getClients());
           }
-        }, '✕');
+        }, OC.icon('close'));
 
         var chip = h('span', { class: 'multi-picker-chip client-chip' }, [
           h('span', {}, label),
@@ -1260,7 +1260,7 @@ OC.ui = (function () {
             render();
             if (onChange) onChange(getDepartments());
           }
-        }, '✕');
+        }, OC.icon('close'));
 
         var chip = h('span', { class: 'multi-picker-chip dept-chip' }, [
           h('span', {}, label),
@@ -1391,7 +1391,7 @@ OC.ui = (function () {
             render();
             if (onChange) onChange(getAssignees());
           }
-        }, '✕');
+        }, OC.icon('close'));
 
         var chip = h('span', { class: 'assignee-chip' }, [
           markEl,

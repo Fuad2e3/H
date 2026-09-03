@@ -112,11 +112,11 @@ OC.people = (function () {
       '',
       'You have been invited to join the Originate Command portal (' + (deptObj ? deptName + ' · ' : '') + levelCap + ').',
       '',
-      '📧 Gmail: ' + account.email,
-      '🔑 72-Hour Password: ' + pass,
-      '🔗 72-Hour Invite Link: ' + link,
+      'Gmail: ' + account.email,
+      '72-Hour Password: ' + pass,
+      '72-Hour Invite Link: ' + link,
       '',
-      '⏳ Security Notice: Both the link and password are valid for 72 hours.',
+      'Security Notice: Both the link and password are valid for 72 hours.',
       'Upon your first login, this password becomes your permanent password for all future logins.',
       '',
       '© Originate Command — Owner: Abdullah Al Fuad'
@@ -135,14 +135,14 @@ OC.people = (function () {
     var details = getInviteDetails(account);
 
     OC.ui.modal({
-      title: '🎉 Invite Created for ' + account.name,
+      title: 'Invite Created for ' + account.name,
       content: h('div', { style: 'font-size:13.5px;' }, [
         h('p', { class: 'muted', style: 'margin-bottom:14px;' },
           'A 72-hour invite link and unique password have been generated for this account.'),
         h('div', { class: 'card', style: 'background:var(--card-bg-alt);border:1px solid var(--rule);padding:14px;margin-bottom:16px;' }, [
-          h('p', { style: 'margin:0 0 6px;' }, ['📧 ', h('strong', {}, 'Gmail: '), account.email]),
-          h('p', { style: 'margin:0 0 6px;' }, ['🔑 ', h('strong', {}, '72-Hour Password: '), h('span', { class: 'mono', style: 'color:var(--blueprint);font-weight:700;' }, details.pass)]),
-          h('p', { style: 'margin:0;word-break:break-all;font-size:12px;' }, ['🔗 ', h('strong', {}, 'Link: '), details.link]),
+          h('p', { style: 'margin:0 0 6px;' }, [h('strong', {}, 'Gmail: '), account.email]),
+          h('p', { style: 'margin:0 0 6px;' }, [h('strong', {}, '72-Hour Password: '), h('span', { class: 'mono', style: 'color:var(--blueprint);font-weight:700;' }, details.pass)]),
+          h('p', { style: 'margin:0;word-break:break-all;font-size:12px;' }, [h('strong', {}, 'Link: '), details.link]),
         ]),
         h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap;' }, [
           h('button', {
@@ -227,7 +227,7 @@ OC.people = (function () {
       : (account.invite && account.invite.level ? account.invite.level : (account.admin ? 'Admin' : 'Member'));
     var base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:7000';
 
-    OC.ui.toast('📧 Dispatching auto-email to ' + account.email + '...');
+    OC.ui.toast('Dispatching auto-email to ' + account.email + '...');
 
     if (typeof fetch === 'function') {
       var targetUrl = getApiEndpoint('/api/invites/send-email');
@@ -250,14 +250,14 @@ OC.people = (function () {
         .then(function (res) { return res.json(); })
         .then(function (data) {
           if (data && data.ok) {
-            OC.ui.toast('🚀 Auto-email successfully delivered to ' + account.email + '!');
+            OC.ui.toast('Auto-email successfully delivered to ' + account.email + '.');
           } else {
-            OC.ui.toast('⚠️ Mail notice: ' + (data.error || 'Server processed request'));
+            OC.ui.toast('Mail notice: ' + (data.error || 'Server processed request'));
           }
         })
         .catch(function (err) {
           console.warn('Auto email dispatch warning:', err);
-          OC.ui.toast('⚠️ Could not connect to mail server. Use Open in Gmail button.');
+          OC.ui.toast('Could not connect to mail server. Use Open in Gmail button.');
         });
     }
   }
@@ -403,7 +403,7 @@ OC.people = (function () {
         return h('span', { class: 'chip custom' }, (OC.store.department(m.department) || {}).name + ' · ' + m.level);
       })),
       account.invite && account.invite.passcode ? h('p', { style: 'font-size:12.5px;color:var(--blueprint);margin:6px 0 2px;' }, [
-        '🔑 72-Hour Password: ',
+        '72-Hour Password: ',
         h('strong', { class: 'mono', style: 'background:var(--card-bg-alt);padding:2px 6px;border-radius:4px;' }, account.invite.passcode)
       ]) : null,
       h('p', { class: 'mono muted', style: 'font-size:10.5px;margin-top:6px' },
@@ -572,7 +572,7 @@ OC.people = (function () {
               }
             });
 
-            OC.ui.toast('✅ Added ' + targetUser.name + ' to ' + dept.name + ' as ' + selectedLevel + '.');
+            OC.ui.toast('Added ' + targetUser.name + ' to ' + dept.name + ' as ' + selectedLevel + '.');
             close();
             if (typeof onAdded === 'function') onAdded();
           }
@@ -601,7 +601,7 @@ OC.people = (function () {
           return mDept !== dept.id && mDept !== dept.name;
         });
       });
-      OC.ui.toast('✅ Removed ' + targetUser.name + ' from ' + dept.name + '.');
+      OC.ui.toast('Removed ' + targetUser.name + ' from ' + dept.name + '.');
       if (typeof onRemoved === 'function') onRemoved();
     });
   }
@@ -711,7 +711,7 @@ OC.people = (function () {
     var actions = [
       { label: 'Cancel', onClick: function (close) { close(); } },
       {
-        label: '🚀 Open Employee Portal', onClick: function (close) {
+        label: 'Open Employee Portal', onClick: function (close) {
           close();
           if (OC.profilePortal && OC.profilePortal.openForUser) {
             OC.profilePortal.openForUser(account);
@@ -915,7 +915,7 @@ OC.people = (function () {
                     onClick: function () {
                       removePersonFromDepartment(u, d, function () { render(host); });
                     }
-                  }, '✕')
+                  }, OC.icon('close'))
                 : null
             ]);
           }) : [h('p', { class: 'muted', style: 'font-size:12.5px;' }, 'No members yet.')])

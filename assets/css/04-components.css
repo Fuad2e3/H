@@ -27,6 +27,10 @@
   white-space: nowrap;
   transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
 }
+.chip .icon {
+  width: 12px;
+  height: 12px;
+}
 .chip.client {
   color: var(--blueprint);
   background: var(--blueprint-soft);
@@ -196,10 +200,14 @@
   display: none;
 }
 .segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
-  padding: 6px 14px;
+  padding: 0 14px;
   height: 32px;
   border-radius: 7px;
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
@@ -209,6 +217,10 @@
   user-select: none;
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
+}
+.segmented button .icon {
+  width: 14px;
+  height: 14px;
 }
 .segmented button + button {
   border-left: none;
@@ -3382,11 +3394,19 @@ dialog.modal.fallback {
   margin-top: 2px;
 }
 .user-profile-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12.5px;
   color: #94a3b8 !important;
   line-height: 1.3;
-  margin-top: 1px;
+  margin-top: 3px;
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+}
+.user-profile-meta-line .icon {
+  width: 13px;
+  height: 13px;
+  flex: none;
 }
 .user-profile-right {
   display: flex;
@@ -3513,7 +3533,7 @@ dialog.modal.fallback {
 .portal-nav-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   width: 100%;
   padding: 10px 14px;
   border-radius: 8px;
@@ -3587,7 +3607,12 @@ dialog.modal.fallback {
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+}
+.portal-view-title .icon {
+  width: 17px;
+  height: 17px;
+  color: var(--text-secondary);
 }
 
 /* ---- 4 Credential Cards 2x2 Grid (Photo 3) ---- */
@@ -3623,7 +3648,14 @@ dialog.modal.fallback {
   gap: 8px;
 }
 .portal-card-icon {
+  display: inline-flex;
+  align-items: center;
   font-size: 16px;
+}
+.portal-card-icon .icon {
+  width: 15px;
+  height: 15px;
+  color: var(--text-secondary);
 }
 .portal-card-heading-text {
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
@@ -3718,19 +3750,43 @@ dialog.modal.fallback {
 .portal-stats-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  gap: var(--s4);
+  align-items: stretch;
 }
 
+/* The employee portal's metrics now read as the same object as the dashboard's
+   .stat cards: neutral surface, 3px accent rail, micro-caps label, tabular
+   value. Only the markup differs, so the treatment lives here. */
 .portal-stat-card {
+  position: relative;
   background: var(--card-bg);
   border: 1px solid var(--rule);
   border-radius: var(--r2);
-  padding: var(--s4) var(--s5);
+  padding: var(--s4) var(--s4) var(--s4) var(--s5);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
+  min-height: 92px;
+  overflow: hidden;
   box-shadow: var(--sh1);
+  transition: box-shadow var(--t-fast), border-color var(--t-fast);
 }
+.portal-stat-card:hover {
+  border-color: var(--rule-strong);
+  box-shadow: var(--sh2);
+}
+.portal-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--slate);
+}
+.portal-stats-row > .portal-stat-card:nth-child(1)::before { background: var(--cyan); }
+.portal-stats-row > .portal-stat-card:nth-child(2)::before { background: var(--indigo); }
+.portal-stats-row > .portal-stat-card:nth-child(3)::before { background: var(--brass); }
+.portal-stats-row > .portal-stat-card:nth-child(4)::before { background: var(--success); }
 .portal-stat-label {
   font-size: 11px;
   font-weight: 700;
@@ -4046,32 +4102,45 @@ dialog.modal.fallback {
 }
 
 /* Client Analytics & Graphics */
+/* A single rounded track with hairline separators, rather than four saturated
+   blocks butted together. The translucent-white ground only read correctly on
+   a dark surface. */
 .client-velocity-bar-wrap {
   display: flex;
-  height: 20px;
+  height: 12px;
   width: 100%;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
-  margin: 10px 0 16px;
+  background: var(--card-bg-alt);
+  border: 1px solid var(--rule);
+  margin: 16px 0 14px;
 }
 .client-velocity-segment {
   height: 100%;
-  transition: width 0.3s ease;
+  transition: width var(--t);
+}
+.client-velocity-segment + .client-velocity-segment {
+  box-shadow: inset 1px 0 0 var(--card-bg);
 }
 .client-graphic-legend {
   display: flex;
-  gap: 16px;
+  gap: var(--s3) var(--s5);
   flex-wrap: wrap;
-  font-size: 12px;
+  align-items: center;
+  font-size: 12.5px;
   color: var(--text-secondary);
+}
+.client-graphic-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 .client-legend-dot {
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  margin-right: 5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex: none;
 }
 
 /* Rich Markdown / Workspace Text Editor */
@@ -4367,4 +4436,48 @@ dialog.modal.fallback {
   :root:not([data-theme="light"]) .group-msg-poll-opt-bar {
     background: linear-gradient(90deg, rgba(56, 189, 248, 0.22), rgba(56, 189, 248, 0.35));
   }
+}
+
+/* the @everyone entry in the mention list uses the shared avatar chip shape */
+.mention-everyone-badge .icon {
+  width: 14px;
+  height: 14px;
+  color: #FFFFFF;
+}
+
+/* ---- portal menu icons --------------------------------------------------
+   The nav slot held an emoji glyph; it now carries an SVG that inherits the
+   row's colour, so the active row's icon turns white with its label.
+   ------------------------------------------------------------------------- */
+.portal-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  flex: none;
+}
+.portal-nav-icon .icon {
+  width: 16px;
+  height: 16px;
+}
+.portal-nav-btn .portal-nav-label {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- markdown editor toolbar -------------------------------------------- */
+.client-editor-tool-btn .icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* the media preview thumb shows an icon when there is no image to show */
+.chat-media-preview-thumb .icon {
+  width: 22px;
+  height: 22px;
+  color: var(--text-secondary);
+}
+.mention-btn-trigger .icon {
+  width: 17px;
+  height: 17px;
 }

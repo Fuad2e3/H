@@ -451,9 +451,25 @@ OC.store = (function () {
   function mutate(entry, fn) {
     if (entry && entry.action === 'user.delete') {
       var actorUser = user(entry.actor) || user(session());
+      var targetUser = (state.users || []).find(function (u) {
+        return u.name === entry.target || u.id === entry.target;
+      });
+
       if (!actorUser || !actorUser.admin) {
         if (typeof OC !== 'undefined' && OC.ui && OC.ui.toast) {
           OC.ui.toast('Access Denied: Only System Admin can delete user accounts.', true);
+        }
+        return false;
+      }
+      if (actorUser && targetUser && actorUser.id === targetUser.id) {
+        if (typeof OC !== 'undefined' && OC.ui && OC.ui.toast) {
+          OC.ui.toast('Access Denied: System Admins cannot delete their own account.', true);
+        }
+        return false;
+      }
+      if (targetUser && targetUser.admin) {
+        if (typeof OC !== 'undefined' && OC.ui && OC.ui.toast) {
+          OC.ui.toast('Access Denied: System Admins cannot be deleted.', true);
         }
         return false;
       }

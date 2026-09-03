@@ -315,7 +315,10 @@ OC.can = (function () {
 
   function canDeleteAccount(actor, targetAccount) {
     if (!actor || !targetAccount) return false;
-    return Boolean(actor.admin);
+    if (!actor.admin) return false; // Only System Admin can delete accounts
+    if (actor.id === targetAccount.id) return false; // System Admins cannot delete themselves
+    if (targetAccount.admin) return false; // System Admins cannot be deleted by anyone
+    return true;
   }
 
   /* System Admin, Department Head, or task creator may edit a todo (assignees cannot edit) */

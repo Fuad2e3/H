@@ -599,8 +599,10 @@ OC.app = (function () {
 
     var actions = [];
 
-    // Delete user button: strictly visible and actionable only by System Admin
-    if (isSysAdmin) {
+    // Delete user button: strictly allowed ONLY for System Admin deleting non-admin users (System Admins cannot be deleted by anyone, and cannot delete themselves)
+    var canDelete = Boolean(isSysAdmin && !user.admin && !isSelf);
+
+    if (canDelete) {
       actions.push({
         label: 'Delete user',
         onClick: function (close) {
@@ -608,17 +610,23 @@ OC.app = (function () {
             OC.ui.toast('Access Denied: Only System Admin can delete a user.', true);
             return;
           }
-          var confirmMsg = isSelf
-            ? 'Are you sure you want to permanently delete your own account "' + user.name + '"? You will be logged out immediately.'
-            : 'Permanently delete user "' + user.name + '"? This user will be removed and cannot log in.';
+          if (user.admin) {
+            OC.ui.toast('Access Denied: System Admins cannot be deleted.', true);
+            return;
+          }
+          if (sessionUser.id === user.id) {
+            OC.ui.toast('Access Denied: System Admins cannot delete their own account.', true);
+            return;
+          }
+
+          var confirmMsg = 'Permanently delete user "' + user.name + '"? This user will be removed and cannot log in.';
 
           OC.ui.confirm(confirmMsg, function () {
             var targetName = user.name;
             var targetId = user.id;
-            var actorId = sessionUser ? sessionUser.id : targetId;
 
             OC.store.mutate({
-              actor: actorId,
+              actor: sessionUser.id,
               action: 'user.delete',
               target: targetName,
               detail: 'Permanently deleted user account ' + targetName + ' (' + (user.email || '') + ')'
@@ -631,25 +639,17 @@ OC.app = (function () {
             OC.ui.toast('User account deleted.');
             close();
 
-            if (isSelf) {
-              if (OC.app && OC.app.logout) {
-                OC.app.logout();
-              } else {
-                location.reload();
-              }
-            } else {
-              if (typeof onSave === 'function') {
-                try { onSave(); } catch (e) {}
-              }
-              if (window.location && window.location.hash && window.location.hash.indexOf('profile') !== -1) {
-                if (OC.profilePortal && OC.profilePortal.openForUser) {
-                  OC.profilePortal.openForUser(sessionUser);
-                } else if (OC.app && OC.app.go) {
-                  OC.app.go('people');
-                }
-              }
-              render();
+            if (typeof onSave === 'function') {
+              try { onSave(); } catch (e) {}
             }
+            if (window.location && window.location.hash && window.location.hash.indexOf('profile') !== -1) {
+              if (OC.profilePortal && OC.profilePortal.openForUser) {
+                OC.profilePortal.openForUser(sessionUser);
+              } else if (OC.app && OC.app.go) {
+                OC.app.go('people');
+              }
+            }
+            render();
           });
         }
       });

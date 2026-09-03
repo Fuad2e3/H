@@ -534,10 +534,15 @@ OC.clients = (function () {
             type: 'button',
             style: 'font-weight:700;',
             onClick: function () {
-              if (OC.ui && OC.ui.newTodoModal) {
+              if (OC.board && OC.board.newTodo) {
+                OC.board.newTodo({
+                  client: client.id,
+                  department: client.department || (client.departments && client.departments[0]) || ''
+                }, function () {
+                  renderClientPortal(host, client, onBack);
+                });
+              } else if (OC.ui && OC.ui.newTodoModal) {
                 OC.ui.newTodoModal(function () { renderClientPortal(host, client, onBack); }, { defaultClient: client.id });
-              } else if (OC.dashboard && OC.dashboard.newTodo) {
-                OC.dashboard.newTodo(function () { renderClientPortal(host, client, onBack); });
               }
             }
           }, ['+ Add Task for ' + clientName])
@@ -577,7 +582,16 @@ OC.clients = (function () {
                   renderClientPortal(host, client, onBack);
                 }
               }),
-              h('div', { class: 'client-todo-info' }, [
+              h('div', {
+                class: 'client-todo-info',
+                style: 'cursor:pointer;',
+                title: 'Click to view / edit task',
+                onClick: function () {
+                  if (OC.board && OC.board.editTodo) {
+                    OC.board.editTodo(t, function () { renderClientPortal(host, client, onBack); });
+                  }
+                }
+              }, [
                 h('span', { class: 'client-todo-title' + (t.state === 'done' ? ' is-done' : ''), style: t.state === 'done' ? 'text-decoration:line-through;color:var(--text-secondary);' : '' }, t.title),
                 h('div', { class: 'client-todo-meta' }, [
                   h('span', { class: 'chip ' + (t.state === 'done' ? 'state-done' : 'state-open') }, t.state || 'open'),

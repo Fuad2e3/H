@@ -2019,6 +2019,9 @@ OC.ui = (function () {
     instructionReaders: instructionReaders, markInstructionRead: markInstructionRead,
     formatMentions: formatMentions, extractMentionedUserIds: extractMentionedUserIds, attachMentionAutocomplete: attachMentionAutocomplete,
     modal: modal, confirm: confirm, toast: toast, debounce: debounce,
+    newTodoModal: function (cb, opts) {
+      if (OC.board && OC.board.newTodo) OC.board.newTodo(opts, cb);
+    },
     playNotificationSound: playNotificationSound
   };
 })();

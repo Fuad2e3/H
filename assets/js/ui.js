@@ -875,7 +875,15 @@ OC.ui = (function () {
       body.focus();
     }
 
-    var mentionHelper = attachMentionAutocomplete(body, null, function (mentionedUser) {});
+    /* @mention only offers people who can actually see this thread — an
+       instruction or a todo is scoped to a department, and mentioning someone
+       outside it would notify a person who cannot open the item to read the
+       comment. */
+    var mentionPool = OC.store.state.users.filter(function (u) {
+      if (kind === 'todo') return OC.can.seeTodo ? OC.can.seeTodo(u, item) : true;
+      return OC.can.seeInstruction ? OC.can.seeInstruction(u, item) : true;
+    });
+    var mentionHelper = attachMentionAutocomplete(body, mentionPool, function (mentionedUser) {});
 
     var bodyWrap = h('div', { class: 'thread-body' });
     var bodyBuilt = false;

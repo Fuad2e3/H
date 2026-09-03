@@ -624,12 +624,27 @@ OC.clients = (function () {
             style: 'font-weight:700;',
             onClick: function () {
               if (OC.board && OC.board.newInstruction) {
-                OC.board.newInstruction(function () {
-                  renderClientPortal(host, client, onBack);
-                }, {
+                /* client, departments and tags all live in the preset object —
+                   newInstruction(preset, onCreated), preset first. Passing the
+                   callback first (as this used to) makes the function's own
+                   callback-only shorthand mistake this preset for the
+                   callback and silently drop it, so the instruction posted
+                   with no client at all. */
+                var clientDepts = Array.isArray(client.departments) && client.departments.length
+                  ? client.departments
+                  : (client.department ? [client.department] : []);
+                OC.board.newInstruction({
                   client: client.id,
                   client_only: true,
-                  tags: client.client_code ? [client.client_code] : []
+                  tags: client.client_code ? [client.client_code] : [],
+                  lockClient: true,
+                  /* only lock the department when this client actually
+                     belongs to one — a client open to every department has
+                     none to lock to */
+                  lockDepartment: clientDepts.length > 0,
+                  departments: clientDepts
+                }, function () {
+                  renderClientPortal(host, client, onBack);
                 });
               }
             }

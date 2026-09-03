@@ -976,16 +976,42 @@ OC.board = (function () {
     preset = preset || {};
     var user = me();
     var body = h('textarea', { placeholder: 'the instruction, as it was given' });
-    var clientPicker = OC.ui.clientPicker(preset.clients || preset.client || '');
-    var deptPicker = OC.ui.deptPicker(preset.departments || preset.department || (user.department || ''), user);
+
+    /* Posted from inside a client's own Instructions tab, the client is not a
+       choice — it is the client whose page this is. Likewise, if that client
+       is scoped to a department, this instruction can only ever be seen by
+       that department, so offering a different one would build something
+       nobody could read. Both fields become a fixed line instead of a
+       picker; the wider "Post an instruction" flow from the Notice Board is
+       unaffected. */
+    var lockClient = !!preset.lockClient;
+    var lockDepartment = !!preset.lockDepartment;
+
+    var clientPicker = lockClient ? null : OC.ui.clientPicker(preset.clients || preset.client || '');
+    var deptPicker = lockDepartment ? null : OC.ui.deptPicker(preset.departments || preset.department || (user.department || ''), user);
     var tags = OC.ui.tagPicker(preset.tags || []);
+
+    var lockedClientIds = lockClient ? (preset.clients || (preset.client ? [preset.client] : [])) : [];
+    var lockedClientNames = lockedClientIds.map(function (cid) {
+      var c = OC.store.client(cid);
+      return c ? (OC.ui.clientLabel ? OC.ui.clientLabel(c) : c.name) : cid;
+    }).join(', ');
+    var lockedDeptIds = lockDepartment ? (preset.departments || (preset.department ? [preset.department] : [])) : [];
+    var lockedDeptNames = lockedDeptIds.map(function (did) {
+      var d = OC.store.department(did);
+      return d ? d.name : did;
+    }).join(', ');
 
     OC.ui.modal({
       title: 'Post an instruction',
       content: h('div', {}, [
         OC.ui.field('Instruction', body, { required: true, hint: 'Anyone may post an instruction — it is not restricted the way assignment is (6.3).' }),
-        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
-        OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (3.2).' }),
+        lockClient
+          ? OC.ui.field('Client', h('div', { class: 'chip custom' }, lockedClientNames || 'This client'), { hint: 'Fixed to the client this instruction is posted from.' })
+          : OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
+        lockDepartment
+          ? OC.ui.field('Department', h('div', { class: 'chip custom' }, lockedDeptNames || 'This department'), { hint: 'Fixed to the department this client is assigned to.' })
+          : OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (3.2).' }),
         OC.ui.field('Tags', tags.node, { hint: 'Typing narrows the list. A new tag is created inline and available to everyone immediately (6.4).' })
       ]),
       actions: [
@@ -993,11 +1019,11 @@ OC.board = (function () {
         {
           label: 'Post instruction', primary: true, onClick: function (close) {
             if (!body.value.trim()) return 'Write the instruction first.';
-            var selectedClients = clientPicker.getClients();
-            var primaryClient = clientPicker.getValue();
+            var selectedClients = lockClient ? lockedClientIds : clientPicker.getClients();
+            var primaryClient = lockClient ? lockedClientIds[0] : clientPicker.getValue();
             if (!selectedClients.length || !primaryClient) return 'Select at least one client or add a new one. This is required by 5.2.';
-            var selectedDepts = deptPicker.getDepartments();
-            var primaryDept = deptPicker.getValue();
+            var selectedDepts = lockDepartment ? lockedDeptIds : deptPicker.getDepartments();
+            var primaryDept = lockDepartment ? lockedDeptIds[0] : deptPicker.getValue();
             if (!selectedDepts.length || !primaryDept) return 'Select at least one department. This is required by 5.2.';
 
             var note = {

@@ -132,6 +132,53 @@ OC.clients = (function () {
   }
 
   /* ---- Markdown Simple Formatter Helper ---- */
+  /* Only these schemes may reach an href. The text has already had & < > escaped
+     by the time a link is built, but that leaves "javascript:" untouched, so the
+     scheme is checked explicitly and anything else renders as plain text. */
+  function safeHref(url) {
+    var raw = String(url || '').trim();
+    if (!raw) return null;
+    var lower = raw.toLowerCase();
+    if (lower.indexOf('mailto:') === 0) return raw;
+    if (lower.indexOf('http://') === 0 || lower.indexOf('https://') === 0) return raw;
+    /* a bare host such as example.com is treated as https */
+    if (/^[a-z0-9.-]+\.[a-z]{2,}(\/|$|\?|#)/i.test(raw)) return 'https://' + raw;
+    return null;                       /* javascript:, data:, file:, anything else */
+  }
+
+  /* quotes are not touched by the & < > escaping, so an href or style value
+     still has to have them removed before it goes inside an attribute */
+  function attrSafe(value) {
+    return String(value || '').replace(/"/g, '%22').replace(/'/g, '%27');
+  }
+
+  /* a fixed palette — a colour name never reaches CSS unless it is on this list */
+  var MD_COLORS = {
+    red: 'var(--signal)', blue: 'var(--blueprint)', green: 'var(--success)',
+    orange: 'var(--brand-orange)', purple: 'var(--purple)', grey: 'var(--text-secondary)',
+    gray: 'var(--text-secondary)', yellow: 'var(--brass)'
+  };
+
+  /* inline formatting shared by every block type, so a link works in a bullet
+     or a heading and not only in a plain paragraph */
+  function renderInline(text) {
+    return String(text)
+      /* {blue}coloured text{/} */
+      .replace(/\{([a-z]+)\}([\s\S]*?)\{\/\}/gi, function (whole, name, body) {
+        var css = MD_COLORS[String(name).toLowerCase()];
+        return css ? '<span style="color:' + css + ';font-weight:600;">' + body + '</span>' : whole;
+      })
+      /* [visible text](https://the-hidden-target) */
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (whole, label, url) {
+        var href = safeHref(url);
+        if (!href) return label;       /* refused scheme: keep the words, drop the link */
+        return '<a class="md-link" href="' + attrSafe(href) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+      })
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code>$1</code>');
+  }
+
   function renderMarkdownPreview(rawText) {
     if (!rawText) return '<p class="muted">No details or notes added yet. Use the editor to add customized notes, specifications, or contracts.</p>';
     var escaped = rawText
@@ -147,36 +194,31 @@ OC.clients = (function () {
       var trimmed = line.trim();
       if (trimmed.indexOf('### ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<h3>' + trimmed.slice(4) + '</h3>');
+        html.push('<h3>' + renderInline(trimmed.slice(4)) + '</h3>');
       } else if (trimmed.indexOf('## ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<h2>' + trimmed.slice(3) + '</h2>');
+        html.push('<h2>' + renderInline(trimmed.slice(3)) + '</h2>');
       } else if (trimmed.indexOf('# ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<h2>' + trimmed.slice(2) + '</h2>');
+        html.push('<h2>' + renderInline(trimmed.slice(2)) + '</h2>');
       } else if (trimmed.indexOf('- [ ] ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><input type="checkbox" disabled /> <span>' + trimmed.slice(6) + '</span></div>');
+        html.push('<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><input type="checkbox" disabled /> <span>' + renderInline(trimmed.slice(6)) + '</span></div>');
       } else if (trimmed.indexOf('- [x] ') === 0 || trimmed.indexOf('- [X] ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><input type="checkbox" checked disabled /> <span style="text-decoration:line-through;color:var(--text-secondary);">' + trimmed.slice(6) + '</span></div>');
+        html.push('<div style="display:flex;align-items:center;gap:6px;margin:4px 0;"><input type="checkbox" checked disabled /> <span style="text-decoration:line-through;color:var(--text-secondary);">' + renderInline(trimmed.slice(6)) + '</span></div>');
       } else if (trimmed.indexOf('- ') === 0 || trimmed.indexOf('* ') === 0) {
         if (!inList) { html.push('<ul>'); inList = true; }
-        html.push('<li>' + trimmed.slice(2) + '</li>');
+        html.push('<li>' + renderInline(trimmed.slice(2)) + '</li>');
       } else if (trimmed.indexOf('> ') === 0) {
         if (inList) { html.push('</ul>'); inList = false; }
-        html.push('<blockquote>' + trimmed.slice(2) + '</blockquote>');
+        html.push('<blockquote>' + renderInline(trimmed.slice(2)) + '</blockquote>');
       } else if (!trimmed) {
         if (inList) { html.push('</ul>'); inList = false; }
         html.push('<br/>');
       } else {
         if (inList) { html.push('</ul>'); inList = false; }
-        // Inline bold, italic, code
-        var formatted = line
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\*(.*?)\*/g, '<em>$1</em>')
-          .replace(/`(.*?)`/g, '<code>$1</code>');
-        html.push('<p style="margin:4px 0;">' + formatted + '</p>');
+        html.push('<p style="margin:4px 0;">' + renderInline(line) + '</p>');
       }
     });
 
@@ -576,8 +618,8 @@ OC.clients = (function () {
             hasDetails
               ? h('div', {
                   class: 'client-details-text-view',
-                  style: 'white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.7;color:var(--ink);font-family:inherit;'
-                }, client.details || client.notes)
+                  html: renderMarkdownPreview(client.details || client.notes)
+                })
               : h('div', { style: 'text-align:center;padding:36px 20px;' }, [
                   h('p', { class: 'muted', style: 'font-size:14px;margin-bottom:14px;' }, 'No customized details or documentation added for this client yet.'),
                   h('button', {
@@ -601,6 +643,20 @@ OC.clients = (function () {
         });
         editorText.value = client.details || client.notes || '';
 
+        /* Drops [words](https://) in and leaves the caret on the address, so the
+           visible words stay put and only the hidden target is typed. */
+        function insertLink() {
+          var start = editorText.selectionStart || 0;
+          var end = editorText.selectionEnd || 0;
+          var text = editorText.value;
+          var label = text.substring(start, end) || 'link text';
+          var snippet = '[' + label + '](https://)';
+          editorText.value = text.substring(0, start) + snippet + text.substring(end);
+          editorText.focus();
+          var caret = start + snippet.length - 1;      /* just before the closing bracket */
+          editorText.setSelectionRange(caret, caret);
+        }
+
         function insertFormatting(prefix, suffix) {
           var start = editorText.selectionStart || 0;
           var end = editorText.selectionEnd || 0;
@@ -621,6 +677,16 @@ OC.clients = (function () {
           h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Task Checkbox (- [ ] task)', onClick: function () { insertFormatting('- [ ] ', '\n'); } }, 'Checklist'),
           h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Code (`code`)', onClick: function () { insertFormatting('`', '`'); } }, 'Code'),
           h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Quote (> quote)', onClick: function () { insertFormatting('> ', '\n'); } }, 'Quote'),
+          h('button', {
+            class: 'client-editor-tool-btn', type: 'button',
+            title: 'Hidden link — [visible words](https://the-target). The address stays hidden behind the words, which render red.',
+            onClick: function () { insertLink(); }
+          }, [OC.icon('link'), 'Link']),
+          h('button', {
+            class: 'client-editor-tool-btn', type: 'button',
+            title: 'Colour text — {blue}words{/}. Also red, green, orange, purple, yellow, grey.',
+            onClick: function () { insertFormatting('{blue}', '{/}'); }
+          }, [h('span', { class: 'md-color-swatch' }), 'Colour']),
           h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear Text', onClick: function () { editorText.value = ''; editorText.focus(); } }, [OC.icon('trash'), 'Clear']),
         ]);
 

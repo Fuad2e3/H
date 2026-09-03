@@ -4162,7 +4162,10 @@ dialog.modal.fallback {
   border-bottom: 1px solid var(--rule);
 }
 .client-editor-tool-btn {
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
   font-size: 12px;
   font-weight: 600;
   background: var(--card-bg-alt);
@@ -4480,4 +4483,81 @@ dialog.modal.fallback {
 .mention-btn-trigger .icon {
   width: 17px;
   height: 17px;
+}
+
+/* ---- rendered client notes ----------------------------------------------
+   The details view used to print the raw text, so nothing the editor toolbar
+   inserted ever showed. It renders now, and these are the marks it can produce.
+   ------------------------------------------------------------------------- */
+.client-details-text-view {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--ink);
+  word-break: break-word;
+}
+.client-details-text-view h2 {
+  font-size: 17px;
+  margin: 18px 0 8px;
+}
+.client-details-text-view h3 {
+  font-size: 15px;
+  margin: 16px 0 6px;
+}
+.client-details-text-view h2:first-child,
+.client-details-text-view h3:first-child {
+  margin-top: 0;
+}
+.client-details-text-view ul {
+  margin: 6px 0;
+  padding-left: 22px;
+}
+.client-details-text-view li {
+  margin: 3px 0;
+}
+.client-details-text-view blockquote {
+  margin: 8px 0;
+  padding: 6px 14px;
+  border-left: 3px solid var(--rule-strong);
+  color: var(--text-secondary);
+}
+.client-details-text-view code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.92em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--card-bg-alt);
+  border: 1px solid var(--rule);
+}
+.client-details-text-view br {
+  line-height: 0.6;
+}
+
+/* a hidden link: the address never shows, only the words, and they read red
+   so a reader can tell at a glance that the text carries a target */
+.md-link {
+  color: var(--signal);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+.md-link:hover {
+  color: var(--signal);
+  text-decoration-thickness: 2px;
+}
+.md-link:focus-visible {
+  outline: 2px solid var(--blueprint);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* the swatch on the Colour toolbar button */
+.md-color-swatch {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  flex: none;
+  border-radius: 3px;
+  background: var(--blueprint);
+  box-shadow: 0 0 0 1px var(--rule-strong) inset;
 }

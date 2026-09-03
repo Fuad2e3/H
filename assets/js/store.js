@@ -70,18 +70,6 @@ OC.store = (function () {
         password: null,
         prefs: { push: true, email: true, discord: true },
         invite: null
-      },
-      {
-        id: 'u-fuadogt',
-        name: 'Abdullah Al Fuad',
-        email: 'fuadogt@gmail.com',
-        title: 'Full Stack Developer',
-        admin: false,
-        departments: [{ department: 'd-web', level: 'head' }],
-        status: 'active',
-        password: null,
-        prefs: { push: true, email: true, discord: true },
-        invite: null
       }
     ];
 

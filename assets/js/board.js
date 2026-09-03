@@ -635,8 +635,29 @@ OC.board = (function () {
     preset = preset || {};
     var user = me();
     var title = h('input', { type: 'text', placeholder: 'What needs doing?' });
-    var clientPicker = OC.ui.clientPicker(preset.clients || preset.client || '');
-    var deptPicker = OC.ui.deptPicker(preset.departments || preset.department || (user.department || ''), user);
+
+    /* Posted from inside a client's own Todos & Tasks tab, the client is
+       fixed to that client and, if it belongs to a department, the
+       department is fixed too — exactly the same reasoning as
+       newInstruction: a task for a client scoped to Outreach has no business
+       being handed to Web Development. The general "New todo" flow from the
+       Notice Board, with no client to draw this from, is unaffected. */
+    var lockClient = !!preset.lockClient;
+    var lockDepartment = !!preset.lockDepartment;
+
+    var clientPicker = lockClient ? null : OC.ui.clientPicker(preset.clients || preset.client || '');
+    var deptPicker = lockDepartment ? null : OC.ui.deptPicker(preset.departments || preset.department || (user.department || ''), user);
+
+    var lockedClientIds = lockClient ? (preset.clients || (preset.client ? [preset.client] : [])) : [];
+    var lockedClientNames = lockedClientIds.map(function (cid) {
+      var c = OC.store.client(cid);
+      return c ? (OC.ui.clientLabel ? OC.ui.clientLabel(c) : c.name) : cid;
+    }).join(', ');
+    var lockedDeptIds = lockDepartment ? (preset.departments || (preset.department ? [preset.department] : [])) : [];
+    var lockedDeptNames = lockedDeptIds.map(function (did) {
+      var d = OC.store.department(did);
+      return d ? d.name : did;
+    }).join(', ');
 
     var initialAssignees = [];
     if (preset.assignees && preset.assignees.length) {
@@ -649,7 +670,44 @@ OC.board = (function () {
     } else {
       initialAssignees = [];
     }
-    var assigneePicker = OC.ui.assigneePicker(initialAssignees, user);
+
+    /* With the department fixed, "Assign to" only makes sense scoped to that
+       department's own people — the general assigneePicker instead offers
+       whoever the CURRENT user (the poster) is permitted to assign work to,
+       which for a system admin is everyone in the organisation regardless of
+       which department the task actually belongs to. A checkbox list of just
+       that department's people replaces it here; a plain "New todo" from the
+       Notice Board keeps the full picker exactly as before. */
+    var deptMemberUsers = lockDepartment
+      ? OC.store.state.users.filter(function (u) {
+          return lockedDeptIds.some(function (did) { return OC.can.inDept(u, did); });
+        })
+      : [];
+    var lockedAssignees = [];
+    var lockedAssigneeList = null;
+    if (deptMemberUsers.length) {
+      var initialAssigneeIds = initialAssignees.map(function (v) { return v.split(':')[1]; });
+      lockedAssigneeList = h('div', {
+        class: 'dept-checkbox-list',
+        style: 'display:grid;grid-template-columns:repeat(auto-fill, minmax(190px, 1fr));gap:6px;padding:8px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:6px;'
+      });
+      deptMemberUsers.forEach(function (u) {
+        var isChecked = initialAssigneeIds.indexOf(u.id) > -1;
+        if (isChecked) lockedAssignees.push(u.id);
+        var chk = h('input', {
+          type: 'checkbox',
+          checked: isChecked,
+          style: 'cursor:pointer;width:15px;height:15px;margin:0;flex:none;',
+          onChange: function (e) {
+            var at = lockedAssignees.indexOf(u.id);
+            if (e.target.checked && at === -1) lockedAssignees.push(u.id);
+            if (!e.target.checked && at > -1) lockedAssignees.splice(at, 1);
+          }
+        });
+        lockedAssigneeList.appendChild(h('label', { style: 'display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;' }, [chk, OC.ui.mark(u.id), u.name]));
+      });
+    }
+    var assigneePicker = lockedAssigneeList ? null : OC.ui.assigneePicker(initialAssignees, user);
 
     var minDue = OC.ui.localNowISO();
     var due = h('input', {
@@ -673,9 +731,15 @@ OC.board = (function () {
       title: 'New todo',
       content: h('div', {}, [
         OC.ui.field('Title', title, { required: true }),
-        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
-        OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),
-        OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: assignHint }),
+        lockClient
+          ? OC.ui.field('Client', h('div', { class: 'chip custom' }, lockedClientNames || 'This client'), { hint: 'Fixed to the client this task is posted from.' })
+          : OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
+        lockDepartment
+          ? OC.ui.field('Department', h('div', { class: 'chip custom' }, lockedDeptNames || 'This department'), { hint: 'Fixed to the department this client is assigned to.' })
+          : OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),
+        lockedAssigneeList
+          ? OC.ui.field('Assign to', lockedAssigneeList, { required: true, hint: 'Only ' + (lockedDeptNames || 'this department') + '\u2019s own people are offered — a client scoped to one department has no business going to someone outside it.' })
+          : OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: assignHint }),
         OC.ui.field('Due date & time', due, { required: true, hint: 'Past dates & times are blocked automatically.' }),
         OC.ui.field('Priority', priority),
         OC.ui.field('Recurrence', recurrence, { hint: 'A recurring todo regenerates on completion (6.2).' })
@@ -685,19 +749,19 @@ OC.board = (function () {
         {
           label: 'Create todo', primary: true, onClick: function (close) {
             if (!title.value.trim()) return 'A todo needs a title.';
-            var selectedClients = clientPicker.getClients();
-            var primaryClient = clientPicker.getValue();
+            var selectedClients = lockClient ? lockedClientIds : clientPicker.getClients();
+            var primaryClient = lockClient ? lockedClientIds[0] : clientPicker.getValue();
             // client is optional for internal/department tasks
-            var selectedDepts = deptPicker.getDepartments();
-            var primaryDept = deptPicker.getValue();
+            var selectedDepts = lockDepartment ? lockedDeptIds : deptPicker.getDepartments();
+            var primaryDept = lockDepartment ? lockedDeptIds[0] : deptPicker.getValue();
             if (!selectedDepts.length || !primaryDept) return 'Select at least one department. This is required by 5.2.';
 
-            var assignees = assigneePicker.getAssignees();
-            var assigneeTypes = assigneePicker.getAssigneeTypes();
-            var primaryAssignee = assigneePicker.getPrimaryAssignee();
-            var primaryType = assigneePicker.getPrimaryType();
+            var assignees = lockedAssigneeList ? lockedAssignees.slice() : assigneePicker.getAssignees();
+            var assigneeTypes = lockedAssigneeList ? assignees.map(function () { return 'user'; }) : assigneePicker.getAssigneeTypes();
+            var primaryAssignee = lockedAssigneeList ? (assignees[0] || null) : assigneePicker.getPrimaryAssignee();
+            var primaryType = lockedAssigneeList ? 'user' : assigneePicker.getPrimaryType();
 
-            if (!assignees.length) return 'Select at least one team member or group to assign to.';
+            if (!assignees.length) return 'Select at least one team member' + (lockedAssigneeList ? '' : ' or group') + ' to assign to.';
             if (!due.value) return 'A todo needs a due date.';
 
             var todo = {
@@ -1030,7 +1094,7 @@ OC.board = (function () {
             if (!e.target.checked && at > -1) targetUsers.splice(at, 1);
           }
         });
-        targetList.appendChild(h('label', { style: 'display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;' }, [chk, u.name]));
+        targetList.appendChild(h('label', { style: 'display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;' }, [chk, OC.ui.mark(u.id), u.name]));
       });
       targetRow = OC.ui.field('Notify specific people (optional)', targetList, {
         hint: 'Leave everyone unchecked to reach the whole department as usual. Check someone and this also shows on their Dashboard.'

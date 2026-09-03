@@ -540,9 +540,17 @@ OC.clients = (function () {
             style: 'font-weight:700;',
             onClick: function () {
               if (OC.board && OC.board.newTodo) {
+                /* same fixed-client, fixed-department treatment as
+                   "Post Client Instruction" — a task for a scoped client has
+                   no business landing on a department it does not belong to */
+                var taskDepts = Array.isArray(client.departments) && client.departments.length
+                  ? client.departments
+                  : (client.department ? [client.department] : []);
                 OC.board.newTodo({
                   client: client.id,
-                  department: client.department || (client.departments && client.departments[0]) || ''
+                  lockClient: true,
+                  lockDepartment: taskDepts.length > 0,
+                  departments: taskDepts
                 }, function () {
                   renderClientPortal(host, client, onBack);
                 });

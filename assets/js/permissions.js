@@ -299,14 +299,17 @@ OC.can = (function () {
   var editClient = canEditClient; // alias — identical logic, kept for backwards compat
   function canDeleteClient(user, client) { return !!(user && user.admin); }
 
-  /* A client may be scoped to one department. Left unscoped it stays visible to
+  /* A client may be scoped to one or multiple departments. Left unscoped it stays visible to
      everyone, which is how every client behaved before scoping existed; scoped,
-     it is visible only to that department's people and the system admin. */
+     it is visible only to those departments' people and the system admin. */
   function seeClient(user, client) {
     if (!user || !client) return false;
     if (user.admin) return true;
-    if (!client.department) return true;
-    return inDept(user, client.department);
+    var depts = Array.isArray(client.departments) && client.departments.length
+      ? client.departments
+      : (client.department ? [client.department] : []);
+    if (!depts.length) return true;
+    return depts.some(function (deptId) { return inDept(user, deptId); });
   }
 
   function visibleClients(user) {

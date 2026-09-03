@@ -72,6 +72,19 @@ ok('a department that no longer exists hides the client from non-admins',
    C.seeClient(leadPerson, { id: 'y', name: 'Y', department: 'd-gone' }), false);
 ok('...but the admin still sees it', C.seeClient(admin, { id: 'y', name: 'Y', department: 'd-gone' }));
 
+console.log('=== multiple departments scoping ===');
+const multiClient = { id: 'c-multi', name: 'Multi Client', departments: ['d-web', 'd-leadgen'], status: 'active' };
+S.state.clients.push(multiClient);
+ok('web person sees multi-dept client', C.seeClient(webPerson, multiClient));
+ok('lead person sees multi-dept client', C.seeClient(leadPerson, multiClient));
+const socialPerson = {
+  id: 'u-social', name: 'Social Person', email: 'soc@example.com',
+  admin: false, departments: [{ department: 'd-social', level: 'member' }],
+  status: 'active'
+};
+ok('social person cannot see client scoped only to web and lead', C.seeClient(socialPerson, multiClient), false);
+ok('admin sees multi-dept client', C.seeClient(admin, multiClient));
+
 console.log(`\n${pass} passed, ${fail.length} failed`);
 fail.forEach(f => console.log('  ✗ ' + f));
 process.exit(fail.length ? 1 : 0);

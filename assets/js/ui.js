@@ -1124,14 +1124,7 @@ OC.ui = (function () {
     var clientNumber = h('input', { type: 'text', placeholder: 'e.g. 0624, 7781' });
 
     var canScope = Boolean(user && user.admin);
-    var deptSelect = canScope ? select(
-      [{ value: '', label: 'All departments (visible to everyone)' }].concat(
-        (OC.store.state.departments || []).map(function (d) {
-          return { value: d.id, label: d.name };
-        })
-      ),
-      ''
-    ) : null;
+    var deptCheckboxes = canScope ? deptCheckboxGroup([]) : null;
 
     (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
       title: 'Add new client',
@@ -1140,7 +1133,7 @@ OC.ui = (function () {
         field('2. Client number', clientNumber, { hint: 'The client\u2019s own number \u2014 not a phone number (optional).' }),
         field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
         field('4. Client / Company name', name, { hint: 'Official client or company name for task assignment (optional).' }),
-        canScope ? field('5. Visible to department', deptSelect, { hint: 'Only this department\u2019s people will see this client. System admins always see every client.' }) : null
+        canScope ? field('5. Visible to department(s)', deptCheckboxes.node, { hint: 'Check departments allowed to see this client. Leave unchecked for all departments (visible to everyone).' }) : null
       ].filter(Boolean)),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
@@ -1190,7 +1183,8 @@ OC.ui = (function () {
               client_code: cCodeVal,
               client_number: cNumVal,
               contact: cNumVal || cName || cIdVal,
-              department: (canScope && deptSelect) ? (deptSelect.value || '') : '',
+              departments: (canScope && deptCheckboxes) ? deptCheckboxes.getDepartments() : [],
+              department: (canScope && deptCheckboxes) ? deptCheckboxes.getValue() : '',
               status: 'active'
             };
 
@@ -1460,6 +1454,75 @@ OC.ui = (function () {
         render();
       },
       refresh: function () { render(); }
+    };
+  }
+
+  /* ---- department checkbox group (multiple selection for client scoping etc.) ---- */
+  function deptCheckboxGroup(selectedValues, onChange) {
+    var chosen = [];
+    (Array.isArray(selectedValues) ? selectedValues : (selectedValues ? [selectedValues] : [])).forEach(function (val) {
+      if (val && chosen.indexOf(val) === -1) chosen.push(val);
+    });
+
+    var summaryText = h('div', { class: 'muted', style: 'font-size:12px;margin-top:7px;line-height:1.4;' });
+    var root = h('div', { class: 'dept-checkbox-group' });
+
+    function updateSummary() {
+      if (!chosen.length) {
+        summaryText.innerHTML = '<span style="color:var(--success, #10b981);font-weight:600;">● Visible to all departments</span> (everyone can see this client)';
+      } else {
+        var names = chosen.map(function (did) {
+          var d = OC.store.department(did);
+          return d ? d.name : did;
+        }).join(', ');
+        summaryText.innerHTML = '<span style="color:var(--brand-orange, #f59e0b);font-weight:600;">🔒 Visible only to:</span> ' + names + ' & System Admin';
+      }
+    }
+
+    var listContainer = h('div', {
+      class: 'dept-checkbox-list',
+      style: 'display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:6px;padding:8px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:6px;'
+    });
+
+    (OC.store.state.departments || []).forEach(function (d) {
+      var isChecked = chosen.indexOf(d.id) > -1;
+      var chk = h('input', {
+        type: 'checkbox',
+        id: 'dept_chk_' + d.id + '_' + Math.random().toString(36).slice(2, 6),
+        value: d.id,
+        checked: isChecked,
+        style: 'cursor:pointer;width:15px;height:15px;margin:0;',
+        onChange: function (e) {
+          var at = chosen.indexOf(d.id);
+          if (e.target.checked && at === -1) chosen.push(d.id);
+          if (!e.target.checked && at > -1) chosen.splice(at, 1);
+          updateSummary();
+          if (onChange) onChange(chosen.slice());
+        }
+      });
+
+      var label = h('label', {
+        style: 'display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:5px 6px;border-radius:4px;user-select:none;transition:background 0.15s;'
+      }, [
+        chk,
+        h('span', { style: 'font-weight:500;' }, d.name)
+      ]);
+      listContainer.appendChild(label);
+    });
+
+    updateSummary();
+
+    root.appendChild(listContainer);
+    root.appendChild(summaryText);
+
+    return {
+      node: root,
+      getDepartments: function () { return chosen.slice(); },
+      getValue: function () { return chosen.length ? chosen[0] : ''; },
+      setValue: function (arr) {
+        chosen = (Array.isArray(arr) ? arr : (arr ? [arr] : [])).slice();
+        updateSummary();
+      }
     };
   }
 
@@ -1878,7 +1941,7 @@ OC.ui = (function () {
     STATE_LABEL: STATE_LABEL,
     field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
     capturePlace: capturePlace, restorePlace: restorePlace, keepingPlace: keepingPlace,
-    assigneePicker: assigneePicker, deptPicker: deptPicker,
+    assigneePicker: assigneePicker, deptPicker: deptPicker, deptCheckboxGroup: deptCheckboxGroup,
     tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
     formatMentions: formatMentions, extractMentionedUserIds: extractMentionedUserIds, attachMentionAutocomplete: attachMentionAutocomplete,
     modal: modal, confirm: confirm, toast: toast, debounce: debounce,

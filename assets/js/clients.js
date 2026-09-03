@@ -58,27 +58,23 @@ OC.clients = (function () {
     var canScope = !!(OC.can && OC.can.assignClientDepartment
       ? OC.can.assignClientDepartment(user) : (user && user.admin));
 
-    /* Which department may see this client. Left as "All departments" the client
-       stays visible to everyone, which is how clients behaved before scoping. */
-    var deptSelect = OC.ui.select(
-      [{ value: '', label: 'All departments (visible to everyone)' }].concat(
-        (OC.store.state.departments || []).map(function (d) {
-          return { value: d.id, label: d.name };
-        })
-      ),
-      client.department || ''
-    );
+    var initialDepts = Array.isArray(client.departments) && client.departments.length
+      ? client.departments
+      : (client.department ? [client.department] : []);
+    var deptCheckboxes = OC.ui.deptCheckboxGroup(initialDepts);
 
-    function deptName(id) {
-      var d = id ? OC.store.department(id) : null;
-      return d ? d.name : '';
+    function deptNames(ids) {
+      if (!ids || !ids.length) return 'all departments';
+      return ids.map(function (id) {
+        var d = OC.store.department(id);
+        return d ? d.name : id;
+      }).join(', ');
     }
 
-    /* The picker is folded away until the admin asks for it, so the form keeps
-       the five numbered fields the client edit screen is built around. */
-    var deptRow = h('div', { class: 'client-dept-row', hidden: !client.department }, [
-      OC.ui.field('6. Visible to department (System Admin Only)', deptSelect, {
-        hint: 'Only this department\u2019s people will see this client. System admins always see every client.'
+    /* The picker is visible if scoped, or revealed when admin clicks Department button */
+    var deptRow = h('div', { class: 'client-dept-row', hidden: !initialDepts.length }, [
+      OC.ui.field('6. Visible to department(s) (System Admin Only)', deptCheckboxes.node, {
+        hint: 'Check departments allowed to see this client. Leave unchecked for all departments (visible to everyone).'
       })
     ]);
 
@@ -123,10 +119,9 @@ OC.clients = (function () {
             if (numExists) return 'Duplicate Client Number: "' + cNumVal + '" is already used by another client.';
           }
 
-          var deptChanged = canScope && (deptSelect.value || '') !== (client.department || '');
-          var deptNote = deptChanged
-            ? '; visible to ' + (deptSelect.value ? deptName(deptSelect.value) : 'all departments')
-            : '';
+          var selectedDepts = canScope ? deptCheckboxes.getDepartments() : (client.departments || []);
+          var primaryDept = selectedDepts.length ? selectedDepts[0] : '';
+          var deptNote = '; visible to ' + deptNames(selectedDepts);
 
           var auditLabel = cCodeVal || cName || cIdVal;
           OC.store.mutate({
@@ -139,7 +134,10 @@ OC.clients = (function () {
             client.client_number = cNumVal;
             client.contact = cNumVal || cName || cIdVal;
             client.status = status.value;
-            if (canScope) client.department = deptSelect.value || '';
+            if (canScope) {
+              client.departments = selectedDepts;
+              client.department = primaryDept;
+            }
           });
           OC.ui.toast('Client updated.');
           if (onDone) onDone();
@@ -172,16 +170,19 @@ OC.clients = (function () {
 
     /* unshifted last, so it lands to the left of "Delete client" */
     if (canScope) {
+      var btnLabel = 'Department';
+      if (initialDepts.length === 1) {
+        var dObj = OC.store.department(initialDepts[0]);
+        btnLabel = 'Dept: ' + (dObj ? dObj.name : initialDepts[0]);
+      } else if (initialDepts.length > 1) {
+        btnLabel = 'Depts (' + initialDepts.length + ')';
+      }
       actions.unshift({
-        label: 'Department' + (client.department ? ': ' + deptName(client.department) : ''),
+        label: btnLabel,
         onClick: function () {
-          /* reveals the picker in place rather than opening a second modal, so
-             edits already typed into the other fields are not thrown away */
+          /* reveals the picker in place rather than opening a second modal */
           deptRow.hidden = false;
-          if (deptSelect && deptSelect.focus) {
-            deptSelect.focus();
-            deptRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
+          deptRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       });
     }

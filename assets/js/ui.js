@@ -1174,7 +1174,16 @@ OC.ui = (function () {
       content: h('p', {}, message),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
-        { label: 'Confirm', primary: true, onClick: function (close) { onYes(); close(); } }
+        {
+          label: 'Confirm', primary: true, onClick: function (close) {
+            close();
+            if (typeof onYes === 'function') {
+              setTimeout(function () {
+                onYes();
+              }, 20);
+            }
+          }
+        }
       ]
     });
   }

@@ -461,7 +461,7 @@ OC.store = (function () {
 
   function mutate(entry, fn) {
     if (entry && entry.action === 'user.delete') {
-      var actorUser = user(entry.actor) || user(session());
+      var actorUser = byId(state.users, entry.actor) || byId(state.users, session());
       var targetUser = (state.users || []).find(function (u) {
         return u.name === entry.target || u.id === entry.target;
       });
@@ -486,7 +486,7 @@ OC.store = (function () {
       }
     }
     if (entry && entry.action === 'group.delete') {
-      var actorUser = user(entry.actor) || user(session());
+      var actorUser = byId(state.users, entry.actor) || byId(state.users, session());
       if (!actorUser || !actorUser.admin) {
         if (typeof OC !== 'undefined' && OC.ui && OC.ui.toast) {
           OC.ui.toast('Access Denied: Only System Admin can delete groups.', true);

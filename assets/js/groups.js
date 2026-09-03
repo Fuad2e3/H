@@ -177,6 +177,9 @@ OC.groups = (function () {
         OC.store.deleteGroup(group.id);
       });
       OC.ui.toast('Group permanently deleted.');
+      if (activeChatGroupId === group.id) {
+        activeChatGroupId = null;
+      }
       if (onDone) onDone();
     });
   }

@@ -35,10 +35,19 @@ OC.clients = (function () {
     if (sub[1] && PORTAL_TABS.indexOf(sub[1]) > -1) activePortalTab = sub[1];
   }
   var activeTimeframe = 'month'; /* day | month | year | all */
+  var activeCustomDate = null; /* 'YYYY-MM-DD' picked via the date field; only meaningful when activeTimeframe === 'day' */
   var todoFilterState = 'all'; /* all | open | progress | done | blocked */
   var isDetailsEditing = false; /* view mode vs edit mode in Details tab */
 
   function me() { return OC.store.user(OC.store.session()); }
+
+  function getLocalDateStr(d) {
+    d = d || new Date();
+    var y = d.getFullYear();
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return y + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+  }
 
   function editClient(client, onDone) {
     var h = OC.ui.h;
@@ -439,14 +448,18 @@ OC.clients = (function () {
     /* TAB 1: REPORT & ANALYTICS */
     if (activePortalTab === 'report') {
       var now = new Date();
+      /* 'T00:00:00' (no timezone designator) makes the engine parse the
+         picked date as local midnight instead of UTC midnight, so the day
+         selected in the field is the day actually shown. */
+      var dayRef = activeCustomDate ? new Date(activeCustomDate + 'T00:00:00') : now;
       var filteredTodos = clientTodos.filter(function (t) {
         if (!t.created_at) return true;
         var tDate = new Date(t.created_at);
         if (isNaN(tDate.getTime())) return true;
         if (activeTimeframe === 'day') {
-          return tDate.getFullYear() === now.getFullYear() &&
-                 tDate.getMonth() === now.getMonth() &&
-                 tDate.getDate() === now.getDate();
+          return tDate.getFullYear() === dayRef.getFullYear() &&
+                 tDate.getMonth() === dayRef.getMonth() &&
+                 tDate.getDate() === dayRef.getDate();
         } else if (activeTimeframe === 'month') {
           return tDate.getFullYear() === now.getFullYear() &&
                  tDate.getMonth() === now.getMonth();
@@ -468,6 +481,13 @@ OC.clients = (function () {
       var openPct = totalT > 0 ? Math.min(100, (openT / totalT) * 100) : 0;
       var blockPct = totalT > 0 ? Math.min(100, (blockedT / totalT) * 100) : 0;
 
+      /* When a specific day is picked via the date field, show that date in
+         the KPI/graph headers instead of the generic "DAY" label so it's
+         clear which day's work is being reported. */
+      var periodLabel = (activeTimeframe === 'day' && activeCustomDate)
+        ? dayRef.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+        : activeTimeframe.toUpperCase();
+
       var reportContent = h('div', { class: 'portal-view-content' }, [
         h('div', { class: 'portal-header-box' }, [
           h('div', {}, [
@@ -475,27 +495,43 @@ OC.clients = (function () {
             h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
               'Review completion velocity, active task breakdowns, and SLA performance metrics for ' + clientName + '.')
           ]),
-          h('div', { class: 'segmented', role: 'group', 'aria-label': 'Select timeframe' }, [
-            ['day', 'Today', 'calendar'],
-            ['month', 'This Month', 'calendar'],
-            ['year', 'This Year', 'stats'],
-            ['all', 'All Time', 'globe']
-          ].map(function (opt) {
-            return h('button', {
-              type: 'button',
-              'aria-pressed': String(activeTimeframe === opt[0]),
-              onClick: function () {
-                activeTimeframe = opt[0];
-                renderClientPortal(host, client, onBack);
-              }
-            }, [OC.icon(opt[2]), opt[1]]);
-          }))
+          h('div', { class: 'row', style: 'align-items:center;gap:10px;flex-wrap:wrap;min-width:0;' }, [
+            h('div', { class: 'segmented', role: 'group', 'aria-label': 'Select timeframe' }, [
+              ['day', 'Today', 'calendar'],
+              ['month', 'This Month', 'calendar'],
+              ['year', 'This Year', 'stats'],
+              ['all', 'All Time', 'globe']
+            ].map(function (opt) {
+              return h('button', {
+                type: 'button',
+                'aria-pressed': String(activeTimeframe === opt[0] && !(opt[0] === 'day' && activeCustomDate)),
+                onClick: function () {
+                  activeCustomDate = null;
+                  activeTimeframe = opt[0];
+                  renderClientPortal(host, client, onBack);
+                }
+              }, [OC.icon(opt[2]), opt[1]]);
+            })),
+            h('label', { class: 'field', style: 'margin:0;display:flex;align-items:center;gap:8px;' }, [
+              h('span', { class: 'label', style: 'margin:0;' }, 'Pick a day'),
+              h('input', {
+                type: 'date',
+                value: activeCustomDate || '',
+                max: getLocalDateStr(),
+                onChange: function (e) {
+                  activeCustomDate = e.target.value || null;
+                  activeTimeframe = 'day';
+                  renderClientPortal(host, client, onBack);
+                }
+              })
+            ])
+          ])
         ]),
 
         /* 4 KPI Cards */
         h('div', { class: 'stats' }, [
           h('div', { class: 'stat' }, [
-            h('span', { class: 'k' }, 'Total Tasks (' + activeTimeframe.toUpperCase() + ')'),
+            h('span', { class: 'k' }, 'Total Tasks (' + periodLabel + ')'),
             h('div', { class: 'v tabular' }, String(totalT))
           ]),
           h('div', { class: 'stat' }, [
@@ -515,7 +551,7 @@ OC.clients = (function () {
         /* Visual Velocity Graphic Card */
         h('div', { class: 'portal-credential-card', style: 'padding:20px;' }, [
           h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;' }, [
-            h('div', { style: 'font-weight:700;font-size:14.5px;color:var(--ink);' }, 'Task Progress Breakdown (' + activeTimeframe.toUpperCase() + ')'),
+            h('div', { style: 'font-weight:700;font-size:14.5px;color:var(--ink);' }, 'Task Progress Breakdown (' + periodLabel + ')'),
             h('span', { class: 'chip count' }, totalT + ' Total Tracked')
           ]),
           h('div', { class: 'client-velocity-bar-wrap', style: 'margin:16px 0 14px;' }, [

@@ -835,11 +835,47 @@ OC.groups = (function () {
           OC.store.addGroupMessage(currentGroup.id, messageText, user.id, extra);
         });
 
-        // If @everyone was mentioned, notify all other group members
-        if (messageText.toLowerCase().indexOf('@everyone') > -1) {
-          var allMembers = (currentGroup.members || []).filter(function (mid) { return mid !== user.id; });
-          if (allMembers.length) {
-            OC.store.notify(allMembers, '📢 ' + user.name + ' mentioned @everyone in ' + currentGroup.name + ': "' + messageText.slice(0, 40) + '"', currentGroup.id);
+        // Targeted notifications for Direct Messages (SMS) & Group Channels
+        var isDirectConvo = OC.can.isDirect(currentGroup);
+        var previewSnippet = messageText.length > 50 ? (messageText.slice(0, 47) + '…') : messageText;
+
+        if (isDirectConvo) {
+          // Direct Message (1-on-1 SMS/Chat): Notify the recipient
+          var dmRecipients = (currentGroup.members || []).filter(function (mid) { return mid !== user.id; });
+          if (dmRecipients.length) {
+            OC.store.notify(
+              dmRecipients,
+              '💬 ' + user.name + ': "' + previewSnippet + '"',
+              currentGroup.id
+            );
+          }
+        } else {
+          // Group Channel Message
+          var groupRecipients = [];
+          if (messageText.toLowerCase().indexOf('@everyone') > -1) {
+            (currentGroup.members || []).forEach(function (mid) {
+              if (mid !== user.id && groupRecipients.indexOf(mid) === -1) groupRecipients.push(mid);
+            });
+          } else {
+            var mentioned = (OC.ui && OC.ui.extractMentionedUserIds) ? OC.ui.extractMentionedUserIds(messageText) : [];
+            mentioned.forEach(function (mid) {
+              if (mid !== user.id && groupRecipients.indexOf(mid) === -1) groupRecipients.push(mid);
+            });
+            if (activeReplyTarget && activeReplyTarget.author && activeReplyTarget.author !== user.id) {
+              if (groupRecipients.indexOf(activeReplyTarget.author) === -1) groupRecipients.push(activeReplyTarget.author);
+            }
+            (currentGroup.members || []).forEach(function (mid) {
+              if (mid !== user.id && groupRecipients.indexOf(mid) === -1) groupRecipients.push(mid);
+            });
+          }
+
+          if (groupRecipients.length) {
+            var prefix = messageText.toLowerCase().indexOf('@everyone') > -1 ? '📢 ' : '💬 ';
+            OC.store.notify(
+              groupRecipients,
+              prefix + user.name + ' in #' + currentGroup.name + ': "' + previewSnippet + '"',
+              currentGroup.id
+            );
           }
         }
 

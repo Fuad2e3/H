@@ -154,6 +154,9 @@ OC.app = (function () {
             if (n.ref && OC.store.todo(n.ref)) {
               if (typeof close === 'function') close();
               go('board');
+            } else if (n.ref && OC.store.group(n.ref)) {
+              if (typeof close === 'function') close();
+              go('messages');
             }
           }
         }, [

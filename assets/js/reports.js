@@ -91,7 +91,7 @@ OC.reports = (function () {
     var done = todos.filter(function (t) { return t.state === 'done'; });
     var left = todos.filter(function (t) { return t.state !== 'done'; });
     var overdue = left.filter(function (t) { return OC.ui.daysLate(t.due) > 0; });
-    var dueToday = left.filter(function (t) { return t.due === today; });
+    var dueToday = left.filter(function (t) { return OC.ui.dueDay(t.due) === today; });
 
     /* a client counts as complete when it has work and none of it is outstanding */
     var byClient = {};

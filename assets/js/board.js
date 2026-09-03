@@ -234,7 +234,11 @@ OC.board = (function () {
   }
 
   function nextDue(dueDate, recurrence) {
-    var d = new Date(dueDate + 'T12:00:00');
+    /* a due value may carry a time ("2026-09-03T14:30"); recur from its day.
+       Without a usable date there is no next instance to compute. */
+    var day = String(dueDate || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return '';
+    var d = new Date(day + 'T12:00:00');
     if (recurrence === 'daily') d.setDate(d.getDate() + 1);
     else if (recurrence === 'weekly') d.setDate(d.getDate() + 7);
     else if (recurrence === 'monthly') d = addMonths(d, 1);
@@ -245,6 +249,7 @@ OC.board = (function () {
 
   function changeState(todo, next, control) {
     var user = me();
+    var spawnedInstance = false;
     if (next === 'blocked') {
       var reason = h('input', { type: 'text', placeholder: 'what is blocking it' });
       OC.ui.modal({
@@ -273,14 +278,16 @@ OC.board = (function () {
       if (next !== 'blocked') todo.blocked_reason = null;
 
       /* a recurring todo regenerates as a fresh instance on completion (6.2) */
-      if (next === 'done' && todo.recurrence && todo.recurrence !== 'none' && !todo.spawned) {
+      if (next === 'done' && todo.recurrence && todo.recurrence !== 'none' && !todo.spawned && todo.due) {
         todo.spawned = true;
         var copy = JSON.parse(JSON.stringify(todo));
         copy.id = OC.store.uid('t');
         copy.state = 'open';
         copy.spawned = false;
         copy.blocked_reason = null;
-        copy.due = nextDue(todo.due, todo.recurrence);
+        var carriedTime = String(todo.due || '').slice(10);
+        copy.due = nextDue(todo.due, todo.recurrence) + carriedTime;
+        spawnedInstance = true;
         copy.created_at = new Date().toISOString();
         copy.comments = [];
         OC.store.state.todos.push(copy);
@@ -302,7 +309,7 @@ OC.board = (function () {
       }
     });
 
-    if (next === 'done') OC.ui.toast('Marked done' + (todo.recurrence !== 'none' ? ', next instance created.' : '.'));
+    if (next === 'done') OC.ui.toast('Marked done' + (spawnedInstance ? ', next instance created.' : '.'));
   }
 
   function escalationNote(todo) {
@@ -442,6 +449,7 @@ OC.board = (function () {
           var assigneeTypes = assigneePicker.getAssigneeTypes();
           var primaryAssignee = assigneePicker.getPrimaryAssignee();
           var primaryType = assigneePicker.getPrimaryType();
+          if (!due.value) return 'A todo needs a due date.';
 
           if (!assignees.length) return 'Select at least one team member or group to assign to.';
 
@@ -661,6 +669,7 @@ OC.board = (function () {
             var primaryType = assigneePicker.getPrimaryType();
 
             if (!assignees.length) return 'Select at least one team member or group to assign to.';
+            if (!due.value) return 'A todo needs a due date.';
 
             var todo = {
               id: OC.store.uid('t'),
@@ -714,14 +723,17 @@ OC.board = (function () {
 
   function copyYesterday() {
     var user = me();
-    var yesterday = (function () { var d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); })();
+    var yesterday = OC.ui.daysFromToday(-1);
     var carry = OC.store.state.todos.filter(function (t) {
-      return t.due === yesterday && t.state !== 'done' && !t.archived && OC.can.seeTodo(user, t) && OC.can.changeState(user, t);
+      return OC.ui.dueDay(t.due) === yesterday && t.state !== 'done' && !t.archived && OC.can.seeTodo(user, t) && OC.can.changeState(user, t);
     });
     if (!carry.length) { OC.ui.toast('Nothing unfinished from yesterday to carry over.', true); return; }
     OC.ui.confirm('Carry ' + carry.length + ' unfinished todo(s) from yesterday into today?', function () {
       OC.store.mutate({ actor: user.id, action: 'todo.carry', target: carry.length + ' todos', detail: 'copied from ' + yesterday }, function () {
-        carry.forEach(function (t) { t.due = OC.ui.today(); });
+        carry.forEach(function (t) {
+          var timePart = String(t.due || '').slice(10);   /* keep "T09:00" if it had one */
+          t.due = OC.ui.today() + timePart;
+        });
       });
       OC.ui.toast(carry.length + ' todo(s) moved to today.');
     });
@@ -752,14 +764,14 @@ OC.board = (function () {
   /* ---- instruction item -------------------------------------------------- */
   function instructionItem(note, rerender) {
     var user = me();
-    var unread = note.read_by.indexOf(user.id) === -1;
-    var readers = note.read_by.map(OC.ui.personName);
+    var unread = (note.read_by || []).indexOf(user.id) === -1;
+    var readers = (note.read_by || []).map(OC.ui.personName);
 
     var actions = [];
     if (unread) {
       actions.push(h('button', {
         class: 'btn small', type: 'button', onClick: function () {
-          OC.store.mutate(null, function () { note.read_by.push(user.id); });
+          OC.store.mutate(null, function () { note.read_by = note.read_by || []; note.read_by.push(user.id); });
         }
       }, 'Mark as read'));
     }
@@ -1032,7 +1044,7 @@ OC.board = (function () {
     var user = me();
     var todos = visibleTodos();
     var notes = visibleInstructions();
-    var unreadCount = notes.filter(function (n) { return n.read_by.indexOf(user.id) === -1; }).length;
+    var unreadCount = notes.filter(function (n) { return (n.read_by || []).indexOf(user.id) === -1; }).length;
 
     var groupControl = h('div', { class: 'segmented', role: 'group', 'aria-label': 'Group todos by', title: 'Group todos by' },
       [['person', 'Person'], ['client', 'Client'], ['department', 'Department']].map(function (opt) {

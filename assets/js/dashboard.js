@@ -159,7 +159,7 @@ OC.dashboard = (function () {
     var allTodos = allMyTodos(user);
     var todos = myTodos(user);
     var notes = myInstructions(user);
-    var unread = notes.filter(function (n) { return n.read_by.indexOf(user.id) === -1; });
+    var unread = notes.filter(function (n) { return (n.read_by || []).indexOf(user.id) === -1; });
     var overdue = allTodos.filter(function (t) { return OC.ui.daysLate(t.due) > 0; });
     var upcoming = allTodos.filter(function (t) { return OC.ui.daysLate(t.due) < 0; });
 
@@ -170,7 +170,7 @@ OC.dashboard = (function () {
       if (Array.isArray(t.clients)) t.clients.forEach(function (cid) { if (cid) clientIds[cid] = true; });
     });
     notes.forEach(function (n) {
-      if (n.read_by.indexOf(user.id) === -1) {
+      if ((n.read_by || []).indexOf(user.id) === -1) {
         if (n.client) clientIds[n.client] = true;
         if (Array.isArray(n.clients)) n.clients.forEach(function (cid) { if (cid) clientIds[cid] = true; });
       }
@@ -333,14 +333,14 @@ OC.dashboard = (function () {
           ]),
           h('div', { class: 'panel-body' }, notes.length
             ? notes.slice(0, 12).map(function (n) {
-                var isUnread = n.read_by.indexOf(user.id) === -1;
+                var isUnread = (n.read_by || []).indexOf(user.id) === -1;
                 var readers = (n.read_by || []).map(OC.ui.personName);
 
                 var actions = [];
                 if (isUnread) {
                   actions.push(h('button', {
                     class: 'btn small', type: 'button', onClick: function () {
-                      OC.store.mutate(null, function () { n.read_by.push(user.id); });
+                      OC.store.mutate(null, function () { n.read_by = n.read_by || []; n.read_by.push(user.id); });
                     }
                   }, 'Mark as read'));
                 }

@@ -65,7 +65,23 @@ OC.ui = (function () {
   /* ---- dates ------------------------------------------------------------ */
   var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-  function today() { return new Date().toISOString().slice(0, 10); }
+  /* The due-date control is a datetime-local input, so a stored due value looks
+     like "2026-09-03T14:30" — a local calendar date with a time. today() used
+     toISOString(), which is UTC, so east of Greenwich it named the wrong day
+     for part of every morning. Both now speak the same local calendar. */
+  function dayOf(date) {
+    var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+  }
+  function today() { return dayOf(new Date()); }
+  function daysFromToday(offset) {
+    var d = new Date();
+    d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() + offset);
+    return dayOf(d);
+  }
+  /* the calendar day a due value falls on, whether or not it carries a time */
+  function dueDay(due) { return String(due || '').slice(0, 10); }
 
   function localNowISO() {
     var d = new Date();
@@ -1769,7 +1785,8 @@ OC.ui = (function () {
 
   return {
     h: h, clear: clear, append: append,
-    today: today, localNowISO: localNowISO, fmtDate: fmtDate, fmtWhen: fmtWhen, daysLate: daysLate, dueLabel: dueLabel,
+    today: today, dayOf: dayOf, daysFromToday: daysFromToday, dueDay: dueDay,
+    localNowISO: localNowISO, fmtDate: fmtDate, fmtWhen: fmtWhen, daysLate: daysLate, dueLabel: dueLabel,
     clientChip: clientChip, clientLabel: clientLabel, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
     personName: personName, assigneeName: assigneeName,
     initials: initials, mark: mark, person: person, photoUploader: photoUploader,

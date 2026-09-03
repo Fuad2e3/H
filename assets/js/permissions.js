@@ -71,11 +71,6 @@ OC.can = (function () {
     return user ? (user.departments || []).map(function (m) { return m.department; }) : [];
   }
 
-  function inGroup(user, groupId) {
-    var g = S().group(groupId);
-    return !!g && Array.isArray(g.members) && g.members.indexOf(user.id) > -1;
-  }
-
   /* ---- descriptive role, for display ----------------------------------- */
   function roleLabel(user) {
     if (!user) return 'Unknown';

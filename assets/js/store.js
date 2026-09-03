@@ -20,13 +20,6 @@ OC.store = (function () {
   var listeners = [];
   var sseSource = null;
 
-  function isHttp() {
-    return typeof window !== 'undefined' &&
-           window.location &&
-           typeof window.location.protocol === 'string' &&
-           window.location.protocol.indexOf('http') === 0;
-  }
-
   /* ---- date helpers ---------------------------------------------------- */
   function iso(d) { return d.toISOString().slice(0, 10); }
   function shift(days) {

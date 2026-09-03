@@ -287,12 +287,16 @@ OC.clients = (function () {
       var filteredTodos = clientTodos.filter(function (t) {
         if (!t.created_at) return true;
         var tDate = new Date(t.created_at);
+        if (isNaN(tDate.getTime())) return true;
         if (activeTimeframe === 'day') {
-          return (now - tDate) <= 24 * 60 * 60 * 1000;
+          return tDate.getFullYear() === now.getFullYear() &&
+                 tDate.getMonth() === now.getMonth() &&
+                 tDate.getDate() === now.getDate();
         } else if (activeTimeframe === 'month') {
-          return (now - tDate) <= 30 * 24 * 60 * 60 * 1000;
+          return tDate.getFullYear() === now.getFullYear() &&
+                 tDate.getMonth() === now.getMonth();
         } else if (activeTimeframe === 'year') {
-          return (now - tDate) <= 365 * 24 * 60 * 60 * 1000;
+          return tDate.getFullYear() === now.getFullYear();
         }
         return true;
       });

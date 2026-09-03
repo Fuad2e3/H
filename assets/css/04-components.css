@@ -4593,6 +4593,12 @@ dialog.modal.fallback {
   contain: layout paint style;
 }
 
+/* a group member whose account is not loaded on this device */
+.chip.person.is-unresolved {
+  opacity: 0.65;
+  font-style: italic;
+}
+
 /* the "Show more" row that ends a capped list */
 .list-more {
   display: flex;

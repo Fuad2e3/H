@@ -338,6 +338,9 @@ OC.ui = (function () {
 
     var scrolls = [];
     placeKeys(root, '*').forEach(function (rec) {
+      /* a chat pins itself to the newest message; restoring the old offset
+         underneath it only produces a visible jump */
+      if (rec.el.hasAttribute && rec.el.hasAttribute('data-autoscroll')) return;
       if (rec.el.scrollTop > 0 || rec.el.scrollLeft > 0) {
         scrolls.push({ key: rec.key, top: rec.el.scrollTop, left: rec.el.scrollLeft });
       }

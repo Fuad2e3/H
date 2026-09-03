@@ -177,6 +177,14 @@ OC.groups = (function () {
   }
 
   /* ---- dedicated full-page group chat room view ------------------------- */
+  /* Where the reader is in a channel has to outlive the page rebuild that a
+     new message causes. Kept per channel at module level: held in a closure it
+     was reset on every render, so a rebuild always looked like a fresh open and
+     yanked whoever was reading history down to the newest message. */
+  var chatOpenGroupId = null;
+  var chatPinnedToBottom = true;
+  var chatScrollTop = 0;
+
   function renderGroupChatPage(host, group, onBack) {
     var h = OC.ui.h;
     var user = me();
@@ -446,12 +454,17 @@ OC.groups = (function () {
       ? OC.ui.attachMentionAutocomplete(msgInput, groupMemberUsers.length ? groupMemberUsers : null, function (u) {})
       : null;
 
-    var isInitialGroupLoad = true;
+    /* a different channel, or the first time this one is opened */
+    var isInitialGroupLoad = (chatOpenGroupId !== group.id);
+    chatOpenGroupId = group.id;
+    if (isInitialGroupLoad) { chatPinnedToBottom = true; chatScrollTop = 0; }
+    /* when the code last moved the list itself; a scroll event that close to a
+       programmatic write is the echo of that write, not the reader */
+    var lastAutoScrollAt = 0;
 
     function renderMessages(forceScrollBottom) {
-      var prevScrollTop = msgsList ? msgsList.scrollTop : 0;
-      var prevScrollHeight = msgsList ? msgsList.scrollHeight : 0;
-      var wasNearBottom = msgsList ? (prevScrollHeight - prevScrollTop - msgsList.clientHeight < 80) : true;
+      var prevScrollTop = msgsList ? msgsList.scrollTop : chatScrollTop;
+      var wasNearBottom = chatPinnedToBottom;
 
       OC.ui.clear(chatContainer);
 
@@ -460,9 +473,15 @@ OC.groups = (function () {
 
       var memberChips = (currentGroup.members || []).map(function (id) {
         var u = OC.store.user(id);
-        return h('span', { class: 'chip custom person', title: OC.can.roleLabel(u) }, [
+        /* a member whose account is not loaded — deleted, or still to come down
+           from the database — used to render as its raw id, which reads as a
+           bug rather than as a person */
+        return h('span', {
+          class: 'chip custom person' + (u ? '' : ' is-unresolved'),
+          title: u ? OC.can.roleLabel(u) : 'This account is not loaded on this device'
+        }, [
           OC.ui.mark(id),
-          u ? u.name : id
+          u ? u.name : 'Unknown member'
         ]);
       });
 
@@ -492,7 +511,7 @@ OC.groups = (function () {
         h('p', { class: 'muted group-channel-topic', style: 'font-size:13px;margin:2px 0 0;' }, currentGroup.purpose)
       ]);
 
-      msgsList = h('div', { class: 'full-page-chat-messages' });
+      msgsList = h('div', { class: 'full-page-chat-messages', 'data-autoscroll': 'bottom' });
 
       if (!currentGroup.messages.length) {
         msgsList.appendChild(h('div', { class: 'empty', style: 'padding:40px 24px;text-align:center;' }, [
@@ -737,21 +756,46 @@ OC.groups = (function () {
         });
       }
 
-      function scrollToBottom(smooth) {
+      /* Setting scrollTop straight after building the list reads a scrollHeight
+         the browser has not laid out yet — and on the first render the list is
+         not even in the document, so the write goes nowhere. That is why the
+         view jumped: opening a channel landed short of the newest message, and
+         sending one threw you to the top of the history. The position is
+         applied on the following frames instead, once, with no competing
+         timers and no smooth animation for another write to interrupt. */
+      function applyScroll(target) {
         if (!msgsList) return;
-        var perform = function () {
-          try {
-            msgsList.scrollTo({
-              top: msgsList.scrollHeight,
-              behavior: smooth ? 'smooth' : 'auto'
-            });
-          } catch (e) {
-            msgsList.scrollTop = msgsList.scrollHeight;
-          }
+        var el = msgsList;
+        var toBottom = (target === 'bottom');
+        chatPinnedToBottom = toBottom;
+        var place = function () {
+          /* the list scrolls smoothly for a person, and for the jump-to-quoted
+             -message link, but pinning it after a rebuild must be instant: the
+             list has just been recreated at zero, so an animated write scrolls
+             the whole history past the reader before settling. That was the
+             bounce. */
+          var prev = el.style.scrollBehavior;
+          el.style.scrollBehavior = 'auto';
+          lastAutoScrollAt = Date.now();
+          el.scrollTop = (target === 'bottom') ? el.scrollHeight : target;
+          el.style.scrollBehavior = prev;
         };
-        perform();
-        // Fallback for slower rendering
-        setTimeout(perform, 50);
+        /* A message list keeps growing for a few frames after it is built —
+           the rows lay out, fonts settle, any image resolves — so a single
+           write lands short of the end. Pinning is held for a few frames
+           instead, and the reader scrolling up cancels it immediately so it
+           never fights them. */
+        place();
+        var frames = 0;
+        (function again() {
+          if (frames++ > 8) return;
+          requestAnimationFrame(function () {
+            if (!el.isConnected) return;
+            if (toBottom && !chatPinnedToBottom) return;   /* they scrolled away */
+            place();
+            again();
+          });
+        })();
       }
 
       function submitGroupMessage() {
@@ -781,7 +825,10 @@ OC.groups = (function () {
         msgInput.value = '';
         setReplyContext(null, null);
         setMediaAttachment(null);
-        renderMessages(true);
+        /* the store change above already rebuilt the page; this only needs to
+           make sure the view follows the message just sent */
+        chatPinnedToBottom = true;
+        applyScroll('bottom');
       }
 
       msgInput.addEventListener('keydown', function (e) {
@@ -807,24 +854,31 @@ OC.groups = (function () {
       chatContainer.appendChild(msgsList);
       chatContainer.appendChild(form);
 
+      if (msgsList) {
+        msgsList.addEventListener('scroll', function () {
+          if (!msgsList) return;
+          if (Date.now() - lastAutoScrollAt < 250) return;  /* our own write */
+          chatPinnedToBottom = (msgsList.scrollHeight - msgsList.scrollTop - msgsList.clientHeight) < 80;
+          chatScrollTop = msgsList.scrollTop;
+        });
+      }
+
       if (isInitialGroupLoad || forceScrollBottom || wasNearBottom) {
-        scrollToBottom(forceScrollBottom && !isInitialGroupLoad);
-      } else if (msgsList) {
-        // Restore scroll position so screen doesn't jump
-        msgsList.scrollTop = prevScrollTop;
+        applyScroll('bottom');
+      } else {
+        /* reading older messages: stay where they were */
+        applyScroll(prevScrollTop);
       }
       isInitialGroupLoad = false;
     }
 
-    renderMessages(true);
     OC.ui.clear(host);
     host.appendChild(chatContainer);
-    var msgsEl = chatContainer.querySelector('.full-page-chat-messages');
-    if (msgsEl) {
-      msgsEl.scrollTop = msgsEl.scrollHeight;
-      setTimeout(function () { msgsEl.scrollTop = msgsEl.scrollHeight; }, 50);
-      setTimeout(function () { msgsEl.scrollTop = msgsEl.scrollHeight; }, 150);
-    }
+    /* Built after the container is in the document, so the scroll it applies
+       actually lands. Nothing is forced here: opening the channel is handled by
+       isInitialGroupLoad, and every other render is a rebuild underneath
+       somebody who may be part way up the history. */
+    renderMessages(false);
   }
 
   function getChannelLastRead(userId, groupId) {

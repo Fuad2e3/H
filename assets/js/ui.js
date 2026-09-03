@@ -1015,12 +1015,6 @@ OC.ui = (function () {
             h('div', { class: 'comment-form-row' }, [
               body,
               h('button', {
-                class: 'mention-btn-trigger',
-                type: 'button',
-                title: 'Mention team member (@)',
-                onClick: function () { mentionHelper.openMentionMenu(); }
-              }, '@'),
-              h('button', {
                 class: 'btn small primary', type: 'button', onClick: submitComment
               }, 'Post')
             ])

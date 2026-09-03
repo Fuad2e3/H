@@ -4694,6 +4694,81 @@ dialog.modal.fallback {
   min-height: 64px;
 }
 
+/* One department per full-width row instead of a cramped multi-column grid —
+   a department card holds a variable, often long list of members, and a
+   narrow column forced that list into a tall, awkward stack. Full width
+   gives the header room to sit on one line and the member list room to wrap
+   as a shelf of pills rather than one-per-line. */
+.dept-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4, 14px);
+  margin-top: 12px;
+}
+.dept-card {
+  padding: 18px 20px;
+}
+.dept-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+}
+.dept-card-head-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+.dept-card-name {
+  margin: 0;
+  font-size: 17px;
+}
+.dept-card-levels {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dept-card-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.dept-member-pill {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  padding: 7px 10px 7px 8px;
+  background: var(--card-bg-alt);
+  border: 1px solid var(--rule);
+  border-radius: var(--r2, 10px);
+  font-size: 13.5px;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.dept-member-pill:hover {
+  border-color: var(--rule-strong);
+  background: var(--card-bg);
+}
+.dept-member-pill .chip.role {
+  margin: 0;
+}
+/* the pill's own text can be long (name + title) — let it wrap instead of
+   forcing the whole pill past a narrow viewport's edge */
+.dept-member-pill .person {
+  white-space: normal;
+  min-width: 0;
+}
+.dept-member-pill .person .name {
+  overflow-wrap: anywhere;
+}
+
 /* the Colour toolbar button and the swatch strip it drops down */
 .md-color-picker {
   position: relative;

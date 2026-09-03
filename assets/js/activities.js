@@ -156,48 +156,52 @@ OC.activities = (function () {
               }, [OC.icon('plus'), 'New department'])
             : null
         ]),
-        h('div', { class: 'grid-2', style: 'margin-top:12px;' }, depts.map(function (d) {
+        h('div', { class: 'dept-cards-list' }, depts.map(function (d) {
           var members = users.filter(function (u) { return OC.can && OC.can.inDept && OC.can.inDept(u, d.id); });
-          return h('div', { class: 'card' }, [
-            h('div', { class: 'row' }, [
-              h('h3', {}, d.name),
-              h('span', { class: 'chip custom push' }, members.length + ' people')
-            ]),
-            h('div', { class: 'row', style: 'margin:8px 0 10px;gap:6px;flex-wrap:wrap;' }, (d.levels || []).map(function (lv, i) {
-              return h('span', { class: 'chip ' + (i === 0 ? 'dept' : 'custom') }, (i + 1) + '. ' + lv);
-            })),
-            canManageDept
-              ? h('div', { class: 'row', style: 'margin-bottom:10px;gap:8px;' }, [
-                  h('button', {
-                    class: 'btn small', type: 'button',
-                    onClick: function () {
-                      if (OC.people && OC.people.editDepartment) {
-                        OC.people.editDepartment(d);
-                      }
-                    }
-                  }, 'Edit department'),
-                  (user && user.admin)
-                    ? h('button', {
-                        class: 'btn small primary', type: 'button',
-                        style: 'background:var(--blueprint);border-color:var(--blueprint);color:#fff;font-weight:600;',
-                        onClick: function () {
-                          if (OC.people && OC.people.addPersonToDepartment) {
-                            OC.people.addPersonToDepartment(d, function () { render(host, rerender); });
-                          }
+          return h('div', { class: 'card dept-card' }, [
+            /* one header row: name, count and level chips on the left,
+               management actions on the right — a full-width card has room
+               for all of it on one line instead of stacking three rows */
+            h('div', { class: 'dept-card-head' }, [
+              h('div', { class: 'dept-card-head-left' }, [
+                h('h3', { class: 'dept-card-name' }, d.name),
+                h('span', { class: 'chip custom push' }, members.length + ' people'),
+                h('div', { class: 'dept-card-levels' }, (d.levels || []).map(function (lv, i) {
+                  return h('span', { class: 'chip ' + (i === 0 ? 'dept' : 'custom') }, (i + 1) + '. ' + lv);
+                }))
+              ]),
+              canManageDept
+                ? h('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap;' }, [
+                    h('button', {
+                      class: 'btn small', type: 'button',
+                      onClick: function () {
+                        if (OC.people && OC.people.editDepartment) {
+                          OC.people.editDepartment(d);
                         }
-                      }, [OC.icon('plus'), 'Add person'])
-                    : null
-                ].filter(Boolean))
-              : null,
-            h('div', { class: 'stack' }, members.length ? members.map(function (u) {
-              return h('div', { class: 'row', style: 'font-size:13.5px;align-items:center;' }, [
+                      }
+                    }, [OC.icon('edit'), 'Edit department']),
+                    (user && user.admin)
+                      ? h('button', {
+                          class: 'btn small primary', type: 'button',
+                          onClick: function () {
+                            if (OC.people && OC.people.addPersonToDepartment) {
+                              OC.people.addPersonToDepartment(d, function () { render(host, rerender); });
+                            }
+                          }
+                        }, [OC.icon('plus'), 'Add person'])
+                      : null
+                  ].filter(Boolean))
+                : null
+            ]),
+            h('div', { class: 'dept-card-members' }, members.length ? members.map(function (u) {
+              return h('div', { class: 'dept-member-pill' }, [
                 OC.ui.person(u.id),
-                h('span', { class: 'chip role push' }, OC.can.levelIn(u, d.id)),
+                h('span', { class: 'chip role' }, OC.can.levelIn(u, d.id)),
                 u.status === 'invited' ? h('span', { class: 'chip overdue' }, 'invited') : null,
                 (OC.can && OC.can.editAccount && OC.can.editAccount(user, u))
                   ? h('button', {
                       class: 'btn small', type: 'button',
-                      style: 'padding:2px 8px;font-size:11.5px;margin-left:6px;',
+                      style: 'padding:2px 8px;font-size:11.5px;',
                       onClick: function () {
                         if (OC.profilePortal && OC.profilePortal.openForUser) {
                           OC.profilePortal.openForUser(u);
@@ -211,7 +215,7 @@ OC.activities = (function () {
                   ? h('button', {
                       class: 'btn small danger',
                       type: 'button',
-                      style: 'padding:2px 7px;font-size:11.5px;margin-left:4px;',
+                      style: 'padding:2px 7px;font-size:11.5px;',
                       title: 'Remove ' + u.name + ' from ' + d.name,
                       onClick: function () {
                         if (OC.people && OC.people.removePersonFromDepartment) {
@@ -220,8 +224,8 @@ OC.activities = (function () {
                       }
                     }, OC.icon('close'))
                   : null
-              ]);
-            }) : [h('p', { class: 'muted', style: 'font-size:12.5px;' }, 'No members yet.')])
+              ].filter(Boolean));
+            }) : [h('p', { class: 'muted', style: 'font-size:12.5px;margin:0;' }, 'No members yet.')])
           ]);
         }))
       ]);

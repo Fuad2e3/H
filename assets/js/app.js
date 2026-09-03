@@ -23,10 +23,27 @@ OC.app = (function () {
   var ROUTES = [
     { id: 'dashboard', label: 'Dashboard', view: function () { return OC.dashboard; } },
     { id: 'board', label: 'Notice Board', view: function () { return OC.board; } },
-    { id: 'activities', label: 'Management', view: function () { return OC.activities || OC.groups || OC.people; } },
+    { id: 'activities', label: 'Management', adminOnly: true, view: function () { return OC.activities || OC.groups || OC.people; } },
     { id: 'clients', label: 'Clients Portal', view: function () { return OC.clients; } },
     { id: 'policy', label: 'Policy', view: function () { return OC.policy; } }
   ];
+
+  /* Management is the system admin's section: nobody else gets the tab, and
+     the aliases it answers to (#groups, #people, #reports) are shut too, so
+     typing the address is no way in either. */
+  function canUseRoute(id) {
+    for (var i = 0; i < ROUTES.length; i++) {
+      if (ROUTES[i].id !== id) continue;
+      if (!ROUTES[i].adminOnly) return true;
+      var u = OC.store.user(OC.store.session());
+      return !!(u && u.admin);
+    }
+    return true;
+  }
+
+  function visibleRoutes() {
+    return ROUTES.filter(function (r) { return canUseRoute(r.id); });
+  }
 
   /* ---- theme (Day / Night Mode Support) ---------------------------------- */
   var THEME_KEY = 'oc-theme';
@@ -775,9 +792,10 @@ OC.app = (function () {
   }
 
   function nav() {
-    return h('nav', { class: 'nav', 'aria-label': 'Sections' }, ROUTES.map(function (r) {
+    return h('nav', { class: 'nav', 'aria-label': 'Sections' }, visibleRoutes().map(function (r) {
       return h('button', {
         type: 'button',
+        'data-route': r.id,
         'aria-current': route === r.id ? 'page' : null,
         onClick: function () { go(r.id); }
       }, r.label);
@@ -785,23 +803,42 @@ OC.app = (function () {
   }
 
   /* ---- routing ---------------------------------------------------------- */
-  function go(id) {
-    if (route === id) return;
-    route = id;
-    if (typeof location !== 'undefined') {
-      try {
-        if (history.replaceState) history.replaceState(null, '', '#' + id);
-        else location.hash = id;
-      } catch (_) {
-        location.hash = id;
-      }
+  function setHash(id) {
+    if (typeof location === 'undefined') return;
+    try {
+      if (history.replaceState) history.replaceState(null, '', '#' + id);
+      else location.hash = id;
+    } catch (_) {
+      location.hash = id;
     }
+  }
+
+  function go(id) {
+    var asked = id;
+    if (id === 'groups' || id === 'people' || id === 'reports') {
+      if (!canUseRoute('activities')) id = 'dashboard';
+    } else if (!canUseRoute(id)) {
+      id = 'dashboard';
+    }
+    if (route === id) {
+      /* the address named a section they may not open; put the bar back to the
+         page they are actually looking at instead of leaving it lying */
+      if (asked !== id) setHash(id);
+      return;
+    }
+    route = id;
+    setHash(id);
     render();
   }
 
   function currentView() {
     if (route === 'profile' || route === 'employee-portal') return OC.profilePortal || OC.dashboard;
-    if (route === 'groups' || route === 'people' || route === 'reports') return (OC.activities || OC.groups || OC.people);
+    /* every way into Management runs through here, so one check covers the tab,
+       the address bar and the three aliases alike */
+    if (route === 'activities' || route === 'groups' || route === 'people' || route === 'reports') {
+      if (!canUseRoute('activities')) { route = 'dashboard'; return OC.dashboard; }
+      if (route !== 'activities') return (OC.activities || OC.groups || OC.people);
+    }
     for (var i = 0; i < ROUTES.length; i++) if (ROUTES[i].id === route) return ROUTES[i].view();
     return OC.dashboard;
   }
@@ -822,17 +859,26 @@ OC.app = (function () {
     // Fast path: if shell exists, update active nav and render page instantly with 0ms delay
     if (existingPage && existingNav && root.contains(existingPage)) {
       var navButtons = existingNav.querySelectorAll('button');
-      ROUTES.forEach(function (r, idx) {
-        if (navButtons[idx]) {
-          if (route === r.id) navButtons[idx].setAttribute('aria-current', 'page');
-          else navButtons[idx].removeAttribute('aria-current');
-        }
-      });
-
-      OC.ui.clear(existingPage);
-      currentView().render(existingPage, render);
-      raisePush();
-      return;
+      var navIds = [];
+      for (var nb = 0; nb < navButtons.length; nb++) {
+        var rid = navButtons[nb].getAttribute('data-route');
+        navIds.push(rid);
+        if (route === rid) navButtons[nb].setAttribute('aria-current', 'page');
+        else navButtons[nb].removeAttribute('aria-current');
+      }
+      /* whoever is signed in may not be who the shell was built for, so rebuild
+         it when the set of sections they may open has changed */
+      var wanted = visibleRoutes().map(function (r) { return r.id; });
+      if (navIds.join(',') !== wanted.join(',')) {
+        OC.ui.clear(root);
+        existingPage = null;
+      }
+      if (existingPage) {
+        OC.ui.clear(existingPage);
+        currentView().render(existingPage, render);
+        raisePush();
+        return;
+      }
     }
 
     // Full mount path
@@ -872,11 +918,11 @@ OC.app = (function () {
       if (hash && hash.indexOf('claim=') === 0) {
         checkClaimToken();
       } else if (hash === 'groups' || hash === 'people' || hash === 'reports') {
-        route = 'activities';
+        route = canUseRoute('activities') ? 'activities' : 'dashboard';
       } else if (hash === 'profile' || hash === 'employee-portal') {
         route = 'profile';
       } else if (hash && ROUTES.some(function (r) { return r.id === hash; })) {
-        route = hash;
+        route = canUseRoute(hash) ? hash : 'dashboard';
       }
 
       window.addEventListener('hashchange', function () {

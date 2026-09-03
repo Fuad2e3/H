@@ -23,9 +23,9 @@
   .checkline input{width:21px; height:21px;}
   .segmented{height:var(--ctl-sm);}
   .segmented button{padding:0 14px; font-size:13.5px;}
-  .nav button{padding:17px 16px 15px; font-size:14.5px;}
+  .nav button{height:52px; padding:0 16px; font-size:14.5px;}
   .panel-tabs button{padding:15px 10px; font-size:14px;}
-  .iconbtn, .toggle-theme{height:44px; padding:0 15px; font-size:12px;}
+  .iconbtn, .toggle-theme{height:44px; padding:0 15px; font-size:13px;}
   .thread summary{min-height:38px; display:flex; align-items:center;}
   .item .actions select{height:var(--ctl-sm);}
   .ticklist .checkline{margin-bottom:2px;}

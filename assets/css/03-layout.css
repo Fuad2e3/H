@@ -12,24 +12,24 @@
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: var(--s4);
+  gap: var(--s3);
   height: var(--topbar-h);
   padding: 0 var(--s5);
   background: var(--topbar-bg);
   border-bottom: 1px solid var(--rule);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
 }
+/* a single hairline of brand colour, not a rainbow rule */
 .topbar::after {
   content: "";
   position: absolute;
   bottom: -1px;
   left: 0;
   right: 0;
-  height: 2px;
-  background: var(--grad-bar);
-  opacity: 0.85;
+  height: 1px;
+  background: linear-gradient(90deg, var(--blueprint) 0%, var(--brand-orange) 55%, transparent 100%);
+  opacity: 0.5;
 }
 
 .brand {
@@ -40,44 +40,49 @@
   color: inherit;
 }
 .brand .mark {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   flex: none;
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-  border: 1.5px solid var(--brand-orange);
+  border: 1px solid rgba(249, 115, 22, 0.65);
   color: #FFFFFF;
   border-radius: 9px;
-  font-family: var(--font-display, 'Outfit', sans-serif);
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
   font-weight: 800;
-  font-size: 16px;
+  font-size: 14.5px;
   letter-spacing: -0.02em;
-  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.2), 0 0 12px rgba(249, 115, 22, 0.25);
-  transition: transform var(--t), box-shadow var(--t);
+  box-shadow: var(--sh1);
+  transition: border-color var(--t), box-shadow var(--t);
 }
 .brand:hover .mark {
-  transform: scale(1.04);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25), 0 0 16px rgba(249, 115, 22, 0.4);
+  border-color: var(--brand-orange);
+  box-shadow: var(--sh2);
 }
 .brand .lockup {
   display: flex;
   flex-direction: column;
-  line-height: 1.25;
+  line-height: 1.2;
+  /* `.brand span` below styles the SRS line; the lockup is a span too, so it
+     has to opt out or the wordmark inherits the caps and tracking. */
+  text-transform: none;
+  letter-spacing: normal;
 }
 .brand b {
-  font-family: var(--font-display, 'Outfit', sans-serif);
-  font-size: 17.5px;
-  font-weight: 800;
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 16px;
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ink);
+  text-transform: none;
 }
-.brand span {
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
+.brand .lockup span {
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 10px;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
-  color: var(--brand-orange);
+  color: var(--text-secondary);
   font-weight: 700;
 }
 
@@ -85,8 +90,22 @@
   display: flex;
   align-items: center;
   gap: var(--s2);
-  padding-left: var(--s4);
-  border-left: 1px solid var(--rule);
+  padding: 5px 12px 5px 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-pill);
+  background: var(--card-bg-alt);
+  max-width: 340px;
+  min-width: 0;
+}
+.topbar .who > div {
+  min-width: 0;
+}
+.topbar .who strong,
+.topbar .who .mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 }
 .topbar .who select {
   width: auto;
@@ -96,33 +115,46 @@
   font-weight: 500;
 }
 
-.iconbtn {
+/* .iconbtn and .toggle-theme are the top-bar utility controls: same height,
+   same radius and the same quiet neutral as .btn, so the bar reads as one row
+   of controls rather than three unrelated shapes. */
+.iconbtn,
+.toggle-theme {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: var(--ctl-sm);
+  height: 34px;
   padding: 0 13px;
   background: var(--btn-bg);
   color: var(--btn-text);
   border: 1px solid var(--btn-border);
-  border-radius: var(--r-pill);
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 11px;
-  font-weight: 700;
+  border-radius: var(--r1);
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-  transition: color var(--t), border-color var(--t), background var(--t), transform var(--t), box-shadow var(--t);
+  box-shadow: var(--sh1);
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
 }
-.iconbtn:hover {
+.iconbtn:hover,
+.toggle-theme:hover {
   color: var(--btn-hover-text);
   border-color: var(--btn-hover-border);
   background: var(--btn-hover-bg);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15);
 }
-.iconbtn:active {
-  transform: translateY(0);
+.iconbtn:active,
+.toggle-theme:active {
+  transform: translateY(1px);
+}
+.iconbtn:focus-visible,
+.toggle-theme:focus-visible {
+  outline: 2px solid var(--blueprint);
+  outline-offset: 2px;
+}
+.toggle-theme .icon {
+  width: 14px;
+  height: 14px;
 }
 .iconbtn .icon {
   width: 13px;
@@ -131,22 +163,22 @@
 .iconbtn .count {
   display: inline-grid;
   place-items: center;
-  min-width: 17px;
-  height: 17px;
+  min-width: 18px;
+  height: 18px;
   padding: 0 5px;
-  background: linear-gradient(135deg, #F43F5E, #E11D48);
+  background: var(--signal);
   color: #FFFFFF !important;
   border-radius: var(--r-pill);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
-  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.4);
 }
 
 /* ---- navigation --------------------------------------------------------- */
 .nav {
   display: flex;
-  gap: 6px;
+  gap: 2px;
   overflow-x: auto;
   padding: 0 var(--s5);
   background: var(--card-bg);
@@ -154,43 +186,61 @@
   position: sticky;
   top: var(--topbar-h);
   z-index: 25;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+/* Underline tabs: the current section is marked by a 2px rule sitting on the
+   nav's own bottom border, so the row keeps a single clean baseline. */
 .nav button {
   position: relative;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 13px 18px 12px;
+  padding: 0 16px;
+  height: var(--nav-h, 46px);
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 13.5px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-secondary);
-  border-bottom: 2.5px solid transparent;
-  border-radius: 6px 6px 0 0;
   white-space: nowrap;
   user-select: none;
-  transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast), transform var(--t-instant);
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.nav button::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+  transition: background var(--t-fast);
 }
 .nav button:hover {
   color: var(--ink);
-  background: var(--tint);
 }
-.nav button:active {
-  transform: scale(0.96);
-  transition: transform var(--t-instant);
+.nav button:hover::after {
+  background: var(--rule-strong);
+}
+.nav button:focus-visible {
+  outline: 2px solid var(--blueprint);
+  outline-offset: -3px;
+  border-radius: 4px;
 }
 .nav button[aria-current="page"] {
   color: var(--blueprint);
-  font-weight: 800;
-  background: var(--blueprint-soft);
-  border-bottom-color: var(--blueprint);
+  font-weight: 700;
+}
+.nav button[aria-current="page"]::after {
+  background: var(--blueprint);
 }
 
 /* ---- page --------------------------------------------------------------- */
 .page {
-  max-width: 1440px;
+  max-width: var(--page-max, 1440px);
   margin: 0 auto;
-  padding: var(--s5) var(--s5) 96px;
+  padding: var(--s6) var(--s5) 96px;
   animation: pageFadeIn 140ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
@@ -204,21 +254,25 @@
     transform: translateY(0);
   }
 }
+/* Page heading. The title was a clipped gradient, which faded the last word of
+   every heading; solid ink reads better and stays legible in both themes. */
 .page-head {
   margin-bottom: var(--s5);
+  padding-bottom: var(--s4);
+  border-bottom: 1px solid var(--rule);
 }
 .page-head h1 {
-  font-size: 28px;
-  margin-bottom: 6px;
+  font-size: 26px;
+  line-height: 1.2;
+  margin-bottom: 7px;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--ink) 60%, var(--blueprint) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.03em;
+  color: var(--ink);
 }
 .page-head p {
   color: var(--text-secondary);
-  font-size: 14.5px;
-  max-width: 78ch;
+  font-size: 14px;
+  max-width: 72ch;
   line-height: 1.6;
 }
 
@@ -277,42 +331,49 @@
   transition: transform var(--t-instant);
 }
 .panel-tabs button[aria-pressed="true"] {
-  background: var(--grad-primary);
+  background: var(--blueprint);
   color: #FFFFFF;
   font-weight: 700;
 }
 
+/* Panels sit still. Hover used to swap the border to blue and jump two
+   elevation steps, which made a static page feel jittery under the cursor. */
 .panel {
   border: 1px solid var(--rule);
   border-radius: var(--r2);
   background: var(--card-bg);
-  box-shadow: var(--sh2);
+  box-shadow: var(--sh1);
   overflow: hidden;
-  transition: box-shadow var(--t), border-color var(--t);
-}
-.panel:hover {
-  border-color: rgba(37, 99, 235, 0.3);
-  box-shadow: var(--sh3);
 }
 .panel-head {
   display: flex;
   align-items: center;
   gap: var(--s3);
   flex-wrap: wrap;
-  min-height: 58px;
-  padding: var(--s2) var(--s4);
+  min-height: 60px;
+  padding: var(--s3) var(--s4);
   border-bottom: 1px solid var(--rule);
-  background: linear-gradient(180deg, var(--card-bg-alt) 0%, var(--card-bg) 100%);
+  background: var(--card-bg-alt);
+}
+/* a segmented control in a panel head sits on the same 60px rhythm as the
+   buttons beside it, so two panels side by side keep one baseline */
+.panel-head .segmented {
+  padding: 2px;
+}
+.panel-head .segmented button {
+  height: 30px;
+  padding: 0 12px;
 }
 .panel-head h2 {
-  font-family: var(--font-display, 'Outfit', sans-serif);
-  font-size: 17px;
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: 15.5px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 .panel-head .sub {
-  font-family: var(--font-mono, 'JetBrains Mono', 'IBM Plex Mono', monospace);
-  font-size: 11px;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+  font-size: 12px;
+  letter-spacing: normal;
   color: var(--text-secondary);
   font-weight: 500;
 }
@@ -345,25 +406,31 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--s4);
-  margin-bottom: var(--s4);
+  margin-bottom: var(--s5);
+  align-items: stretch;
 }
 
 .grid-2 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--s4);
+  align-items: stretch;
 }
 .grid-3 {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: var(--s3);
+  align-items: stretch;
+}
+/* cards in a row share the row's height so a grid never looks ragged */
+.grid-2 > *,
+.grid-3 > *,
+.grid-4 > *,
+.stats > * {
+  min-width: 0;
 }
 
 /* ---- responsiveness & performance optimizations ----------------------- */
-.nav {
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
 .nav::-webkit-scrollbar {
   display: none;
 }
@@ -381,7 +448,24 @@
   }
 }
 
+/* two metric cards to a row on a phone: one per row pushed the actual work
+   four screens down */
 @media (max-width: 600px) {
+  .stats,
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s3);
+  }
+  .stat {
+    min-height: 80px;
+    padding: var(--s3) var(--s3) var(--s3) var(--s4);
+  }
+  .stat .v {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 380px) {
   .stats,
   .grid-4 {
     grid-template-columns: 1fr;
@@ -399,8 +483,8 @@
   .topbar .who {
     order: 3;
     width: 100%;
-    border-left: none;
-    padding-left: 0;
+    max-width: none;
+    margin-left: 0;
   }
   .topbar .who select {
     flex: 1;
@@ -416,7 +500,8 @@
     gap: 2px;
   }
   .nav button {
-    padding: 10px 14px;
+    padding: 0 14px;
+    height: 42px;
     font-size: 13px;
   }
   .page {

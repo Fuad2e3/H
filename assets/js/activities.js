@@ -56,7 +56,7 @@ OC.activities = (function () {
           }
         }, ['← Back to Management']),
         h('div', { class: 'row', style: 'align-items:center;gap:8px;' }, [
-          h('span', { style: 'font-weight:700;font-size:14px;color:var(--ink);' }, '💬 Groups & Discussions'),
+          h('span', { class: 'row', style: 'font-weight:700;font-size:14px;color:var(--ink);gap:7px;' }, [OC.icon('chat'), 'Groups & Discussions']),
           h('span', { class: 'chip group' }, allGroups.length + ' channels')
         ])
       ]);
@@ -108,7 +108,7 @@ OC.activities = (function () {
           activeTab = 'groups';
           render(host, rerender);
         }
-      }, ['💬 Groups & Discussions (' + allGroups.length + ') ↗']);
+      }, [OC.icon('chat'), 'Groups & Discussions (' + allGroups.length + ')']);
 
       var subNavRow = h('div', { class: 'activities-subnav-row' }, [
         subNavSegment,
@@ -199,7 +199,7 @@ OC.activities = (function () {
                           OC.people.removePersonFromDepartment(u, d, function () { render(host, rerender); });
                         }
                       }
-                    }, '✕')
+                    }, OC.icon('close'))
                   : null
               ]);
             }) : [h('p', { class: 'muted', style: 'font-size:12.5px;' }, 'No members yet.')])
@@ -372,7 +372,7 @@ OC.activities = (function () {
         h('div', { class: 'portal-header-box', style: 'margin-bottom:16px;' }, [
           h('div', {}, [
             h('h2', { class: 'portal-view-title', style: 'margin:0;font-size:18px;' }, [
-              '📜 System History & Audit Logs',
+              'System History & Audit Logs',
               h('span', { class: 'chip count', style: 'margin-left:8px;' }, filteredAudit.length + ' events')
             ]),
             h('p', { class: 'muted', style: 'font-size:13px;margin:3px 0 0;' },

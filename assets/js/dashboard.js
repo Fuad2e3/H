@@ -200,15 +200,15 @@ OC.dashboard = (function () {
     var schedIn = user.scheduled_in || (user.office_details && user.office_details.scheduled_in) || '09:00 AM';
 
     var punchBtnLabel = isPunchComplete
-      ? '🔒 Completed (' + todayLog.punch_in + ' - ' + todayLog.punch_out + ')'
-      : (!todayLog ? '⏱️ Quick Punch In' : '🏁 Quick Punch Out (' + todayLog.punch_in + ')');
+      ? 'Completed (' + todayLog.punch_in + ' - ' + todayLog.punch_out + ')'
+      : (!todayLog ? 'Quick Punch In' : 'Quick Punch Out (' + todayLog.punch_in + ')');
 
     function handleDashboardPunch(e) {
       if (e && e.stopPropagation) e.stopPropagation();
       var latestAtt = OC.store.state.attendance || [];
       var currentLog = latestAtt.find(function (a) { return a.user_id === user.id && a.date === todayStr; });
       if (currentLog && currentLog.punch_in && currentLog.punch_out) {
-        OC.ui.toast('🔒 Your attendance for today is already completed and locked.', true);
+        OC.ui.toast('Your attendance for today is already completed and locked.', true);
         return;
       }
 
@@ -233,10 +233,10 @@ OC.dashboard = (function () {
             status: isLate ? 'Late' : 'Present',
             note: 'Auto Quick Punch In'
           });
-          OC.ui.toast('Punch In recorded with date ' + todayStr + ' at ' + nowTime + ' ✅');
+          OC.ui.toast('Punch In recorded with date ' + todayStr + ' at ' + nowTime + '.');
         } else if (!existing.punch_out) {
           existing.punch_out = nowTime;
-          OC.ui.toast('Punch Out recorded with date ' + todayStr + ' at ' + nowTime + ' 🏁');
+          OC.ui.toast('Punch Out recorded with date ' + todayStr + ' at ' + nowTime + '.');
         }
       });
       if (typeof rerender === 'function') {
@@ -288,7 +288,7 @@ OC.dashboard = (function () {
           h('div', { class: 'user-profile-status-label' }, 'OFFICIAL EMAIL'),
           h('div', { class: 'user-profile-status-val' }, 'Verified Portal Active')
         ]),
-        h('div', { class: 'user-profile-edit-hint' }, ['✏️ Edit Profile'])
+        h('div', { class: 'user-profile-edit-hint' }, [OC.icon('edit'), 'Edit Profile'])
       ])
     ]);
 

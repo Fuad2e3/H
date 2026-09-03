@@ -501,7 +501,7 @@ OC.ui = (function () {
         parts.push(h('span', {
           class: 'mention-tag everyone',
           title: 'Notifies all team members in this group'
-        }, '📢 @everyone'));
+        }, [OC.icon ? OC.icon('users') : null, '@everyone']));
         lastIdx = match.index + match[0].length;
       } else if (foundUser) {
         if (match.index > lastIdx) {
@@ -578,7 +578,7 @@ OC.ui = (function () {
 
       filtered.forEach(function (u, i) {
         var markNode = u.isEveryone
-          ? h('div', { class: 'mention-everyone-badge', style: 'width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;' }, '📢')
+          ? h('div', { class: 'mention-everyone-badge mark-tint', style: 'width:24px;height:24px;background:var(--brand-orange);' }, OC.icon('users'))
           : mark(u.id);
 
         var item = h('div', {
@@ -709,7 +709,7 @@ OC.ui = (function () {
               e.preventDefault();
               setReplyContext(null, null);
             }
-          }, '✕')
+          }, OC.icon('close'))
         ]));
       } else {
         replyingBadgeWrap.style.display = 'none';
@@ -958,7 +958,7 @@ OC.ui = (function () {
 
     dlg.appendChild(h('div', { class: 'modal-head' }, [
       h('h2', {}, opts.title),
-      h('button', { class: 'iconbtn push', type: 'button', 'aria-label': 'Close', onClick: close }, '✕')
+      h('button', { class: 'iconbtn push', type: 'button', 'aria-label': 'Close', onClick: close }, OC.icon('close'))
     ]));
     var bodyClass = 'modal-body' + (opts.bodyClass ? ' ' + opts.bodyClass : '');
     dlg.appendChild(h('div', { class: bodyClass }, [errorBox, opts.content]));
@@ -1021,10 +1021,10 @@ OC.ui = (function () {
     (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
       title: 'Add new client',
       content: h('div', {}, [
-        field('1. Client / Company name', name, { required: true, hint: 'Official client or company name for task assignment.' }),
-        field('2. Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
+        field('1. Client ID', clientId, { hint: 'Unique client identifier or account number (optional).' }),
+        field('2. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' }),
         field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
-        field('4. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' })
+        field('4. Client / Company name', name, { required: true, hint: 'Official client or company name for task assignment.' })
       ]),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
@@ -1144,7 +1144,7 @@ OC.ui = (function () {
             render();
             if (onChange) onChange(getClients());
           }
-        }, '✕');
+        }, OC.icon('close'));
 
         var chip = h('span', { class: 'multi-picker-chip client-chip' }, [
           h('span', {}, label),
@@ -1260,7 +1260,7 @@ OC.ui = (function () {
             render();
             if (onChange) onChange(getDepartments());
           }
-        }, '✕');
+        }, OC.icon('close'));
 
         var chip = h('span', { class: 'multi-picker-chip dept-chip' }, [
           h('span', {}, label),
@@ -1391,7 +1391,7 @@ OC.ui = (function () {
             render();
             if (onChange) onChange(getAssignees());
           }
-        }, '✕');
+        }, OC.icon('close'));
 
         var chip = h('span', { class: 'assignee-chip' }, [
           markEl,
@@ -1420,7 +1420,7 @@ OC.ui = (function () {
       }
 
       if (filteredPeople.length) {
-        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--ink-muted);margin:3px 0;font-weight:700;' }, 'Team Members'));
+        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin:3px 0;font-weight:700;' }, 'Team Members'));
         filteredPeople.forEach(function (u) {
           var val = 'user:' + u.id;
           var isChecked = chosen.indexOf(val) > -1;
@@ -1448,7 +1448,7 @@ OC.ui = (function () {
       }
 
       if (filteredGroups.length) {
-        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--ink-muted);margin:8px 0 3px 0;font-weight:700;' }, 'Cross-Dept Groups'));
+        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin:8px 0 3px 0;font-weight:700;' }, 'Cross-Dept Groups'));
         filteredGroups.forEach(function (g) {
           var val = 'group:' + g.id;
           var isChecked = chosen.indexOf(val) > -1;
@@ -1580,7 +1580,7 @@ OC.ui = (function () {
         };
         preview.appendChild(img);
         var approxKb = Math.round(((avatarVal.length * 0.75) / 1024) * 10) / 10;
-        sizeBadge.textContent = '⚡ ' + approxKb + ' KB (optimized)';
+        sizeBadge.textContent = approxKb + ' KB (optimized)';
         sizeBadge.style.display = 'inline-flex';
       } else {
         preview.textContent = initials(defaultName || 'User');

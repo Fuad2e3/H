@@ -24,7 +24,8 @@ OC.app = (function () {
     { id: 'dashboard', label: 'Dashboard', view: function () { return OC.dashboard; } },
     { id: 'board', label: 'Notice Board', view: function () { return OC.board; } },
     { id: 'activities', label: 'Management', view: function () { return OC.activities || OC.groups || OC.people; } },
-    { id: 'clients', label: 'Clients Portal', view: function () { return OC.clients; } }
+    { id: 'clients', label: 'Clients Portal', view: function () { return OC.clients; } },
+    { id: 'policy', label: 'Policy', view: function () { return OC.policy; } }
   ];
 
   /* ---- theme (Day / Night Mode Support) ---------------------------------- */

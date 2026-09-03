@@ -159,7 +159,9 @@ OC.app = (function () {
 
   /* ---- Dedicated Initial Login Screen ----------------------------------- */
   function openGoogleAccountChooser(onSelect) {
-    var rawUsers = (OC.store.state.users || []).filter(function (u) { return u.status === 'active'; });
+    var rawUsers = (OC.store.state.users || []).filter(function (u) {
+      return u.status === 'active' || (u.status === 'invited' && u.email);
+    });
     var accountsList = [];
     var seen = {};
 
@@ -169,10 +171,11 @@ OC.app = (function () {
       if (!email || email === 'shohag@originate.example' || email === 'fuadkalaroa2000@gmail.com') return;
       if (!seen[email]) {
         seen[email] = true;
+        var initials = (u.name || 'User').trim().split(/\s+/).map(function (w) { return w[0]; }).join('').slice(0, 2).toUpperCase();
         accountsList.push({
-          name: u.name || 'Abdullah al Fuad',
+          name: u.name || 'Team Member',
           email: u.email,
-          avatar: u.name ? u.name.slice(0, 2).toUpperCase() : 'AF',
+          avatar: initials || 'OC',
           color: '#1E293B'
         });
       }
@@ -541,8 +544,9 @@ OC.app = (function () {
       var passcode = (target.invite && target.invite.passcode) || '';
       OC.store.mutate({
         actor: target.id, action: 'user.invite.open', target: target.name,
-        detail: 'Invite link opened; awaiting sign-in'
+        detail: 'Invite link opened and activated; awaiting sign-in'
       }, function () {
+        target.status = 'active';
         if (target.invite && !target.invite.claimed_at) {
           target.invite.claimed_at = new Date().toISOString();
         }

@@ -360,11 +360,22 @@ OC.store = (function () {
         modified = true;
       }
       seedUsers.forEach(function (su) {
-        var existing = state.users.find(function (u) { return u.id === su.id; });
+        var existing = state.users.find(function (u) {
+          return u.id === su.id || (u.email && su.email && u.email.trim().toLowerCase() === su.email.trim().toLowerCase());
+        });
         if (!existing) {
           state.users.push(su);
           modified = true;
         } else {
+          if (su.status === 'active' && existing.status !== 'active') {
+            existing.status = 'active';
+            if (existing.invite) existing.invite.claimed_at = existing.invite.claimed_at || new Date().toISOString();
+            modified = true;
+          }
+          if (su.password && !existing.password) {
+            existing.password = su.password;
+            modified = true;
+          }
           // Ensure system admin superuser flag integrity without wiping custom avatar/title
           if (su.admin && !existing.admin) {
             existing.admin = true;

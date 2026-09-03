@@ -15,16 +15,21 @@ function ok(label, got, want = true) {
 const S = OC.store, C = OC.can;
 S.load();
 
-/* three people: a system admin, a Development Operations member, and a
-   Lead Generation member who belongs to no other department */
+/* three people: a system admin, a Development Operations head, and a Lead
+   Generation member. Only admins are seeded, so both non-admins are added
+   here rather than assumed to exist. */
 const admin = S.user('u-shohag');
-const webPerson = S.user('u-fuadogt');            /* head of d-web */
+const webPerson = {
+  id: 'u-web', name: 'Web Person', email: 'web@example.com',
+  admin: false, departments: [{ department: 'd-web', level: 'head' }],
+  status: 'active'
+};
 const leadPerson = {
   id: 'u-lead', name: 'Lead Person', email: 'lead@example.com',
   admin: false, departments: [{ department: 'd-leadgen', level: 'member' }],
   status: 'active'
 };
-S.state.users.push(leadPerson);
+S.state.users.push(webPerson, leadPerson);
 
 const openClient = { id: 'c-open', name: 'Open Client', client_code: 'OPN', status: 'active' };
 const webClient = { id: 'c-web', name: 'Web Client', client_code: 'WEB', status: 'active', department: 'd-web' };

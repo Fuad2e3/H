@@ -97,8 +97,26 @@ console.log('╚═════════════════════�
 OC.store.load();
 
 const adminUser = OC.store.state.users.find(u => u.admin) || OC.store.state.users[0];
-const regularUser1 = OC.store.state.users.find(u => !u.admin) || OC.store.state.users[1];
-const regularUser2 = OC.store.state.users.find(u => !u.admin && u.id !== regularUser1.id) || OC.store.state.users[2];
+
+/* The seed ships the system admins only — every other account is loaded from
+   the database at runtime — so this suite creates the two ordinary accounts it
+   needs instead of assuming the seed carries them. */
+function ensureMember(id, name, dept) {
+  let u = OC.store.user(id);
+  if (!u) {
+    u = {
+      id, name, email: id + '@example.com', title: name, admin: false,
+      departments: [{ department: dept, level: 'member' }],
+      status: 'active', password: null, prefs: {}, invite: null
+    };
+    OC.store.state.users.push(u);
+  }
+  return u;
+}
+const regularUser1 = OC.store.state.users.find(u => !u.admin)
+  || ensureMember('u-member-1', 'Member One', 'd-outreach');
+const regularUser2 = OC.store.state.users.find(u => !u.admin && u.id !== regularUser1.id)
+  || ensureMember('u-member-2', 'Member Two', 'd-leadgen');
 
 assert.ok(adminUser, 'Admin user must exist');
 assert.ok(regularUser1, 'Regular user 1 must exist');

@@ -91,7 +91,11 @@ OC.can = (function () {
       if (!best || r < best.r) best = { r: r, level: m.level };
     });
     if (best && best.r === 0) return 'Department Head';
-    if (best && best.r === 1) return 'Team Lead';
+    /* keyed off the level's name, not its index: a department that ships only
+       ['head','member'] puts "member" at index 1, so an index test labels every
+       ordinary member a Team Lead. A department that does add a 'lead' level
+       still reads correctly here. */
+    if (best && String(best.level).toLowerCase() === 'lead') return 'Team Lead';
     return 'Member';
   }
 
@@ -333,6 +337,9 @@ OC.can = (function () {
 
   function canDeleteAccount(actor, targetAccount) {
     if (!actor || !targetAccount) return false;
+    /* deleting your own account locks you out of the workspace, and a sole
+       system admin doing it leaves nobody who can let anyone back in */
+    if (actor.id === targetAccount.id) return false;
     return Boolean(actor.admin);
   }
 

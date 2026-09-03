@@ -1369,7 +1369,7 @@ OC.ui = (function () {
 
     var root = h('div', { class: 'assignee-picker' });
     var chipsWrap = h('div', { class: 'assignee-selected-chips' });
-    var searchInput = h('input', { type: 'search', placeholder: 'Search team members or groups...', 'aria-label': 'Filter assignees' });
+    var searchInput = h('input', { type: 'search', placeholder: 'Search team members...', 'aria-label': 'Filter assignees' });
     var listWrap = h('div', { class: 'assignee-list', role: 'group', 'aria-label': 'Assignees' });
 
     function renderChips() {
@@ -1426,70 +1426,35 @@ OC.ui = (function () {
         return !q || u.name.toLowerCase().indexOf(q) > -1 || (u.email && u.email.toLowerCase().indexOf(q) > -1);
       });
 
-      var filteredGroups = assignableGroups.filter(function (g) {
-        return !q || g.name.toLowerCase().indexOf(q) > -1 || (g.purpose && g.purpose.toLowerCase().indexOf(q) > -1);
-      });
-
-      if (!filteredPeople.length && !filteredGroups.length) {
-        listWrap.appendChild(h('p', { class: 'ticklist-empty' }, 'No team members or groups found matching "' + q + '"'));
+      if (!filteredPeople.length) {
+        listWrap.appendChild(h('p', { class: 'ticklist-empty' }, 'No team members found matching "' + q + '"'));
         return;
       }
 
-      if (filteredPeople.length) {
-        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin:3px 0;font-weight:700;' }, 'Team Members'));
-        filteredPeople.forEach(function (u) {
-          var val = 'user:' + u.id;
-          var isChecked = chosen.indexOf(val) > -1;
-          var chk = h('input', {
-            type: 'checkbox',
-            value: val,
-            checked: isChecked,
-            onChange: function (e) {
-              var at = chosen.indexOf(val);
-              if (e.target.checked && at === -1) chosen.push(val);
-              if (!e.target.checked && at > -1) chosen.splice(at, 1);
-              render();
-              if (onChange) onChange(getAssignees());
-            }
-          });
-
-          var line = h('label', { class: 'assignee-item-line' }, [
-            chk,
-            mark(u.id),
-            h('span', { style: 'font-weight:500;' }, u.name),
-            u.title ? h('span', { class: 'chip custom', style: 'margin-left:auto;font-size:10.5px;' }, u.title) : null
-          ].filter(Boolean));
-          listWrap.appendChild(line);
+      filteredPeople.forEach(function (u) {
+        var val = 'user:' + u.id;
+        var isChecked = chosen.indexOf(val) > -1;
+        var chk = h('input', {
+          type: 'checkbox',
+          value: val,
+          checked: isChecked,
+          onChange: function (e) {
+            var at = chosen.indexOf(val);
+            if (e.target.checked && at === -1) chosen.push(val);
+            if (!e.target.checked && at > -1) chosen.splice(at, 1);
+            render();
+            if (onChange) onChange(getAssignees());
+          }
         });
-      }
 
-      if (filteredGroups.length) {
-        listWrap.appendChild(h('div', { style: 'font-size:11px;text-transform:uppercase;color:var(--text-secondary);margin:8px 0 3px 0;font-weight:700;' }, 'Cross-Dept Groups'));
-        filteredGroups.forEach(function (g) {
-          var val = 'group:' + g.id;
-          var isChecked = chosen.indexOf(val) > -1;
-          var chk = h('input', {
-            type: 'checkbox',
-            value: val,
-            checked: isChecked,
-            onChange: function (e) {
-              var at = chosen.indexOf(val);
-              if (e.target.checked && at === -1) chosen.push(val);
-              if (!e.target.checked && at > -1) chosen.splice(at, 1);
-              render();
-              if (onChange) onChange(getAssignees());
-            }
-          });
-
-          var line = h('label', { class: 'assignee-item-line' }, [
-            chk,
-            h('span', { class: 'chip group' }, 'Group'),
-            h('span', { style: 'font-weight:500;' }, g.name),
-            h('span', { class: 'chip count', style: 'margin-left:auto;' }, (g.members || []).length + ' members')
-          ]);
-          listWrap.appendChild(line);
-        });
-      }
+        var line = h('label', { class: 'assignee-item-line' }, [
+          chk,
+          mark(u.id),
+          h('span', { style: 'font-weight:500;' }, u.name),
+          u.title ? h('span', { class: 'chip custom', style: 'margin-left:auto;font-size:10.5px;' }, u.title) : null
+        ].filter(Boolean));
+        listWrap.appendChild(line);
+      });
     }
 
     function render() {

@@ -523,7 +523,7 @@ OC.board = (function () {
         OC.ui.field('Title', title, { required: true }),
         OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
         OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),
-        OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: canReassign ? 'Select one or multiple team members or groups to assign.' : 'Only authorized leads/admins can reassign (3.2).' }),
+        OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: canReassign ? 'Select one or multiple team members to assign.' : 'Only authorized leads/admins can reassign (3.2).' }),
         OC.ui.field('Due date & time', due, { required: true, hint: 'Past dates & times are blocked automatically.' }),
         OC.ui.field('Priority', priority),
         OC.ui.field('Recurrence', recurrence)
@@ -546,7 +546,7 @@ OC.board = (function () {
     OC.ui.modal({
       title: 'Reassign todo: ' + todo.title,
       content: h('div', {}, [
-        OC.ui.field('Assign to', picker.node, { required: true, hint: 'Select one or multiple team members or cross-department groups (3.2).' })
+        OC.ui.field('Assign to', picker.node, { required: true, hint: 'Select one or multiple team members (3.2).' })
       ]),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
@@ -642,7 +642,7 @@ OC.board = (function () {
       { value: 'quarterly', label: 'Quarterly' }
     ], 'none');
 
-    var assignHint = 'Select one or multiple team members or cross-department groups (3.2).';
+    var assignHint = 'Select one or multiple team members (3.2).';
 
     OC.ui.modal({
       title: 'New todo',

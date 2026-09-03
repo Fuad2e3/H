@@ -268,6 +268,99 @@ OC.ui = (function () {
   }
 
   /* ---- form pieces ------------------------------------------------------ */
+  /* ---- keeping the reader's place across a re-render ----------------------
+     A view that rebuilds itself — because a keystroke filtered a list, or
+     because data arrived from the server a second ago — throws away the scroll
+     position and whatever field was being typed in. These capture where the
+     person is and put them back afterwards.
+
+     Elements are keyed by tag, class and label plus their position among the
+     others sharing that key, rather than by a global index, so a row appearing
+     or disappearing elsewhere does not shift the key. Anything that cannot be
+     found again afterwards is simply skipped. */
+  function placeKeys(root, selector) {
+    var seen = {};
+    var out = [];
+    var nodes = root.querySelectorAll(selector);
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var label = (el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('placeholder'))) || '';
+      var base = el.tagName + '.' + (el.className || '') + '.' + label;
+      seen[base] = (seen[base] || 0) + 1;
+      out.push({ el: el, key: base + '#' + (seen[base] - 1) });
+    }
+    return out;
+  }
+
+  function capturePlace(root) {
+    if (typeof document === 'undefined' || !root) return null;
+
+    var scrolls = [];
+    placeKeys(root, '*').forEach(function (rec) {
+      if (rec.el.scrollTop > 0 || rec.el.scrollLeft > 0) {
+        scrolls.push({ key: rec.key, top: rec.el.scrollTop, left: rec.el.scrollLeft });
+      }
+    });
+
+    var focus = null;
+    var active = document.activeElement;
+    if (active && active !== document.body && root.contains(active)) {
+      var match = placeKeys(root, active.tagName).filter(function (r) { return r.el === active; })[0];
+      if (match) {
+        focus = { key: match.key, tag: active.tagName };
+        try {
+          if (typeof active.selectionStart === 'number') {
+            focus.start = active.selectionStart;
+            focus.end = active.selectionEnd;
+          }
+        } catch (e) { /* a selection is not readable on every input type */ }
+      }
+    }
+
+    return {
+      win: typeof window !== 'undefined' ? (window.scrollY || window.pageYOffset || 0) : 0,
+      scrolls: scrolls,
+      focus: focus
+    };
+  }
+
+  function restorePlace(place, root) {
+    if (!place || typeof document === 'undefined' || !root) return;
+
+    if (place.scrolls.length) {
+      var byKey = {};
+      placeKeys(root, '*').forEach(function (rec) { byKey[rec.key] = rec.el; });
+      place.scrolls.forEach(function (rec) {
+        var el = byKey[rec.key];
+        if (el) { el.scrollTop = rec.top; el.scrollLeft = rec.left; }
+      });
+    }
+
+    if (typeof window !== 'undefined' && place.win) window.scrollTo(0, place.win);
+
+    if (place.focus) {
+      var target = placeKeys(root, place.focus.tag).filter(function (r) {
+        return r.key === place.focus.key;
+      })[0];
+      if (target && target.el && target.el.focus) {
+        target.el.focus({ preventScroll: true });
+        if (typeof place.focus.start === 'number' && target.el.setSelectionRange) {
+          try { target.el.setSelectionRange(place.focus.start, place.focus.end); } catch (e) { }
+        }
+      }
+    }
+  }
+
+  /* run a re-render without moving the reader */
+  function keepingPlace(root, fn) {
+    var live = root || (typeof document !== 'undefined' ? document.getElementById('page') : null);
+    var place = live ? capturePlace(live) : null;
+    fn();
+    var after = (live && live.isConnected) ? live
+      : (typeof document !== 'undefined' ? document.getElementById('page') : null);
+    if (place && after) restorePlace(place, after);
+  }
+
   function field(labelText, control, opts) {
     opts = opts || {};
     var label = h('label', { class: 'field' }, [
@@ -1790,6 +1883,7 @@ OC.ui = (function () {
     initials: initials, mark: mark, person: person, photoUploader: photoUploader,
     STATE_LABEL: STATE_LABEL,
     field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
+    capturePlace: capturePlace, restorePlace: restorePlace, keepingPlace: keepingPlace,
     assigneePicker: assigneePicker, deptPicker: deptPicker,
     tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
     formatMentions: formatMentions, extractMentionedUserIds: extractMentionedUserIds, attachMentionAutocomplete: attachMentionAutocomplete,

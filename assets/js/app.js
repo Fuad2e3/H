@@ -862,6 +862,14 @@ OC.app = (function () {
     return OC.dashboard;
   }
 
+  /* A refresh driven by the data, not by the person: rebuild the page, then put
+     them back exactly where they were — same scroll, same field, same caret.
+     OC.ui.keepingPlace does the capture and restore. */
+  function renderInPlace() {
+    if (!OC.ui.keepingPlace) { render(); return; }
+    OC.ui.keepingPlace(typeof document !== 'undefined' ? document.getElementById('page') : null, render);
+  }
+
   function render() {
     var root = typeof document !== 'undefined' ? document.getElementById('root') : null;
     if (!root) return;
@@ -966,7 +974,7 @@ OC.app = (function () {
       });
     }
 
-    OC.store.onChange(render);
+    OC.store.onChange(renderInPlace);
     render();
   }
 

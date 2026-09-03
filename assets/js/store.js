@@ -311,11 +311,14 @@ OC.store = (function () {
     } catch (_) {}
   }
 
-  // 🔄 Recurring 2-second Live Auto-Refresh Loop
+  /* Live auto-refresh, once a second. syncWithServer only emits when the state
+     actually came back different, so a quiet second costs one request and
+     rebuilds nothing. A tab in the background is not polled at all. */
   if (typeof setInterval === 'function' && isHttp()) {
     var syncTimer = setInterval(function () {
+      if (typeof document !== 'undefined' && document.hidden) return;
       syncWithServer();
-    }, 2000);
+    }, 1000);
     if (syncTimer && typeof syncTimer.unref === 'function') {
       syncTimer.unref();
     }
@@ -325,6 +328,14 @@ OC.store = (function () {
   if (typeof window !== 'undefined' && window.addEventListener) {
     window.addEventListener('online', function () {
       syncWithServer();
+    });
+  }
+
+  /* coming back to the tab should catch up immediately rather than waiting out
+     the next tick */
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) syncWithServer();
     });
   }
 

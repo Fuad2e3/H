@@ -1020,7 +1020,8 @@ OC.clients = (function () {
             style: 'width:100%;',
             onInput: function (e) {
               searchQuery = e.target.value;
-              render(host);
+              /* carry the caret across the rebuild, see the note in activities.js */
+              OC.ui.keepingPlace(host, function () { render(host); });
             }
           })
         ]),

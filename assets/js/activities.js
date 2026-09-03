@@ -439,7 +439,10 @@ OC.activities = (function () {
             style: 'width:100%;max-width:480px;',
             onInput: function (e) {
               auditSearchQuery = e.target.value.trim();
-              render(host, rerender);
+              /* this rebuilds the page, and the box being typed in with it, so
+                 the caret has to be carried across or every keystroke drops
+                 focus and the next one goes nowhere */
+              OC.ui.keepingPlace(host, function () { render(host, rerender); });
             }
           })
         ]),

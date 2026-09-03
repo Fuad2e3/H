@@ -1002,6 +1002,41 @@ OC.board = (function () {
       return d ? d.name : did;
     }).join(', ');
 
+    /* Members of the department this instruction is already fixed to, offered
+       as an optional, specific target. Left unchecked, the instruction
+       reaches the whole department exactly as before. Checking someone also
+       surfaces it on their own Dashboard, which an instruction scoped to a
+       single client otherwise never does — it only ever showed inside that
+       client's own Instructions tab. */
+    var deptMemberUsers = lockDepartment
+      ? OC.store.state.users.filter(function (u) {
+          return lockedDeptIds.some(function (did) { return OC.can.inDept(u, did); });
+        })
+      : [];
+    var targetUsers = [];
+    var targetRow = null;
+    if (deptMemberUsers.length) {
+      var targetList = h('div', {
+        class: 'dept-checkbox-list',
+        style: 'display:grid;grid-template-columns:repeat(auto-fill, minmax(190px, 1fr));gap:6px;padding:8px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:6px;'
+      });
+      deptMemberUsers.forEach(function (u) {
+        var chk = h('input', {
+          type: 'checkbox',
+          style: 'cursor:pointer;width:15px;height:15px;margin:0;flex:none;',
+          onChange: function (e) {
+            var at = targetUsers.indexOf(u.id);
+            if (e.target.checked && at === -1) targetUsers.push(u.id);
+            if (!e.target.checked && at > -1) targetUsers.splice(at, 1);
+          }
+        });
+        targetList.appendChild(h('label', { style: 'display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;' }, [chk, u.name]));
+      });
+      targetRow = OC.ui.field('Notify specific people (optional)', targetList, {
+        hint: 'Leave everyone unchecked to reach the whole department as usual. Check someone and this also shows on their Dashboard.'
+      });
+    }
+
     OC.ui.modal({
       title: 'Post an instruction',
       content: h('div', {}, [
@@ -1012,8 +1047,9 @@ OC.board = (function () {
         lockDepartment
           ? OC.ui.field('Department', h('div', { class: 'chip custom' }, lockedDeptNames || 'This department'), { hint: 'Fixed to the department this client is assigned to.' })
           : OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (3.2).' }),
+        targetRow,
         OC.ui.field('Tags', tags.node, { hint: 'Typing narrows the list. A new tag is created inline and available to everyone immediately (6.4).' })
-      ]),
+      ].filter(Boolean)),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
         {
@@ -1033,7 +1069,8 @@ OC.board = (function () {
               tags: tags.resolve(),
               posted_at: new Date().toISOString(), read_by: [user.id],
               archived: false, linked_todo: null, comments: [],
-              client_only: !!preset.client_only
+              client_only: !!preset.client_only,
+              target_users: targetUsers.slice()
             };
 
             OC.store.mutate({ actor: user.id, action: 'instruction.post', target: note.body.slice(0, 48), detail: 'tagged ' + (OC.store.client(note.client) || {}).name }, function () {

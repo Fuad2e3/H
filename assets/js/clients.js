@@ -686,7 +686,10 @@ OC.clients = (function () {
               h('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
                 OC.ui.person(ins.author, 'strong'),
                 ins.department ? OC.ui.deptChip(ins.department) : null,
-                ins.target_type ? h('span', { class: 'chip custom' }, 'Target: ' + ins.target_type) : null
+                ins.target_type ? h('span', { class: 'chip custom' }, 'Target: ' + ins.target_type) : null,
+                (Array.isArray(ins.target_users) && ins.target_users.length)
+                  ? h('span', { class: 'chip custom' }, 'For: ' + ins.target_users.map(OC.ui.personName).join(', '))
+                  : null
               ].filter(Boolean)),
               h('div', { class: 'row', style: 'gap:8px;align-items:center;' }, [
                 h('span', { class: 'muted', style: 'font-size:11.5px;' }, OC.ui.fmtWhen(ins.posted_at || ins.created_at)),

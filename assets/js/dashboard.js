@@ -53,7 +53,14 @@ OC.dashboard = (function () {
   function myInstructions(user) {
     if (!user || !Array.isArray(OC.store.state.instructions)) return [];
     return OC.store.state.instructions
-      .filter(function (n) { return !n.archived && !n.client_only && OC.can.seeInstruction(user, n); })
+      .filter(function (n) {
+        if (n.archived || !OC.can.seeInstruction(user, n)) return false;
+        /* a client instruction otherwise stays inside that client's own
+           Instructions tab — unless whoever posted it picked this person
+           out specifically, in which case it belongs on their Dashboard too */
+        if (!n.client_only) return true;
+        return Array.isArray(n.target_users) && n.target_users.indexOf(user.id) > -1;
+      })
       .sort(function (a, b) {
         var aRead = Array.isArray(a.read_by) ? a.read_by : [];
         var bRead = Array.isArray(b.read_by) ? b.read_by : [];
@@ -394,8 +401,11 @@ OC.dashboard = (function () {
                     OC.ui.person(n.author || n.posted_by, 'strong'),
                     h('span', {}, OC.ui.fmtWhen(n.posted_at)),
                     isUnread ? h('span', { class: 'chip overdue' }, 'unread') : null,
-                    n.linked_todo ? h('span', { class: 'chip group' }, 'todo created') : null
-                  ]),
+                    n.linked_todo ? h('span', { class: 'chip group' }, 'todo created') : null,
+                    (Array.isArray(n.target_users) && n.target_users.length)
+                      ? h('span', { class: 'chip custom' }, 'For: ' + n.target_users.map(OC.ui.personName).join(', '))
+                      : null
+                  ].filter(Boolean)),
                   h('div', { class: 'body' }, n.body),
                   h('div', { class: 'tags' }, [
                     (Array.isArray(n.clients) && n.clients.length > 1)

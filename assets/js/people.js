@@ -759,13 +759,30 @@ OC.people = (function () {
 
     if (OC.can.deleteAccount(user, account)) {
       actions.unshift({
-        label: 'Delete account', onClick: function (close) {
-          OC.ui.confirm('Delete account "' + account.name + '"? This user will be permanently removed and cannot log in.', function () {
-            OC.store.mutate({ actor: user.id, action: 'user.delete', target: account.name }, function () {
+        label: 'Delete user', onClick: function (close) {
+          var isSelf = Boolean(user && user.id === account.id);
+          var confirmMsg = isSelf
+            ? 'Are you sure you want to permanently delete your own account "' + account.name + '"? You will be logged out immediately.'
+            : 'Permanently delete user "' + account.name + '"? This user will be removed and cannot log in.';
+
+          OC.ui.confirm(confirmMsg, function () {
+            OC.store.mutate({
+              actor: user.id,
+              action: 'user.delete',
+              target: account.name,
+              detail: 'Permanently deleted user account ' + account.name
+            }, function () {
               OC.store.state.users = OC.store.state.users.filter(function (u) { return u.id !== account.id; });
             });
-            OC.ui.toast('Account permanently deleted.');
+            OC.ui.toast('User account permanently deleted.');
             close();
+
+            if (isSelf && OC.app && OC.app.logout) {
+              OC.app.logout();
+            } else {
+              var host = document.querySelector('main.content') || document.querySelector('#content');
+              if (host && typeof render === 'function') render(host);
+            }
           });
         }
       });

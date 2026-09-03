@@ -315,7 +315,6 @@ OC.can = (function () {
 
   function canDeleteAccount(actor, targetAccount) {
     if (!actor || !targetAccount) return false;
-    if (actor.id === targetAccount.id) return false; // Cannot delete self
     return Boolean(actor.admin);
   }
 

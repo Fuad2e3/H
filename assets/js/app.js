@@ -579,7 +579,8 @@ OC.app = (function () {
 
   /* ---- profile settings modal with photo upload ------------------------ */
   function openProfileModal(customUser, onSave) {
-    var user = customUser || OC.store.user(OC.store.session());
+    var sessionUser = OC.store.user(OC.store.session());
+    var user = customUser || sessionUser;
     if (!user) return;
 
     var empIdDefault = user.employee_id || '';
@@ -593,8 +594,112 @@ OC.app = (function () {
     var joinedInput = h('input', { type: 'text', value: joinedDefault, placeholder: 'e.g. DD-Mon-YYYY' });
     var uploader = OC.ui.photoUploader(user.avatar, user.name);
 
+    var isSysAdmin = Boolean(sessionUser && sessionUser.admin);
+    var isSelf = Boolean(sessionUser && sessionUser.id === user.id);
+
+    var actions = [];
+
+    // Delete user button: strictly visible and actionable only by System Admin
+    if (isSysAdmin) {
+      actions.push({
+        label: 'Delete user',
+        onClick: function (close) {
+          if (!sessionUser || !sessionUser.admin) {
+            OC.ui.toast('Access Denied: Only System Admin can delete a user.', true);
+            return;
+          }
+          var confirmMsg = isSelf
+            ? 'Are you sure you want to permanently delete your own account "' + user.name + '"? You will be logged out immediately.'
+            : 'Permanently delete user "' + user.name + '"? This user will be removed and cannot log in.';
+
+          OC.ui.confirm(confirmMsg, function () {
+            var targetName = user.name;
+            var targetId = user.id;
+            var actorId = sessionUser ? sessionUser.id : targetId;
+
+            OC.store.mutate({
+              actor: actorId,
+              action: 'user.delete',
+              target: targetName,
+              detail: 'Permanently deleted user account ' + targetName + ' (' + (user.email || '') + ')'
+            }, function () {
+              OC.store.state.users = (OC.store.state.users || []).filter(function (u) {
+                return u.id !== targetId;
+              });
+            });
+
+            OC.ui.toast('User account deleted.');
+            close();
+
+            if (isSelf) {
+              if (OC.app && OC.app.logout) {
+                OC.app.logout();
+              } else {
+                location.reload();
+              }
+            } else {
+              if (typeof onSave === 'function') {
+                try { onSave(); } catch (e) {}
+              }
+              if (window.location && window.location.hash && window.location.hash.indexOf('profile') !== -1) {
+                if (OC.profilePortal && OC.profilePortal.openForUser) {
+                  OC.profilePortal.openForUser(sessionUser);
+                } else if (OC.app && OC.app.go) {
+                  OC.app.go('people');
+                }
+              }
+              render();
+            }
+          });
+        }
+      });
+    }
+
+    actions.push({ label: 'Cancel', onClick: function (close) { close(); } });
+    actions.push({
+      label: 'Save profile', primary: true, onClick: function (close) {
+        var newName = nameInput.value.trim();
+        if (!newName) return 'Name cannot be empty.';
+        var newAvatar = uploader.getValue();
+        var newTitle = titleInput.value.trim();
+        var newEmpId = empIdInput.value.trim() || empIdDefault;
+        var newOrg = orgInput.value.trim() || orgDefault;
+        var newJoined = joinedInput.value.trim() || joinedDefault;
+
+        OC.store.mutate({
+          actor: sessionUser ? sessionUser.id : user.id,
+          action: 'user.update_profile',
+          target: newName,
+          detail: 'Updated profile details, employee badge & avatar photo'
+        }, function () {
+          var targetUser = OC.store.user(user.id);
+          if (targetUser) {
+            targetUser.name = newName;
+            targetUser.title = newTitle;
+            targetUser.avatar = newAvatar;
+            targetUser.employee_id = newEmpId;
+            targetUser.org = newOrg;
+            targetUser.joined_date = newJoined;
+          }
+          user.name = newName;
+          user.title = newTitle;
+          user.avatar = newAvatar;
+          user.employee_id = newEmpId;
+          user.org = newOrg;
+          user.joined_date = newJoined;
+
+          OC.ui.toast('Profile card & details updated successfully.');
+          if (typeof onSave === 'function') {
+            try { onSave(); } catch (e) {}
+          }
+          render();
+          close();
+        });
+      }
+    });
+
     OC.ui.modal({
-      title: 'Edit My Profile & ID Card',
+      title: isSelf ? 'Edit My Profile & ID Card' : ('Edit Profile & ID Card: ' + user.name),
       content: h('div', {}, [
         OC.ui.field('Profile photo', uploader.node, { hint: 'Upload a custom photo from your device or paste an image URL.' }),
         OC.ui.field('Full name', nameInput, { required: true }),
@@ -604,50 +709,7 @@ OC.app = (function () {
         OC.ui.field('Joined date', joinedInput, { hint: 'e.g. DD-Mon-YYYY' }),
         OC.ui.field('Email address', h('input', { type: 'email', value: user.email, disabled: true }), { hint: 'Assigned login email.' })
       ]),
-      actions: [
-        { label: 'Cancel', onClick: function (close) { close(); } },
-        {
-          label: 'Save profile', primary: true, onClick: function (close) {
-            var newName = nameInput.value.trim();
-            if (!newName) return 'Name cannot be empty.';
-            var newAvatar = uploader.getValue();
-            var newTitle = titleInput.value.trim();
-            var newEmpId = empIdInput.value.trim() || empIdDefault;
-            var newOrg = orgInput.value.trim() || orgDefault;
-            var newJoined = joinedInput.value.trim() || joinedDefault;
-
-            OC.store.mutate({
-              actor: user.id,
-              action: 'user.update_profile',
-              target: newName,
-              detail: 'Updated profile details, employee badge & avatar photo'
-            }, function () {
-              var targetUser = OC.store.user(user.id);
-              if (targetUser) {
-                targetUser.name = newName;
-                targetUser.title = newTitle;
-                targetUser.avatar = newAvatar;
-                targetUser.employee_id = newEmpId;
-                targetUser.org = newOrg;
-                targetUser.joined_date = newJoined;
-              }
-              user.name = newName;
-              user.title = newTitle;
-              user.avatar = newAvatar;
-              user.employee_id = newEmpId;
-              user.org = newOrg;
-              user.joined_date = newJoined;
-
-              OC.ui.toast('Profile card & details updated successfully.');
-              if (typeof onSave === 'function') {
-                try { onSave(); } catch (e) {}
-              }
-              render();
-              close();
-            });
-          }
-        }
-      ]
+      actions: actions
     });
   }
 

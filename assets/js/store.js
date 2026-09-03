@@ -449,6 +449,15 @@ OC.store = (function () {
   function emit() { listeners.forEach(function (fn) { fn(); }); }
 
   function mutate(entry, fn) {
+    if (entry && entry.action === 'user.delete') {
+      var actorUser = user(entry.actor) || user(session());
+      if (!actorUser || !actorUser.admin) {
+        if (typeof OC !== 'undefined' && OC.ui && OC.ui.toast) {
+          OC.ui.toast('Access Denied: Only System Admin can delete user accounts.', true);
+        }
+        return false;
+      }
+    }
     if (typeof fn === 'function') {
       fn();
     }

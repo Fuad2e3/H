@@ -111,7 +111,20 @@ OC.app = (function () {
     var list = myNotifications();
     var content = list.length
       ? h('div', {}, list.slice(0, 30).map(function (n) {
-        return h('div', { class: 'notif' + (n.read ? '' : ' unread') }, [
+        return h('div', {
+          class: 'notif' + (n.read ? '' : ' unread'),
+          style: 'cursor:pointer;',
+          title: 'Click to mark as read and view',
+          onClick: function () {
+            if (!n.read) {
+              OC.store.mutate(null, function () { n.read = true; });
+            }
+            if (n.ref && OC.store.todo(n.ref)) {
+              if (typeof close === 'function') close();
+              go('board');
+            }
+          }
+        }, [
           h('span', { class: 'marker' }),
           h('div', {}, [
             h('div', { class: 'what' }, n.text),

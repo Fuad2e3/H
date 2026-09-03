@@ -299,9 +299,15 @@ OC.people = (function () {
       OC.ui.toast('Access Denied: Only System Admin and Department Heads can resend invitations.', true);
       return;
     }
+    // Pass the account's existing meta so the new invite token carries correct email/name/dept
     OC.store.mutate({ actor: user.id, action: 'user.invite.resend', target: account.name,
                       detail: 'new single use link and 72-hr password' }, function () {
-      account.invite = OC.store.issueInvite(user.id);
+      account.invite = OC.store.issueInvite(user.id, {
+        email: account.email,
+        name: account.name,
+        department: account.departments && account.departments[0] ? account.departments[0].department : '',
+        level: account.departments && account.departments[0] ? account.departments[0].level : 'member'
+      });
     });
     dispatchInviteEmail(account, true);
     showInviteSuccessModal(account);
@@ -736,7 +742,11 @@ OC.people = (function () {
             }
             account.status = statusSelect.value;
             if (deptSelect.value && levelSelect.value) {
-              account.departments = [{ department: deptSelect.value, level: levelSelect.value }];
+              // Preserve all other department memberships — only update or insert the selected dept
+              var otherDepts = (account.departments || []).filter(function (m) {
+                return m.department !== deptSelect.value;
+              });
+              account.departments = otherDepts.concat([{ department: deptSelect.value, level: levelSelect.value }]);
             } else if (user.admin && !deptSelect.value) {
               account.departments = [];
             }

@@ -229,12 +229,36 @@ OC.store = (function () {
               }
             });
           }
-          // Merge offline-queued notifications back so unread counts survive a sync
+          // Merge offline-created todos back so they survive a sync
+          if (state && Array.isArray(state.todos) && state.todos.length > 0) {
+            serverState.todos = serverState.todos || [];
+            state.todos.forEach(function (lt) {
+              if (!serverState.todos.some(function (st) { return st.id === lt.id; })) {
+                serverState.todos.push(lt);
+                needsPush = true;
+              }
+            });
+          }
+          // Merge offline-created instructions back so they survive a sync
+          if (state && Array.isArray(state.instructions) && state.instructions.length > 0) {
+            serverState.instructions = serverState.instructions || [];
+            state.instructions.forEach(function (li) {
+              if (!serverState.instructions.some(function (si) { return si.id === li.id; })) {
+                serverState.instructions.push(li);
+                needsPush = true;
+              }
+            });
+          }
+          // Merge offline-queued notifications and synchronize read state
           if (state && Array.isArray(state.notifications) && state.notifications.length > 0) {
             serverState.notifications = serverState.notifications || [];
             state.notifications.forEach(function (ln) {
-              if (!serverState.notifications.some(function (sn) { return sn.id === ln.id; })) {
+              var sn = serverState.notifications.find(function (n) { return n.id === ln.id; });
+              if (!sn) {
                 serverState.notifications.unshift(ln);
+                needsPush = true;
+              } else if (ln.read && !sn.read) {
+                sn.read = true;
                 needsPush = true;
               }
             });

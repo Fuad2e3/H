@@ -65,9 +65,9 @@ OC.board = (function () {
       }
     }
 
-    var when = (isTodo ? item.created_at : item.posted_at).slice(0, 10);
-    if (filters.from && when < filters.from) return false;
-    if (filters.to && when > filters.to) return false;
+    var when = (isTodo ? (item.created_at || item.posted_at || '') : (item.posted_at || item.created_at || '')).slice(0, 10);
+    if (filters.from && when && when < filters.from) return false;
+    if (filters.to && when && when > filters.to) return false;
 
     if (filters.q) {
       var q = filters.q.toLowerCase();
@@ -95,7 +95,11 @@ OC.board = (function () {
         if (n.archived && !showArchived) return false;
         return matches(n, false);
       })
-      .sort(function (a, b) { return b.posted_at.localeCompare(a.posted_at); });
+      .sort(function (a, b) {
+        var ap = a.posted_at || '';
+        var bp = b.posted_at || '';
+        return bp.localeCompare(ap);
+      });
   }
 
   /* ---- filter bar ------------------------------------------------------- */
@@ -440,7 +444,7 @@ OC.board = (function () {
           if (!newTitle) return 'A todo needs a title.';
           var selectedClients = clientPicker.getClients();
           var primaryClient = clientPicker.getValue();
-          if (!selectedClients.length || !primaryClient) return 'Please select at least one client.';
+          // client is optional — internal tasks may have no client (matches commandController.js fix)
           var selectedDepts = deptPicker.getDepartments();
           var primaryDept = deptPicker.getValue();
           if (!selectedDepts.length || !primaryDept) return 'Please select at least one department.';
@@ -658,7 +662,7 @@ OC.board = (function () {
             if (!title.value.trim()) return 'A todo needs a title.';
             var selectedClients = clientPicker.getClients();
             var primaryClient = clientPicker.getValue();
-            if (!selectedClients.length || !primaryClient) return 'Select at least one client or add a new one. This is required by 5.2.';
+            // client is optional for internal/department tasks
             var selectedDepts = deptPicker.getDepartments();
             var primaryDept = deptPicker.getValue();
             if (!selectedDepts.length || !primaryDept) return 'Select at least one department. This is required by 5.2.';

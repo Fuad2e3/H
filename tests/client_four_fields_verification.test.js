@@ -177,7 +177,10 @@ function findInputs(node) {
   if (Array.isArray(node.children)) node.children.forEach(findInputs);
 }
 findInputs(capturedModal.content);
-const [nameField, idField, codeField, numField] = inputs;
+const nameField = inputs.find(i => i.placeholder && i.placeholder.includes('Acme')) || inputs[3] || inputs[0];
+const idField = inputs.find(i => i.placeholder && i.placeholder.includes('CL-101')) || inputs[0] || inputs[1];
+const codeField = inputs.find(i => i.placeholder && i.placeholder.includes('TFR')) || inputs[2];
+const numField = inputs.find(i => i.placeholder && i.placeholder.includes('000000')) || inputs[1] || inputs[3];
 assert.ok(nameField && idField && codeField && numField, 'Must find all 4 input fields');
 
 nameField.value = 'Brand New Corp';

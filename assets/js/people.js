@@ -737,10 +737,12 @@ OC.people = (function () {
             account.email = email.value.trim();
             account.avatar = uploader.getValue();
             account.title = title.value.trim() || 'Team Member';
-            if (user.admin) {
+            if (account.admin) {
+              account.admin = true; // System Admins are permanently protected
+            } else if (user.admin) {
               account.admin = isAdmin.checked;
             }
-            account.status = statusSelect.value;
+            account.status = account.admin ? 'active' : statusSelect.value;
             if (deptSelect.value && levelSelect.value) {
               // Preserve all other department memberships — only update or insert the selected dept
               var otherDepts = (account.departments || []).filter(function (m) {
@@ -760,10 +762,20 @@ OC.people = (function () {
     if (OC.can.deleteAccount(user, account)) {
       actions.unshift({
         label: 'Delete user', onClick: function (close) {
-          var isSelf = Boolean(user && user.id === account.id);
-          var confirmMsg = isSelf
-            ? 'Are you sure you want to permanently delete your own account "' + account.name + '"? You will be logged out immediately.'
-            : 'Permanently delete user "' + account.name + '"? This user will be removed and cannot log in.';
+          if (!user || !user.admin) {
+            OC.ui.toast('Access Denied: Only System Admin can delete user accounts.', true);
+            return;
+          }
+          if (account.admin) {
+            OC.ui.toast('Access Denied: System Admins cannot be deleted.', true);
+            return;
+          }
+          if (user.id === account.id) {
+            OC.ui.toast('Access Denied: System Admins cannot delete their own account.', true);
+            return;
+          }
+
+          var confirmMsg = 'Permanently delete user "' + account.name + '"? This user will be removed and cannot log in.';
 
           OC.ui.confirm(confirmMsg, function () {
             OC.store.mutate({
@@ -777,12 +789,8 @@ OC.people = (function () {
             OC.ui.toast('User account permanently deleted.');
             close();
 
-            if (isSelf && OC.app && OC.app.logout) {
-              OC.app.logout();
-            } else {
-              var host = document.querySelector('main.content') || document.querySelector('#content');
-              if (host && typeof render === 'function') render(host);
-            }
+            var host = document.querySelector('main.content') || document.querySelector('#content');
+            if (host && typeof render === 'function') render(host);
           });
         }
       });
@@ -800,10 +808,18 @@ OC.people = (function () {
       fields.push(OC.ui.field('Department level (System Admin Only)', levelSelect));
     }
 
+    if (account.admin) {
+      statusSelect.disabled = true;
+    }
     fields.push(OC.ui.field('Status', statusSelect));
 
     if (user && user.admin && account.id !== user.id) {
-      fields.push(h('label', { class: 'checkline', style: 'margin-top:12px;' }, [isAdmin, ' Grant System Admin superuser access']));
+      if (account.admin) {
+        isAdmin.disabled = true;
+        fields.push(h('label', { class: 'checkline', style: 'margin-top:12px;opacity:0.85;' }, [isAdmin, ' System Admin (Protected superuser — cannot be removed)']));
+      } else {
+        fields.push(h('label', { class: 'checkline', style: 'margin-top:12px;' }, [isAdmin, ' Grant System Admin superuser access']));
+      }
     }
 
     OC.ui.modal({

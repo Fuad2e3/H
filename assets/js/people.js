@@ -265,9 +265,10 @@ OC.people = (function () {
   function editPrefs() {
     var h = OC.ui.h;
     var user = me();
-    var push = h('input', { type: 'checkbox', checked: user.prefs.push });
-    var email = h('input', { type: 'checkbox', checked: user.prefs.email });
-    var discord = h('input', { type: 'checkbox', checked: user.prefs.discord });
+    var prefs = user.prefs || {};
+    var push = h('input', { type: 'checkbox', checked: prefs.push });
+    var email = h('input', { type: 'checkbox', checked: prefs.email });
+    var discord = h('input', { type: 'checkbox', checked: prefs.discord });
 
     OC.ui.modal({
       title: 'Notification preferences',

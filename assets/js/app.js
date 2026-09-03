@@ -80,12 +80,21 @@ OC.app = (function () {
     });
   }
 
+  /* Seeded the moment a session starts, from whatever is already waiting, so
+     old alerts are not re-announced on every sign-in and the first genuinely
+     new one still chimes. Left unseeded, the first alert of a session was
+     swallowed: raisePush recorded its id and returned without a sound. */
+  function seedLastSeenNotification() {
+    var mine = myNotifications();
+    lastSeenNotification = mine.length ? mine[0].id : '';
+  }
+
   function raisePush() {
     var user = OC.store.user(OC.store.session());
     var mine = myNotifications();
     if (!mine.length) return;
     var newest = mine[0];
-    if (lastSeenNotification === null) { lastSeenNotification = newest.id; return; }
+    if (lastSeenNotification === null) { seedLastSeenNotification(); return; }
     if (newest.id === lastSeenNotification || newest.read) return;
     lastSeenNotification = newest.id;
 
@@ -95,7 +104,9 @@ OC.app = (function () {
     }
 
     if (!pushSupported() || Notification.permission !== 'granted') return;
-    if (!user || !user.prefs.push) return;
+    /* an account created straight in the database may carry no prefs at all,
+       and reading through it here took the whole app down */
+    if (!user || !user.prefs || !user.prefs.push) return;
     try {
       new Notification('Originate Command', { body: newest.text, tag: newest.id });
     } catch (e) { }
@@ -320,6 +331,7 @@ OC.app = (function () {
     isAuthenticated = true;
     try { localStorage.setItem(AUTH_KEY, found.id); } catch (e) { }
     OC.store.setSession(found.id);
+    seedLastSeenNotification();
     OC.ui.toast(greeting || ('Connected successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')'));
     render();
   }
@@ -787,10 +799,56 @@ OC.app = (function () {
       }, [OC.icon('logout'), 'Sign out']),
       h('button', {
         class: 'iconbtn', type: 'button', onClick: openNotifications,
+        'data-alerts': 'true',
         'aria-label': 'Notifications' + (unread ? ', ' + unread + ' unread' : '')
       }, [OC.icon('bell'), 'Alerts', unread ? h('span', { class: 'count' }, String(unread)) : null]),
       themeButton
     ]);
+  }
+
+  /* The topbar is built once, when the shell is mounted, and the fast render
+     path deliberately leaves it alone. That left the unread count frozen at
+     whatever it was when the page loaded, so an alert arriving afterwards never
+     showed on the button. The badge is refreshed on its own instead — one
+     number, no rebuild. */
+  /* The identity block has the same problem the badge had: built once with the
+     shell, so a changed name, title, avatar or role sat there stale until a
+     reload. Rebuilding it on every render would be waste, so it is rebuilt only
+     when what it displays has actually changed. */
+  var lastTopbarSignature = null;
+
+  function topbarSignature() {
+    var u = OC.store.user(OC.store.session());
+    if (!u) return '';
+    return [u.id, u.name, u.email, u.title, u.avatar, u.admin,
+            OC.can && OC.can.roleLabel ? OC.can.roleLabel(u) : ''].join('|');
+  }
+
+  function refreshTopbarIdentity() {
+    if (typeof document === 'undefined') return;
+    var root = document.getElementById('root');
+    var existing = root && root.querySelector('.topbar');
+    if (!existing) { lastTopbarSignature = null; return; }
+    var sig = topbarSignature();
+    if (sig === lastTopbarSignature) return;
+    lastTopbarSignature = sig;
+    var fresh = topbar();
+    existing.parentNode.replaceChild(fresh, existing);
+  }
+
+  function refreshAlertsBadge() {
+    if (typeof document === 'undefined') return;
+    var btn = document.querySelector('.topbar [data-alerts]');
+    if (!btn) return;
+    var unread = myNotifications().filter(function (n) { return !n.read; }).length;
+    var badge = btn.querySelector('.count');
+    if (unread) {
+      if (!badge) { badge = h('span', { class: 'count' }); btn.appendChild(badge); }
+      badge.textContent = String(unread);
+    } else if (badge) {
+      badge.parentNode.removeChild(badge);
+    }
+    btn.setAttribute('aria-label', 'Notifications' + (unread ? ', ' + unread + ' unread' : ''));
   }
 
   function nav() {
@@ -903,6 +961,8 @@ OC.app = (function () {
       if (existingPage) {
         OC.ui.clear(existingPage);
         currentView().render(existingPage, render);
+        refreshTopbarIdentity();
+        refreshAlertsBadge();
         raisePush();
         return;
       }
@@ -913,6 +973,8 @@ OC.app = (function () {
     var page = h('main', { class: 'page', id: 'page' });
     OC.ui.append(root, [topbar(), nav(), page]);
     currentView().render(page, render);
+    lastTopbarSignature = topbarSignature();
+    refreshAlertsBadge();
     raisePush();
   }
 
@@ -925,6 +987,7 @@ OC.app = (function () {
     if (savedAuth && OC.store.user(savedAuth)) {
       isAuthenticated = true;
       OC.store.setSession(savedAuth);
+      seedLastSeenNotification();
     } else {
       isAuthenticated = false;
     }

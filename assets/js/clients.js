@@ -39,6 +39,32 @@ OC.clients = (function () {
     var currentLabel = OC.ui.clientLabel ? OC.ui.clientLabel(client) : client.name;
 
     var canDelete = !!(OC.can && OC.can.canDeleteClient ? OC.can.canDeleteClient(user, client) : (user && user.admin));
+    var canScope = !!(OC.can && OC.can.assignClientDepartment
+      ? OC.can.assignClientDepartment(user) : (user && user.admin));
+
+    /* Which department may see this client. Left as "All departments" the client
+       stays visible to everyone, which is how clients behaved before scoping. */
+    var deptSelect = OC.ui.select(
+      [{ value: '', label: 'All departments (visible to everyone)' }].concat(
+        (OC.store.state.departments || []).map(function (d) {
+          return { value: d.id, label: d.name };
+        })
+      ),
+      client.department || ''
+    );
+
+    function deptName(id) {
+      var d = id ? OC.store.department(id) : null;
+      return d ? d.name : '';
+    }
+
+    /* The picker is folded away until the admin asks for it, so the form keeps
+       the five numbered fields the client edit screen is built around. */
+    var deptRow = h('div', { class: 'client-dept-row', hidden: true }, [
+      OC.ui.field('Visible to department', deptSelect, {
+        hint: 'Only this department\u2019s people will see this client. System admins always see every client.'
+      })
+    ]);
 
     var actions = [
       { label: 'Cancel', onClick: function (close) { close(); } },
@@ -77,9 +103,14 @@ OC.clients = (function () {
             if (numExists) return 'Duplicate Client Number: "' + cNumVal + '" is already used by another client.';
           }
 
+          var deptChanged = canScope && (deptSelect.value || '') !== (client.department || '');
+          var deptNote = deptChanged
+            ? '; visible to ' + (deptSelect.value ? deptName(deptSelect.value) : 'all departments')
+            : '';
+
           OC.store.mutate({
             actor: user.id, action: 'client.update', target: cName,
-            detail: 'Updated details for ' + client.name
+            detail: 'Updated details for ' + client.name + deptNote
           }, function () {
             client.name = cName;
             client.client_id = cIdVal;
@@ -87,6 +118,7 @@ OC.clients = (function () {
             client.client_number = cNumVal;
             client.contact = cNumVal || cName;
             client.status = status.value;
+            if (canScope) client.department = deptSelect.value || '';
           });
           OC.ui.toast('Client updated.');
           if (onDone) onDone();
@@ -118,6 +150,19 @@ OC.clients = (function () {
       });
     }
 
+    /* unshifted last, so it lands to the left of "Delete client" */
+    if (canScope) {
+      actions.unshift({
+        label: 'Department' + (client.department ? ': ' + deptName(client.department) : ''),
+        onClick: function () {
+          /* reveals the picker in place rather than opening a second modal, so
+             edits already typed into the other fields are not thrown away */
+          deptRow.hidden = !deptRow.hidden;
+          if (!deptRow.hidden && deptSelect.focus) deptSelect.focus();
+        }
+      });
+    }
+
     OC.ui.modal({
       title: 'Edit client: ' + currentLabel,
       content: h('div', {}, [
@@ -125,7 +170,8 @@ OC.clients = (function () {
         OC.ui.field('2. Client number', clientNumber, { hint: 'Phone / WhatsApp / Mobile contact number (optional).' }),
         OC.ui.field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
         OC.ui.field('4. Client / Company name', name, { required: true }),
-        OC.ui.field('5. Status', status)
+        OC.ui.field('5. Status', status),
+        canScope ? deptRow : null
       ]),
       actions: actions
     });
@@ -858,10 +904,18 @@ OC.clients = (function () {
   function render(host) {
     var h = OC.ui.h;
     var user = me();
-    var clients = OC.store.state.clients || [];
+    var clients = (OC.can && OC.can.visibleClients)
+      ? OC.can.visibleClients(user)
+      : (OC.store.state.clients || []);
     var canCreate = !!(OC.can && OC.can.createClient ? OC.can.createClient(user) : (user && user.admin));
 
     var activeClient = activePortalClientId ? OC.store.client(activePortalClientId) : null;
+    /* a client scoped away from this person must not stay open behind them, so
+       a workspace they can no longer see drops back to the list */
+    if (activeClient && OC.can && OC.can.seeClient && !OC.can.seeClient(user, activeClient)) {
+      activeClient = null;
+      activePortalClientId = null;
+    }
     if (activeClient) {
       renderClientPortal(host, activeClient, function () {
         activePortalClientId = null;

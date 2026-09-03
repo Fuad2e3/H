@@ -1173,7 +1173,11 @@ OC.ui = (function () {
     function renderList() {
       clear(listWrap);
       var q = searchInput.value.trim().toLowerCase();
-      var clients = (OC.store.state.clients || []).filter(function (c) {
+      var pickerUser = OC.store.user(OC.store.session());
+      var pool = (OC.can && OC.can.visibleClients && pickerUser)
+        ? OC.can.visibleClients(pickerUser)
+        : (OC.store.state.clients || []);
+      var clients = pool.filter(function (c) {
         if (!q) return true;
         var full = [c.client_id, c.client_code, c.name, c.contact].filter(Boolean).join(' ').toLowerCase();
         return full.indexOf(q) > -1;

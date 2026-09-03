@@ -175,7 +175,11 @@ OC.dashboard = (function () {
         if (Array.isArray(n.clients)) n.clients.forEach(function (cid) { if (cid) clientIds[cid] = true; });
       }
     });
-    var clients = Object.keys(clientIds).map(OC.store.client).filter(Boolean);
+    var clients = Object.keys(clientIds).map(OC.store.client).filter(function (c) {
+      /* a client scoped to another department stays off this list even when a
+         task happens to reference it */
+      return !!c && (!OC.can.seeClient || OC.can.seeClient(user, c));
+    });
 
     var empId = user.employee_id || 'N/A';
     var orgName = user.org || 'N/A';

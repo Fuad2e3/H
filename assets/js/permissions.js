@@ -294,6 +294,24 @@ OC.can = (function () {
   function canEditClient(user, client) { return Boolean(user); }
   function canDeleteClient(user, client) { return !!(user && user.admin); }
 
+  /* A client may be scoped to one department. Left unscoped it stays visible to
+     everyone, which is how every client behaved before scoping existed; scoped,
+     it is visible only to that department's people and the system admin. */
+  function seeClient(user, client) {
+    if (!user || !client) return false;
+    if (user.admin) return true;
+    if (!client.department) return true;
+    return inDept(user, client.department);
+  }
+
+  function visibleClients(user) {
+    if (!user) return [];
+    return (S().state.clients || []).filter(function (c) { return seeClient(user, c); });
+  }
+
+  /* only the system admin decides which department a client belongs to */
+  function assignClientDepartment(user) { return !!(user && user.admin); }
+
   /* an unclaimed invite may be withdrawn by whoever sent it, or by the
      system admin (6.1) */
   function manageInvite(user, account) {
@@ -406,7 +424,8 @@ OC.can = (function () {
     canPostGroupMessage: canPostGroupMessage, canEditGroupMessage: canEditGroupMessage, canDeleteGroupMessage: canDeleteGroupMessage,
     canReactGroupMessage: canReactGroupMessage,
     postInstruction: postInstruction, createTodo: createTodo,
-    createClient: createClient, editClient: editClient, canEditClient: canEditClient, canDeleteClient: canDeleteClient, canEditTodo: canEditTodo,
+    createClient: createClient, editClient: editClient, canEditClient: canEditClient, canDeleteClient: canDeleteClient,
+    seeClient: seeClient, visibleClients: visibleClients, assignClientDepartment: assignClientDepartment, canEditTodo: canEditTodo,
     canEditInstruction: canEditInstruction, canDeleteInstruction: canDeleteInstruction,
     canEditComment: canEditComment, canDeleteComment: canDeleteComment,
     changeState: changeState, reassign: reassign, assignsOthers: assignsOthers, archiveInstruction: archiveInstruction,

@@ -789,6 +789,9 @@ OC.people = (function () {
   function render(host) {
     var h = OC.ui.h;
     var user = me();
+    var visibleClients = (OC.can && OC.can.visibleClients)
+      ? OC.can.visibleClients(user)
+      : (OC.store.state.clients || []);
     // Only System Admins or the person who issued the invite can see and manage pending invites (6.1)
     var pending = OC.store.state.users.filter(function (u) {
       return u.status === 'invited' && u.invite && !u.invite.claimed_at && OC.can.manageInvite(user, u);
@@ -830,13 +833,13 @@ OC.people = (function () {
       h('div', { class: 'row', style: 'align-items:center;margin-top:20px;' }, [
         h('h2', { class: 'section-head', style: 'margin:0;' }, [
           'Clients & Accounts',
-          h('span', { class: 'chip count' }, OC.store.state.clients.length + ' total')
+          h('span', { class: 'chip count' }, visibleClients.length + ' total')
         ]),
         OC.can.createClient(user)
           ? h('button', { class: 'btn small push', type: 'button', onClick: function () { OC.ui.newClientModal(function () { render(host); }); } }, [OC.icon('plus'), 'New client'])
           : null
       ]),
-      OC.store.state.clients.length ? h('div', { class: 'grid-2', style: 'margin:12px 0 22px' }, OC.store.state.clients.map(function (c) {
+      visibleClients.length ? h('div', { class: 'grid-2', style: 'margin:12px 0 22px' }, visibleClients.map(function (c) {
         var clientTodos = OC.store.state.todos.filter(function (t) {
           return !t.archived && t.state !== 'done' && (t.client === c.id || (Array.isArray(t.clients) && t.clients.indexOf(c.id) > -1));
         });

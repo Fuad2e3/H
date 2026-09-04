@@ -21,6 +21,55 @@ OC.clients = (function () {
 
   var PORTAL_TABS = ['details', 'todos', 'instructions', 'report'];
 
+  /* Extended client info: a large, fixed set of CRM/intake fields a client
+     may carry (lead-gen intake through deal & operations details). Stored
+     per client as client.extended_fields[key] = { value, visible } — value
+     is what's typed in; visible decides whether it shows on the Details
+     tab's summary card, independent of one another (a field can be filled
+     in but kept off the summary). "department" here is the contact
+     person's own department at their company (e.g. "Marketing"), not this
+     app's internal department scoping — keyed distinctly to avoid any
+     confusion with client.department. */
+  var CLIENT_EXTENDED_FIELDS = [
+    { key: 'crm_id', label: 'CRM ID' },
+    { key: 'unique_id', label: 'Unique ID' },
+    { key: 'year', label: 'Year' },
+    { key: 'quarter', label: 'Q' },
+    { key: 'entry_date', label: 'Entry Date', type: 'date' },
+    { key: 'sales_team', label: 'Sales Team' },
+    { key: 'source', label: 'Source' },
+    { key: 'channel', label: 'Channel' },
+    { key: 'approach', label: 'Approach' },
+    { key: 'client_name_field', label: 'Client Name' },
+    { key: 'account_name', label: 'Account Name' },
+    { key: 'account_id', label: 'Account ID' },
+    { key: 'projects_brief', label: 'Projects Brief' },
+    { key: 'onboard_date', label: 'Onboard Date', type: 'date' },
+    { key: 'official_client_id', label: 'Official Client ID' },
+    { key: 'short_code', label: 'Short Code' },
+    { key: 'linkedin', label: 'LinkedIn' },
+    { key: 'first_name', label: 'First Name' },
+    { key: 'last_name', label: 'Last Name' },
+    { key: 'title', label: 'Title' },
+    { key: 'seniority_level', label: 'Seniority Level' },
+    { key: 'contact_department', label: 'Department' },
+    { key: 'linkedin_location', label: 'LinkedIn Location' },
+    { key: 'country', label: 'Country' },
+    { key: 'business_email', label: 'Business Email' },
+    { key: 'personal_email', label: 'Personal Email' },
+    { key: 'direct_number', label: 'Direct Number' },
+    { key: 'facebook', label: 'Facebook' },
+    { key: 'instagram', label: 'Instagram' },
+    { key: 'twitter', label: 'Twitter' },
+    { key: 'offer_details', label: 'Offer Details' },
+    { key: 'contract_details', label: 'Contract Details' },
+    { key: 'google_drive', label: 'Google Drive' },
+    { key: 'invoice_details', label: 'Invoice Details' },
+    { key: 'team_sheet', label: 'Team Sheet' },
+    { key: 'contact_channel_1', label: 'Contact Channel - I' },
+    { key: 'contact_channel_2', label: 'Contact Channel - II' }
+  ];
+
   /* The open workspace and its tab live in the address as #clients/<id>/<tab>,
      so a reload comes back to the workspace instead of the client list. */
   function syncPortalToUrl() {
@@ -264,6 +313,58 @@ OC.clients = (function () {
         canAssign ? assigneeRow : null
       ]),
       actions: actions
+    });
+  }
+
+  /* ---- Extended client info (CRM intake fields) ------------------------- */
+  function editClientExtendedFields(client, onDone) {
+    var h = OC.ui.h;
+    var user = me();
+    var existing = client.extended_fields || {};
+    var currentLabel = OC.ui.clientLabel ? OC.ui.clientLabel(client) : (client.name || client.client_id);
+
+    var rows = CLIENT_EXTENDED_FIELDS.map(function (f) {
+      var saved = existing[f.key] || {};
+      var checkbox = h('input', { type: 'checkbox', checked: !!saved.visible });
+      var input = h('input', { type: f.type || 'text', value: saved.value || '', placeholder: f.label });
+      var row = h('div', { class: 'client-field-row' }, [
+        h('label', { class: 'client-field-row-check', title: 'Show on the Details summary' }, [checkbox]),
+        h('span', { class: 'client-field-row-label' }, f.label),
+        input
+      ]);
+      return { key: f.key, checkbox: checkbox, input: input, row: row };
+    });
+
+    OC.ui.modal({
+      title: 'Edit extended info: ' + currentLabel,
+      className: 'client-fields-modal',
+      content: h('div', {}, [
+        h('p', { class: 'muted', style: 'font-size:12.5px;margin:0 0 14px;' },
+          'Fill in whatever applies. The checkbox decides whether a field shows on the Details summary — a field can be filled in and still kept off it.'),
+        h('div', { class: 'client-field-rows' }, rows.map(function (r) { return r.row; }))
+      ]),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } },
+        {
+          label: 'Save', primary: true, onClick: function (close) {
+            var next = {};
+            rows.forEach(function (r) {
+              var val = r.input.value.trim();
+              var visible = r.checkbox.checked;
+              if (val || visible) next[r.key] = { value: val, visible: visible };
+            });
+            OC.store.mutate({
+              actor: user.id, action: 'client.update', target: currentLabel,
+              detail: 'Updated extended info for ' + currentLabel
+            }, function () {
+              client.extended_fields = next;
+            });
+            OC.ui.toast('Extended info saved.');
+            if (onDone) onDone();
+            close();
+          }
+        }
+      ]
     });
   }
 
@@ -900,8 +1001,51 @@ OC.clients = (function () {
           ])
         ]);
 
+        var extFields = client.extended_fields || {};
+        var visibleExtFields = CLIENT_EXTENDED_FIELDS.filter(function (f) {
+          var saved = extFields[f.key];
+          return saved && saved.visible && saved.value;
+        });
+        var filledExtFieldCount = CLIENT_EXTENDED_FIELDS.filter(function (f) {
+          return extFields[f.key] && extFields[f.key].value;
+        }).length;
+
+        var extInfoCard = h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;margin-bottom:18px;' }, [
+          h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;' }, [
+            h('div', {}, [
+              h('h3', { style: 'margin:0;font-size:15px;display:flex;align-items:center;gap:8px;' }, [
+                OC.icon('file'),
+                'Extended Info',
+                filledExtFieldCount ? h('span', { class: 'chip custom', style: 'font-size:10.5px;' }, filledExtFieldCount + ' filled') : null
+              ].filter(Boolean)),
+              h('p', { class: 'muted', style: 'font-size:12px;margin:2px 0 0;' },
+                'CRM/intake fields for ' + clientName + '. Only the fields checked visible show here.')
+            ]),
+            h('button', {
+              class: 'btn small secondary',
+              type: 'button',
+              style: 'font-weight:600;display:inline-flex;align-items:center;gap:6px;',
+              onClick: function () {
+                editClientExtendedFields(client, function () { renderClientPortal(host, client, onBack); });
+              }
+            }, [OC.icon('edit'), 'Edit'])
+          ]),
+          visibleExtFields.length
+            ? h('div', { class: 'client-extended-info-grid' }, visibleExtFields.map(function (f) {
+                return h('div', { class: 'client-extended-info-item' }, [
+                  h('span', { class: 'k' }, f.label),
+                  h('span', { class: 'v' }, extFields[f.key].value)
+                ]);
+              }))
+            : h('p', { class: 'muted', style: 'font-size:13px;margin:0;' },
+                filledExtFieldCount
+                  ? 'Some fields are filled in but none are marked visible. Click Edit to show them here.'
+                  : 'No extended info added yet.')
+        ]);
+
         detailsContent = h('div', { class: 'portal-view-content' }, [
           teamCard,
+          extInfoCard,
           h('div', { class: 'portal-header-box' }, [
             h('div', {}, [
               h('h2', { class: 'portal-view-title' }, [OC.icon('edit'), 'Details & Documentation']),

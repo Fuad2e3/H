@@ -1003,6 +1003,73 @@ dialog.modal::backdrop {
   }
 }
 
+/* ---- extended client info (CRM intake fields) modal --------------------- */
+dialog.modal.client-fields-modal {
+  width: min(640px, 94vw);
+}
+.client-field-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.client-field-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.client-field-row-check {
+  display: inline-flex;
+  flex: none;
+  cursor: pointer;
+}
+.client-field-row-check input[type="checkbox"] {
+  cursor: pointer;
+  margin: 0;
+  width: 15px;
+  height: 15px;
+}
+.client-field-row-label {
+  flex: 0 0 130px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.client-field-row input[type="text"],
+.client-field-row input[type="date"] {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+@media (max-width: 480px) {
+  .client-field-row input[type="text"],
+  .client-field-row input[type="date"] {
+    flex-basis: 100%;
+  }
+}
+
+/* ---- client Details tab: extended info summary card ---------------------- */
+.client-extended-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px 24px;
+}
+.client-extended-info-item {
+  min-width: 0;
+}
+.client-extended-info-item .k {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
+.client-extended-info-item .v {
+  font-size: 13.5px;
+  color: var(--ink);
+  word-break: break-word;
+}
+
 /* ---- responsive table wrapper ------------------------------------------- */
 .table-responsive {
   width: 100%;

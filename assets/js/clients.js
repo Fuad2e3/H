@@ -951,56 +951,8 @@ OC.clients = (function () {
       var detailsContent;
       var rawNotes = (client.details || client.notes || '').trim();
       var hasDetails = Boolean(rawNotes);
-
       if (!isDetailsEditing) {
         /* VIEW MODE: Direct clean text rendering with preserved lines & continuous Edit button */
-        var assignedUsers = clientAssignees.map(function (uid) { return OC.store.user(uid); }).filter(Boolean);
-
-        var teamCard = h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;margin-bottom:18px;' }, [
-          h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;' }, [
-            h('div', {}, [
-              h('h3', { style: 'margin:0;font-size:15px;display:flex;align-items:center;gap:8px;' }, [
-                OC.icon('user'),
-                'Assigned Working Members (' + assignedUsers.length + ')'
-              ]),
-              h('p', { class: 'muted', style: 'font-size:12px;margin:2px 0 0;' },
-                'Only assigned members, Department Heads, and System Admins can access and work on this client.')
-            ]),
-            canAssign ? h('button', {
-              class: 'btn small secondary',
-              type: 'button',
-              style: 'font-weight:600;display:inline-flex;align-items:center;gap:6px;',
-              onClick: function () {
-                openManageAssigneesModal(client, function () {
-                  renderClientPortal(host, client, onBack);
-                });
-              }
-            }, [OC.icon('edit'), 'Manage Team']) : null
-          ]),
-          assignedUsers.length ? h('div', { style: 'display:flex;flex-wrap:wrap;gap:10px;' }, assignedUsers.map(function (u) {
-            return h('div', {
-              style: 'display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(255,255,255,0.04);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:20px;'
-            }, [
-              OC.ui.initials(u),
-              h('div', { style: 'display:flex;flex-direction:column;' }, [
-                h('span', { style: 'font-size:13px;font-weight:600;' }, u.name),
-                h('span', { class: 'muted', style: 'font-size:11px;' }, OC.can && OC.can.roleLabel ? OC.can.roleLabel(u) : 'Member')
-              ])
-            ]);
-          })) : h('div', { style: 'padding:12px 14px;background:rgba(245,158,11,0.06);border:1px dashed rgba(245,158,11,0.3);border-radius:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;' }, [
-            h('span', { class: 'muted', style: 'font-size:13px;' }, '⚠️ No specific members assigned yet. Currently only Department Head and System Admin can access.'),
-            canAssign ? h('button', {
-              class: 'btn primary small',
-              type: 'button',
-              onClick: function () {
-                openManageAssigneesModal(client, function () {
-                  renderClientPortal(host, client, onBack);
-                });
-              }
-            }, ['+ Assign Person']) : null
-          ])
-        ]);
-
         var extFields = client.extended_fields || {};
         var visibleExtFields = CLIENT_EXTENDED_FIELDS.filter(function (f) {
           var saved = extFields[f.key];
@@ -1044,7 +996,6 @@ OC.clients = (function () {
         ]);
 
         detailsContent = h('div', { class: 'portal-view-content' }, [
-          teamCard,
           extInfoCard,
           h('div', { class: 'portal-header-box' }, [
             h('div', {}, [

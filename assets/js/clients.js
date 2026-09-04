@@ -100,6 +100,9 @@ OC.clients = (function () {
 
   function openManageAssigneesModal(client, onDone) {
     var user = me();
+    var canScope = !!(OC.can && OC.can.assignClientDepartment
+      ? OC.can.assignClientDepartment(user) : (user && (user.admin || (OC.can && OC.can.headOfAny && OC.can.headOfAny(user)))));
+
     var initialDepts = Array.isArray(client.departments) && client.departments.length
       ? client.departments
       : (client.department ? [client.department] : []);
@@ -116,33 +119,33 @@ OC.clients = (function () {
     var currentAssignees = Array.isArray(client.assignees) ? client.assignees.slice() : (Array.isArray(client.assigned_users) ? client.assigned_users.slice() : []);
 
     var picker = OC.ui.clientAssigneePicker(currentAssignees, initialDepts, null);
+    var deptCheckboxes = canScope ? OC.ui.deptCheckboxGroup(initialDepts, function (newDepts) {
+      if (picker && picker.setDepartments) picker.setDepartments(newDepts);
+    }) : null;
+
     var currentLabel = OC.ui.clientLabel ? OC.ui.clientLabel(client) : (client.name || client.client_id);
 
-    var dNames = initialDepts.map(function (did) {
-      var d = OC.store && OC.store.department ? OC.store.department(did) : null;
-      return d ? d.name : did;
-    }).filter(Boolean).join(', ');
-
-    var modalTitle = dNames 
-      ? ('Assign ' + dNames + ' Team Members — ' + currentLabel)
-      : ('Assign Team Members — ' + currentLabel);
-
-    var fieldHint = dNames
-      ? ('Showing only members of ' + dNames + '. Selected members (along with Department Head & System Admin) will be able to see and work on this client.')
-      : 'Select specific members allowed to work on this client.';
+    var modalFields = [];
+    if (canScope && deptCheckboxes) {
+      modalFields.push(OC.ui.field('1. Visible to department(s)', deptCheckboxes.node, {
+        hint: 'Check departments allowed to see this client. Selecting department(s) filters eligible team members below.'
+      }));
+    }
+    modalFields.push(OC.ui.field(canScope ? '2. Assigned Working Member(s)' : 'Assigned Working Member(s)', picker.node, {
+      hint: 'Select the specific person(s) allowed to see and work on this client.'
+    }));
 
     (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
-      title: modalTitle,
-      content: OC.ui.h('div', {}, [
-        OC.ui.field(dNames ? ('Select ' + dNames + ' Member(s)') : 'Select Department Member(s)', picker.node, {
-          hint: fieldHint
-        })
-      ]),
+      title: 'Assign Team & Scoping — ' + currentLabel,
+      content: OC.ui.h('div', {}, modalFields),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
         {
           label: 'Save Assignment', primary: true, onClick: function (close) {
+            var selectedDepts = canScope && deptCheckboxes ? deptCheckboxes.getDepartments() : initialDepts;
+            var primaryDept = selectedDepts.length ? selectedDepts[0] : '';
             var selected = picker.getAssignees();
+
             OC.store.mutate({
               actor: user.id,
               action: 'client.assign',
@@ -150,12 +153,22 @@ OC.clients = (function () {
               detail: 'Updated assigned working members (' + selected.length + ' members) for ' + currentLabel
             }, function () {
               client.assignees = selected;
-              if ((!client.departments || !client.departments.length) && !client.department && initialDepts.length) {
-                client.departments = initialDepts;
-                client.department = initialDepts[0];
+              client.assigned_users = selected;
+              if (canScope) {
+                client.departments = selectedDepts;
+                client.department = primaryDept;
+              }
+              var targetClient = (OC.store.state.clients || []).find(function (c) { return c.id === client.id; });
+              if (targetClient) {
+                targetClient.assignees = selected;
+                targetClient.assigned_users = selected;
+                if (canScope) {
+                  targetClient.departments = selectedDepts;
+                  targetClient.department = primaryDept;
+                }
               }
             });
-            OC.ui.toast('Client team members updated.');
+            OC.ui.toast('Client team & department assignment updated.');
             if (onDone) onDone();
             close();
           }
@@ -180,7 +193,7 @@ OC.clients = (function () {
 
     var canDelete = !!(OC.can && OC.can.canDeleteClient ? OC.can.canDeleteClient(user, client) : (user && user.admin));
     var canScope = !!(OC.can && OC.can.assignClientDepartment
-      ? OC.can.assignClientDepartment(user) : (user && user.admin));
+      ? OC.can.assignClientDepartment(user) : (user && (user.admin || (OC.can && OC.can.headOfAny && OC.can.headOfAny(user)))));
     var canAssign = !!(OC.can && OC.can.canAssignClientMembers
       ? OC.can.canAssignClientMembers(user, client) : (user && (user.admin || (OC.can && OC.can.headOfAny && OC.can.headOfAny(user)))));
 
@@ -202,9 +215,9 @@ OC.clients = (function () {
       }).join(', ');
     }
 
-    /* The picker is visible if scoped, or revealed when admin clicks Department button */
-    var deptRow = h('div', { class: 'client-dept-row', hidden: !initialDepts.length }, [
-      OC.ui.field('6. Visible to department(s) (System Admin Only)', deptCheckboxes.node, {
+    /* The department picker is visible in the modal for scoping */
+    var deptRow = h('div', { class: 'client-dept-row' }, [
+      OC.ui.field('6. Visible to department(s) (Dept Head & Admin)', deptCheckboxes.node, {
         hint: 'Check departments allowed to see this client. Leave unchecked for all departments (visible to everyone).'
       })
     ]);
@@ -278,6 +291,24 @@ OC.clients = (function () {
             }
             if (canAssign) {
               client.assignees = selectedAssignees;
+              client.assigned_users = selectedAssignees;
+            }
+            var targetClient = (OC.store.state.clients || []).find(function (c) { return c.id === client.id; });
+            if (targetClient) {
+              targetClient.name = cName;
+              targetClient.client_id = cIdVal;
+              targetClient.client_code = cCodeVal;
+              targetClient.client_number = cNumVal;
+              targetClient.contact = cNumVal || cName || cIdVal;
+              targetClient.status = status.value;
+              if (canScope) {
+                targetClient.departments = selectedDepts;
+                targetClient.department = primaryDept;
+              }
+              if (canAssign) {
+                targetClient.assignees = selectedAssignees;
+                targetClient.assigned_users = selectedAssignees;
+              }
             }
           });
           OC.ui.toast('Client updated.');
@@ -305,25 +336,6 @@ OC.clients = (function () {
               if (host) render(host);
             });
           }, 50);
-        }
-      });
-    }
-
-    /* unshifted last, so it lands to the left of "Delete client" */
-    if (canScope) {
-      var btnLabel = 'Department';
-      if (initialDepts.length === 1) {
-        var dObj = OC.store.department(initialDepts[0]);
-        btnLabel = 'Dept: ' + (dObj ? dObj.name : initialDepts[0]);
-      } else if (initialDepts.length > 1) {
-        btnLabel = 'Depts (' + initialDepts.length + ')';
-      }
-      actions.unshift({
-        label: btnLabel,
-        onClick: function () {
-          /* reveals the picker in place rather than opening a second modal */
-          deptRow.hidden = false;
-          deptRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       });
     }
@@ -581,7 +593,10 @@ OC.clients = (function () {
           type: 'button',
           style: 'font-weight:600;display:inline-flex;align-items:center;gap:6px;',
           onClick: function () {
-            openManageAssigneesModal(client, function () { renderClientPortal(host, client, onBack); });
+            openManageAssigneesModal(client, function () {
+              var freshClient = OC.store.client(client.id) || client;
+              renderClientPortal(host, freshClient, onBack);
+            });
           }
         }, [OC.icon('user'), 'Assign Team']) : null,
         h('button', {
@@ -589,10 +604,59 @@ OC.clients = (function () {
           type: 'button',
           style: 'font-weight:700;display:inline-flex;align-items:center;gap:6px;',
           onClick: function () {
-            editClient(client, function () { renderClientPortal(host, client, onBack); });
+            editClient(client, function () {
+              var freshClient = OC.store.client(client.id) || client;
+              renderClientPortal(host, freshClient, onBack);
+            });
           }
         }, [OC.icon('edit'), 'Edit Client'])
       ].filter(Boolean))
+    ]);
+
+    /* 1b. Extended Info Card (Photo 1 directly below Photo 2 heroBanner) */
+    var extFields = client.extended_fields || {};
+    var visibleExtFields = CLIENT_EXTENDED_FIELDS.filter(function (f) {
+      var saved = extFields[f.key];
+      return saved && saved.visible && saved.value;
+    });
+    var filledExtFieldCount = CLIENT_EXTENDED_FIELDS.filter(function (f) {
+      return extFields[f.key] && extFields[f.key].value;
+    }).length;
+
+    var extInfoCard = h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;margin-bottom:18px;' }, [
+      h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;' }, [
+        h('div', {}, [
+          h('h3', { style: 'margin:0;font-size:15px;display:flex;align-items:center;gap:8px;' }, [
+            OC.icon('file'),
+            'Extended Info',
+            filledExtFieldCount ? h('span', { class: 'chip custom', style: 'font-size:10.5px;' }, filledExtFieldCount + ' filled') : null
+          ].filter(Boolean)),
+          h('p', { class: 'muted', style: 'font-size:12px;margin:2px 0 0;' },
+            'CRM/intake fields for ' + clientName + '. Only the fields checked visible show here.')
+        ]),
+        h('button', {
+          class: 'btn small secondary',
+          type: 'button',
+          style: 'font-weight:600;display:inline-flex;align-items:center;gap:6px;',
+          onClick: function () {
+            editClientExtendedFields(client, function () {
+              var freshClient = OC.store.client(client.id) || client;
+              renderClientPortal(host, freshClient, onBack);
+            });
+          }
+        }, [OC.icon('edit'), 'Edit'])
+      ]),
+      visibleExtFields.length
+        ? h('div', { class: 'client-extended-info-grid' }, visibleExtFields.map(function (f) {
+            return h('div', { class: 'client-extended-info-item' }, [
+              h('span', { class: 'k' }, f.label),
+              h('span', { class: 'v' }, extFields[f.key].value)
+            ]);
+          }))
+        : h('p', { class: 'muted', style: 'font-size:13px;margin:0;' },
+            filledExtFieldCount
+              ? 'Some fields are filled in but none are marked visible. Click Edit to show them here.'
+              : 'No extended info added yet.')
     ]);
 
     /* 2. Sidebar Navigation Items */
@@ -972,7 +1036,6 @@ OC.clients = (function () {
       ]);
       mainArea.appendChild(insContent);
     }
-
     /* TAB 4: DETAILS & WORKSPACE NOTES */
     if (activePortalTab === 'details') {
       var detailsContent;
@@ -980,50 +1043,7 @@ OC.clients = (function () {
       var hasDetails = Boolean(rawNotes);
       if (!isDetailsEditing) {
         /* VIEW MODE: Direct clean text rendering with preserved lines & continuous Edit button */
-        var extFields = client.extended_fields || {};
-        var visibleExtFields = CLIENT_EXTENDED_FIELDS.filter(function (f) {
-          var saved = extFields[f.key];
-          return saved && saved.visible && saved.value;
-        });
-        var filledExtFieldCount = CLIENT_EXTENDED_FIELDS.filter(function (f) {
-          return extFields[f.key] && extFields[f.key].value;
-        }).length;
-
-        var extInfoCard = h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;margin-bottom:18px;' }, [
-          h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;' }, [
-            h('div', {}, [
-              h('h3', { style: 'margin:0;font-size:15px;display:flex;align-items:center;gap:8px;' }, [
-                OC.icon('file'),
-                'Extended Info',
-                filledExtFieldCount ? h('span', { class: 'chip custom', style: 'font-size:10.5px;' }, filledExtFieldCount + ' filled') : null
-              ].filter(Boolean)),
-              h('p', { class: 'muted', style: 'font-size:12px;margin:2px 0 0;' },
-                'CRM/intake fields for ' + clientName + '. Only the fields checked visible show here.')
-            ]),
-            h('button', {
-              class: 'btn small secondary',
-              type: 'button',
-              style: 'font-weight:600;display:inline-flex;align-items:center;gap:6px;',
-              onClick: function () {
-                editClientExtendedFields(client, function () { renderClientPortal(host, client, onBack); });
-              }
-            }, [OC.icon('edit'), 'Edit'])
-          ]),
-          visibleExtFields.length
-            ? h('div', { class: 'client-extended-info-grid' }, visibleExtFields.map(function (f) {
-                return h('div', { class: 'client-extended-info-item' }, [
-                  h('span', { class: 'k' }, f.label),
-                  h('span', { class: 'v' }, extFields[f.key].value)
-                ]);
-              }))
-            : h('p', { class: 'muted', style: 'font-size:13px;margin:0;' },
-                filledExtFieldCount
-                  ? 'Some fields are filled in but none are marked visible. Click Edit to show them here.'
-                  : 'No extended info added yet.')
-        ]);
-
         detailsContent = h('div', { class: 'portal-view-content' }, [
-          extInfoCard,
           h('div', { class: 'portal-header-box' }, [
             h('div', {}, [
               h('h2', { class: 'portal-view-title' }, [OC.icon('edit'), 'Details & Documentation']),
@@ -1313,6 +1333,7 @@ OC.clients = (function () {
 
     var rootWrap = h('div', { class: 'client-portal-container' }, [
       heroBanner,
+      extInfoCard,
       layoutContainer
     ]);
 

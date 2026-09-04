@@ -627,7 +627,7 @@ OC.people = (function () {
 
     var currentLabel = OC.ui.clientLabel ? OC.ui.clientLabel(client) : client.name;
     var canDelete = !!(OC.can && OC.can.canDeleteClient ? OC.can.canDeleteClient(user, client) : (user && user.admin));
-    var canScope = Boolean(user && user.admin);
+    var canScope = !!(user && (user.admin || (OC.can && OC.can.headOfAny && OC.can.headOfAny(user))));
     var canAssign = !!(OC.can && OC.can.canAssignClientMembers
       ? OC.can.canAssignClientMembers(user, client) : (user && (user.admin || (OC.can && OC.can.headOfAny && OC.can.headOfAny(user)))));
 
@@ -649,8 +649,8 @@ OC.people = (function () {
       }).join(', ');
     }
 
-    var deptRow = h('div', { class: 'client-dept-row', hidden: !initialDepts.length }, [
-      OC.ui.field('Visible to department(s) (System Admin Only)', deptCheckboxes.node, {
+    var deptRow = h('div', { class: 'client-dept-row' }, [
+      OC.ui.field('Visible to department(s) (Dept Head & Admin)', deptCheckboxes.node, {
         hint: 'Check departments allowed to see this client. Leave unchecked for all departments (visible to everyone).'
       })
     ]);
@@ -691,6 +691,23 @@ OC.people = (function () {
             }
             if (canAssign) {
               client.assignees = selectedAssignees;
+              client.assigned_users = selectedAssignees;
+            }
+            var targetClient = (OC.store.state.clients || []).find(function (c) { return c.id === client.id; });
+            if (targetClient) {
+              targetClient.client_id = cIdVal;
+              targetClient.client_code = cCodeVal;
+              targetClient.name = cName;
+              targetClient.contact = cContact;
+              targetClient.status = status.value;
+              if (canScope) {
+                targetClient.departments = selectedDepts;
+                targetClient.department = primaryDept;
+              }
+              if (canAssign) {
+                targetClient.assignees = selectedAssignees;
+                targetClient.assigned_users = selectedAssignees;
+              }
             }
           });
           OC.ui.toast('Client updated.');

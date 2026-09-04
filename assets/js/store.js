@@ -237,12 +237,24 @@ OC.store = (function () {
                 serverState.clients.push(lc);
                 needsPush = true;
               } else {
-                if (lc.extended_fields && !sc.extended_fields) {
+                if (lc.extended_fields && (!sc.extended_fields || Object.keys(lc.extended_fields).length > Object.keys(sc.extended_fields).length)) {
                   sc.extended_fields = lc.extended_fields;
                   needsPush = true;
                 }
-                if (lc.assignees && !sc.assignees) {
+                if (Array.isArray(lc.departments) && lc.departments.length > 0 && (!Array.isArray(sc.departments) || !sc.departments.length)) {
+                  sc.departments = lc.departments;
+                  needsPush = true;
+                }
+                if (lc.department && !sc.department) {
+                  sc.department = lc.department;
+                  needsPush = true;
+                }
+                if (Array.isArray(lc.assignees) && lc.assignees.length > 0 && (!Array.isArray(sc.assignees) || !sc.assignees.length)) {
                   sc.assignees = lc.assignees;
+                  needsPush = true;
+                }
+                if (Array.isArray(lc.assigned_users) && lc.assigned_users.length > 0 && (!Array.isArray(sc.assigned_users) || !sc.assigned_users.length)) {
+                  sc.assigned_users = lc.assigned_users;
                   needsPush = true;
                 }
               }

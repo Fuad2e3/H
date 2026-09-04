@@ -193,6 +193,11 @@
   border: 1px solid var(--segmented-border, rgba(148, 163, 184, 0.20));
   border-radius: 10px;
   max-width: 100%;
+  /* as a flex item, its automatic minimum width defaults to its unwrapped
+     content size, which wins over max-width:100% and forces any flex
+     ancestor wider than the viewport instead of letting this scroll
+     internally the way overflow-x:auto below intends */
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -3923,6 +3928,12 @@ dialog.modal.fallback {
 @media (max-width: 820px) {
   .portal-layout-container {
     flex-direction: column;
+    /* the base rule uses flex-start so the side-by-side sidebar and main
+       area don't stretch to match each other's height on desktop; once
+       this stacks into a single column that same flex-start instead sizes
+       each block to its own content width, letting KPI grids and other
+       wide content push the block (and the page) past the viewport edge */
+    align-items: stretch;
   }
   .portal-sidebar {
     width: 100%;

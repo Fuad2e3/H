@@ -35,10 +35,19 @@ OC.clients = (function () {
     if (sub[1] && PORTAL_TABS.indexOf(sub[1]) > -1) activePortalTab = sub[1];
   }
   var activeTimeframe = 'month'; /* day | month | year | all */
+  var activeCustomDate = null; /* 'YYYY-MM-DD' picked via the date field; only meaningful when activeTimeframe === 'day' */
   var todoFilterState = 'all'; /* all | open | progress | done | blocked */
   var isDetailsEditing = false; /* view mode vs edit mode in Details tab */
 
   function me() { return OC.store.user(OC.store.session()); }
+
+  function getLocalDateStr(d) {
+    d = d || new Date();
+    var y = d.getFullYear();
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return y + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
+  }
 
   function editClient(client, onDone) {
     var h = OC.ui.h;
@@ -439,14 +448,18 @@ OC.clients = (function () {
     /* TAB 1: REPORT & ANALYTICS */
     if (activePortalTab === 'report') {
       var now = new Date();
+      /* 'T00:00:00' (no timezone designator) makes the engine parse the
+         picked date as local midnight instead of UTC midnight, so the day
+         selected in the field is the day actually shown. */
+      var dayRef = activeCustomDate ? new Date(activeCustomDate + 'T00:00:00') : now;
       var filteredTodos = clientTodos.filter(function (t) {
         if (!t.created_at) return true;
         var tDate = new Date(t.created_at);
         if (isNaN(tDate.getTime())) return true;
         if (activeTimeframe === 'day') {
-          return tDate.getFullYear() === now.getFullYear() &&
-                 tDate.getMonth() === now.getMonth() &&
-                 tDate.getDate() === now.getDate();
+          return tDate.getFullYear() === dayRef.getFullYear() &&
+                 tDate.getMonth() === dayRef.getMonth() &&
+                 tDate.getDate() === dayRef.getDate();
         } else if (activeTimeframe === 'month') {
           return tDate.getFullYear() === now.getFullYear() &&
                  tDate.getMonth() === now.getMonth();
@@ -468,6 +481,13 @@ OC.clients = (function () {
       var openPct = totalT > 0 ? Math.min(100, (openT / totalT) * 100) : 0;
       var blockPct = totalT > 0 ? Math.min(100, (blockedT / totalT) * 100) : 0;
 
+      /* When a specific day is picked via the date field, show that date in
+         the KPI/graph headers instead of the generic "DAY" label so it's
+         clear which day's work is being reported. */
+      var periodLabel = (activeTimeframe === 'day' && activeCustomDate)
+        ? dayRef.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+        : activeTimeframe.toUpperCase();
+
       var reportContent = h('div', { class: 'portal-view-content' }, [
         h('div', { class: 'portal-header-box' }, [
           h('div', {}, [
@@ -475,27 +495,43 @@ OC.clients = (function () {
             h('p', { class: 'muted', style: 'font-size:13px;margin:2px 0 0;' },
               'Review completion velocity, active task breakdowns, and SLA performance metrics for ' + clientName + '.')
           ]),
-          h('div', { class: 'segmented', role: 'group', 'aria-label': 'Select timeframe' }, [
-            ['day', 'Today', 'calendar'],
-            ['month', 'This Month', 'calendar'],
-            ['year', 'This Year', 'stats'],
-            ['all', 'All Time', 'globe']
-          ].map(function (opt) {
-            return h('button', {
-              type: 'button',
-              'aria-pressed': String(activeTimeframe === opt[0]),
-              onClick: function () {
-                activeTimeframe = opt[0];
-                renderClientPortal(host, client, onBack);
-              }
-            }, [OC.icon(opt[2]), opt[1]]);
-          }))
+          h('div', { class: 'row', style: 'align-items:center;gap:10px;flex-wrap:wrap;min-width:0;' }, [
+            h('div', { class: 'segmented', role: 'group', 'aria-label': 'Select timeframe' }, [
+              ['day', 'Today', 'calendar'],
+              ['month', 'This Month', 'calendar'],
+              ['year', 'This Year', 'stats'],
+              ['all', 'All Time', 'globe']
+            ].map(function (opt) {
+              return h('button', {
+                type: 'button',
+                'aria-pressed': String(activeTimeframe === opt[0] && !(opt[0] === 'day' && activeCustomDate)),
+                onClick: function () {
+                  activeCustomDate = null;
+                  activeTimeframe = opt[0];
+                  renderClientPortal(host, client, onBack);
+                }
+              }, [OC.icon(opt[2]), opt[1]]);
+            })),
+            h('label', { class: 'field', style: 'margin:0;display:flex;align-items:center;gap:8px;' }, [
+              h('span', { class: 'label', style: 'margin:0;' }, 'Pick a day'),
+              h('input', {
+                type: 'date',
+                value: activeCustomDate || '',
+                max: getLocalDateStr(),
+                onChange: function (e) {
+                  activeCustomDate = e.target.value || null;
+                  activeTimeframe = 'day';
+                  renderClientPortal(host, client, onBack);
+                }
+              })
+            ])
+          ])
         ]),
 
         /* 4 KPI Cards */
         h('div', { class: 'stats' }, [
           h('div', { class: 'stat' }, [
-            h('span', { class: 'k' }, 'Total Tasks (' + activeTimeframe.toUpperCase() + ')'),
+            h('span', { class: 'k' }, 'Total Tasks (' + periodLabel + ')'),
             h('div', { class: 'v tabular' }, String(totalT))
           ]),
           h('div', { class: 'stat' }, [
@@ -515,7 +551,7 @@ OC.clients = (function () {
         /* Visual Velocity Graphic Card */
         h('div', { class: 'portal-credential-card', style: 'padding:20px;' }, [
           h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;' }, [
-            h('div', { style: 'font-weight:700;font-size:14.5px;color:var(--ink);' }, 'Task Progress Breakdown (' + activeTimeframe.toUpperCase() + ')'),
+            h('div', { style: 'font-weight:700;font-size:14.5px;color:var(--ink);' }, 'Task Progress Breakdown (' + periodLabel + ')'),
             h('span', { class: 'chip count' }, totalT + ' Total Tracked')
           ]),
           h('div', { class: 'client-velocity-bar-wrap', style: 'margin:16px 0 14px;' }, [
@@ -849,15 +885,48 @@ OC.clients = (function () {
           sel.removeAllRanges(); sel.addRange(range);
         }
 
-        /* Insert a link around the selection (or a placeholder). */
+        /* Insert a link around the selection (or a placeholder). A native
+           window.prompt() would do this in one line, but it's a blocking OS
+           dialog that's inconsistent with the rest of the app's own modal
+           system — and prompt()/confirm() are disabled outright in some
+           mobile and installed-PWA contexts, which would make this button
+           silently do nothing there. Uses the same modal the rest of the
+           app builds links, departments, etc. through. */
         function insertLink() {
           editorDiv.focus();
           var sel = window.getSelection();
           var label = (sel && sel.toString().trim()) || 'link text';
-          var url = window.prompt('Enter URL:', 'https://');
-          if (!url) return;
-          document.execCommand('insertHTML', false,
-            '<a href="' + url + '" target="_blank" rel="noopener noreferrer" class="md-link">' + label + '</a>');
+          /* the selection is lost once focus moves to the modal's input, so
+             the Range is saved now and re-applied right before execCommand */
+          var savedRange = (sel && sel.rangeCount) ? sel.getRangeAt(0).cloneRange() : null;
+
+          var urlInput = OC.ui.h('input', { type: 'text', value: 'https://' });
+          OC.ui.modal({
+            title: 'Insert link',
+            content: OC.ui.field('URL', urlInput, { required: true }),
+            actions: [
+              { label: 'Cancel', onClick: function (close) { close(); } },
+              {
+                label: 'Insert', primary: true, onClick: function (close) {
+                  var url = urlInput.value.trim();
+                  if (!url) return 'Enter a URL.';
+                  /* a modal <dialog> makes the rest of the document inert
+                     while showModal() is active, so editorDiv.focus() (and
+                     therefore execCommand) is a no-op until the dialog is
+                     actually closed — close it first, then write back. */
+                  close();
+                  editorDiv.focus();
+                  if (savedRange) {
+                    var s = window.getSelection();
+                    s.removeAllRanges();
+                    s.addRange(savedRange);
+                  }
+                  document.execCommand('insertHTML', false,
+                    '<a href="' + url + '" target="_blank" rel="noopener noreferrer" class="md-link">' + label + '</a>');
+                }
+              }
+            ]
+          });
         }
 
         /* ── colour picker ────────────────────────────────────────────────── */
@@ -945,7 +1014,9 @@ OC.clients = (function () {
           h('div', { class: 'md-color-picker' }, [colorBtn, colorMenu]),
           h('button', { class: 'client-editor-tool-btn', type: 'button', title: 'Clear all text',
             onMousedown: noBlur,
-            onClick: function () { if (window.confirm('Clear all content?')) { editorDiv.innerHTML = ''; editorDiv.focus(); } }
+            onClick: function () {
+              OC.ui.confirm('Clear all content?', function () { editorDiv.innerHTML = ''; editorDiv.focus(); });
+            }
           }, [OC.icon('trash'), 'Clear']),
         ]);
 
@@ -1127,10 +1198,6 @@ OC.clients = (function () {
       /* Clients Grid (Fully Clickable Cards) */
       filtered.length
         ? h('div', { class: 'grid-2', style: 'margin:12px 0 24px;' }, filtered.map(function (c) {
-            var clientTodos = OC.store.state.todos.filter(function (t) {
-              return t.client === c.id || (Array.isArray(t.clients) && t.clients.indexOf(c.id) > -1);
-            });
-            var activeTaskCount = clientTodos.filter(function (t) { return !t.archived && t.state !== 'done'; }).length;
             var displayTitle = OC.ui.clientLabel ? OC.ui.clientLabel(c) : c.name;
 
             return h('div', {
@@ -1147,9 +1214,9 @@ OC.clients = (function () {
                 h('h3', { style: 'margin:0;font-size:16px;color:var(--ink);' }, displayTitle),
                 h('span', { class: 'chip ' + (c.status === 'active' ? 'dept' : 'custom') + ' push' }, c.status)
               ]),
-              /* the card keeps two details — the code people recognize at a
-                 glance, and the open-task count that actually changes day to
-                 day. ID and phone number still show once the client is open. */
+              /* the card keeps just the one detail people recognize a client
+                 by at a glance. Code and phone number still show once the
+                 client is open. */
               h('div', { class: 'row', style: 'margin:8px 0 6px;gap:6px;flex-wrap:wrap;' }, [
                 (c.client_id || c.client_code) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Client ID: ' + (c.client_id || c.client_code)) : null
               ].filter(Boolean)),

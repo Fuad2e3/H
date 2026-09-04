@@ -193,9 +193,9 @@ OC.dashboard = (function () {
       return !!c && (!OC.can.seeClient || OC.can.seeClient(user, c));
     });
 
-    var empId = user.employee_id || 'N/A';
-    var orgName = user.org || 'N/A';
-    var joinedDate = user.joined_date || 'N/A';
+    var empId = user.employee_id || '';
+    var orgName = user.org || '';
+    var joinedDate = user.joined_date || '';
     var deptNames = (user.departments && user.departments.length)
       ? user.departments.map(function (m) { return (OC.store.department(m.department) || {}).name; }).join(', ')
       : '';
@@ -207,7 +207,11 @@ OC.dashboard = (function () {
       roleLine += ' • Operations';
     }
     
-    var joinLine = 'Joined ' + joinedDate + ' (' + orgName + ')';
+    /* only claim a join date/org when the account actually carries one —
+       'Joined N/A (N/A)' read as broken rather than simply unset */
+    var joinLine = joinedDate
+      ? ('Joined ' + joinedDate + (orgName ? ' (' + orgName + ')' : ''))
+      : '';
 
     var todayStr = new Date().toISOString().split('T')[0];
     var attendanceList = OC.store.state.attendance || [];
@@ -292,10 +296,10 @@ OC.dashboard = (function () {
         h('div', { class: 'user-profile-info' }, [
           h('div', { class: 'user-profile-title-row' }, [
             h('span', { class: 'user-profile-name' }, user.name),
-            h('span', { class: 'user-profile-badge' }, empId)
-          ]),
+            empId ? h('span', { class: 'user-profile-badge' }, empId) : null
+          ].filter(Boolean)),
           h('div', { class: 'user-profile-role-line' }, roleLine),
-          h('div', { class: 'user-profile-meta-line' }, joinLine)
+          joinLine ? h('div', { class: 'user-profile-meta-line' }, joinLine) : null
         ])
       ]),
       h('div', { class: 'user-profile-right', style: 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;' }, [

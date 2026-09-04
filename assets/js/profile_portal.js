@@ -192,10 +192,17 @@ OC.profilePortal = (function () {
         h('div', { class: 'user-profile-info' }, [
           h('div', { class: 'user-profile-title-row' }, [
             h('span', { class: 'user-profile-name' }, user.name),
-            h('span', { class: 'user-profile-badge' }, prof.empId)
-          ]),
+            /* the badge and join line use the raw user fields rather than
+               prof.empId/prof.joined — those default to the string 'N/A' for
+               display inside the Office Details card, and reusing that
+               default here would read as 'Joined N/A (N/A)' instead of
+               simply omitting a line nobody has filled in yet */
+            user.employee_id ? h('span', { class: 'user-profile-badge' }, user.employee_id) : null
+          ].filter(Boolean)),
           h('div', { class: 'user-profile-role-line' }, (user.title || 'Intern') + ' • ' + deptNames),
-          h('div', { class: 'user-profile-meta-line' }, 'Joined ' + prof.joined + ' (' + prof.org + ')')
+          user.joined_date
+            ? h('div', { class: 'user-profile-meta-line' }, 'Joined ' + user.joined_date + (user.org ? ' (' + user.org + ')' : ''))
+            : null
         ])
       ]),
       h('div', { class: 'user-profile-right' }, [

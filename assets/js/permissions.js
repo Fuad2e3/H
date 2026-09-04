@@ -469,12 +469,14 @@ OC.can = (function () {
   }
 
   /* System Admin, Department Head, or task creator may edit a todo (assignees cannot edit) */
+  /* Editing a task belongs to whoever wrote it — a department head running the
+     work is not the same as the person who set out what it says. Admin keeps
+     it as the account of last resort. Everyone else, assignees included,
+     changes state and comments rather than rewriting the task. */
   function canEditTodo(user, todo) {
     if (!user || !todo) return false;
     if (user.admin) return true;
     if (todo.created_by === user.id) return true;
-    if (isHead(user, todo.department)) return true;
-    if (Array.isArray(todo.departments) && todo.departments.some(function (d) { return isHead(user, d); })) return true;
     return false;
   }
 

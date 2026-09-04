@@ -77,33 +77,6 @@ OC.dashboard = (function () {
     var late = OC.ui.daysLate(t.due) > 0;
     var overdue = !isDone && late;
 
-    // Determine channel / department badge info
-    var dept = OC.store.department(t.department || (Array.isArray(t.departments) ? t.departments[0] : ''));
-    var deptName = dept ? dept.name : '';
-    var tag = (t.tags && t.tags.length) ? ((OC.store.tag(t.tags[0]) || {}).label || t.tags[0]) : '';
-
-    var badgeLabel = tag || deptName || (t.priority && t.priority !== 'normal' ? t.priority.toUpperCase() : 'General');
-    var badgeIcon = 'mail';
-    var badgeStyleClass = 'badge-channel';
-
-    var lowerBadge = badgeLabel.toLowerCase();
-    if (lowerBadge.indexOf('urgent') > -1 || lowerBadge.indexOf('high') > -1) {
-      badgeIcon = 'alert';
-      badgeStyleClass = 'badge-urgent';
-    } else if (lowerBadge.indexOf('linkedin') > -1) {
-      badgeIcon = 'linkedin';
-      badgeStyleClass = 'badge-linkedin';
-    } else if (lowerBadge.indexOf('mail') > -1 || lowerBadge.indexOf('email') > -1 || lowerBadge.indexOf('outreach') > -1) {
-      badgeIcon = 'mail';
-      badgeStyleClass = 'badge-email';
-    } else if (lowerBadge.indexOf('web') > -1 || lowerBadge.indexOf('dev') > -1) {
-      badgeIcon = 'monitor';
-      badgeStyleClass = 'badge-web';
-    } else {
-      badgeIcon = 'inbox';
-      badgeStyleClass = 'badge-default';
-    }
-
     /* only the short code belongs on a one-line row — the full
        "0583 - TFR - Tafor Niba" identifier is too long to sit inline */
     var clientCode = OC.ui.clientCode(t.client || (Array.isArray(t.clients) ? t.clients[0] : ''));
@@ -138,11 +111,6 @@ OC.dashboard = (function () {
       }
     }, [
       isDone ? (OC.icon ? OC.icon('check', 'check-icon') : '✓') : null
-    ]);
-
-    var channelBadge = h('span', { class: 'channel-badge ' + badgeStyleClass }, [
-      (OC.icon && badgeIcon) ? OC.icon(badgeIcon, 'channel-icon') : null,
-      h('span', {}, badgeLabel)
     ]);
 
     var dueNode = overdue
@@ -184,7 +152,6 @@ OC.dashboard = (function () {
       checkbox,
       clientCode ? h('span', { class: 'dashboard-client-name' }, clientCode) : null,
       titleNode,
-      channelBadge,
       dueNode,
       assigneeNode
     ].filter(Boolean));

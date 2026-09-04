@@ -1955,7 +1955,6 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 
 /* everything after the title is trailing metadata: it keeps its own size and
    the title absorbs whatever is left, so the row never wraps to two lines */
-.dashboard-todo-main-row > .channel-badge,
 .dashboard-todo-main-row > .due,
 .dashboard-todo-main-row > .dashboard-assignee-mark {
   flex: none;
@@ -2045,16 +2044,6 @@ dialog.modal.todo-detail-modal {
 .dashboard-todo-title[role="button"]:focus-visible {
   outline: 2px solid var(--blueprint);
   outline-offset: 2px;
-}
-
-/* On a narrow screen the row's fixed parts add up to more than the width,
-   which squeezed the title — the one thing the row is actually about — down
-   to nothing and pushed the due date off the edge. The department badge is
-   the most expendable of them, and it is still on the task itself. */
-@media (max-width: 760px) {
-  .dashboard-todo-main-row > .channel-badge {
-    display: none;
-  }
 }
 
 /* the avatar stands in for the assignee; the name is in its tooltip */

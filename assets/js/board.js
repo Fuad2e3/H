@@ -548,7 +548,7 @@ OC.board = (function () {
       title: 'Edit todo',
       content: h('div', {}, [
         OC.ui.field('Title', title, { required: true }),
-        OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
+        OC.ui.field('Client', clientPicker.node, { hint: 'Optional — leave empty for an internal task. Select one or more, or click "+ New Client".' }),
         OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),
         OC.ui.field('Assign to', assigneePicker.node, { required: true, hint: canReassign ? 'Select one or multiple team members to assign.' : 'Only authorized leads/admins can reassign (3.2).' }),
         OC.ui.field('Due date & time', due, { required: true, hint: 'Past dates & times are blocked automatically.' }),
@@ -734,7 +734,7 @@ OC.board = (function () {
         OC.ui.field('Title', title, { required: true }),
         lockClient
           ? OC.ui.field('Client', h('div', { class: 'chip custom' }, lockedClientNames || 'This client'), { hint: 'Fixed to the client this task is posted from.' })
-          : OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
+          : OC.ui.field('Client', clientPicker.node, { hint: 'Optional — leave empty for an internal task. Select one or more, or click "+ New Client".' }),
         lockDepartment
           ? OC.ui.field('Department', h('div', { class: 'chip custom' }, lockedDeptNames || 'This department'), { hint: 'Fixed to the department this client is assigned to.' })
           : OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),

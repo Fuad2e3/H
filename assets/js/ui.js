@@ -1442,6 +1442,15 @@ OC.ui = (function () {
     var chipsWrap = h('div', { class: 'multi-picker-chips' });
     var searchInput = h('input', { type: 'search', placeholder: 'Search clients...', 'aria-label': 'Filter clients', style: 'flex:1;' });
     var listWrap = h('div', { class: 'multi-picker-list', role: 'group', 'aria-label': 'Clients' });
+    var countWrap = h('div', { class: 'multi-picker-count' });
+
+    /* A client book runs to hundreds. Rendering all of them put ~23 screens of
+       scrolling inside a 170px box and built a DOM row for every one on every
+       keystroke, so the list is capped and the search is the way through it.
+       Anything already ticked is exempt from the cap and sorted to the top —
+       a selection you cannot see is worse than a long list. */
+    var LIST_LIMIT = 10;
+    var showAll = false;
 
     var addBtn = canAdd ? h('button', {
       class: 'btn small',
@@ -1506,10 +1515,19 @@ OC.ui = (function () {
 
       if (!clients.length) {
         listWrap.appendChild(h('p', { class: 'ticklist-empty' }, 'No clients found' + (q ? ' matching "' + q + '"' : '') + '. Click "+ New Client" above.'));
+        renderCount(0, 0, q);
         return;
       }
 
-      clients.forEach(function (c) {
+      /* stable sort, so unticked clients keep the order they came in */
+      clients.sort(function (a, b) {
+        return (chosen.indexOf(a.id) > -1 ? 0 : 1) - (chosen.indexOf(b.id) > -1 ? 0 : 1);
+      });
+
+      var visible = showAll ? clients : clients.slice(0, Math.max(LIST_LIMIT, chosen.length));
+      renderCount(visible.length, clients.length, q);
+
+      visible.forEach(function (c) {
         var isChecked = chosen.indexOf(c.id) > -1;
         var display = clientLabel(c);
         var chk = h('input', {
@@ -1536,6 +1554,23 @@ OC.ui = (function () {
       });
     }
 
+    /* says how much of the book is on screen, and offers the rest — without it
+       a capped list silently hides clients the user knows exist */
+    function renderCount(shownCount, totalCount, q) {
+      clear(countWrap);
+      if (totalCount <= LIST_LIMIT) return;
+      countWrap.appendChild(h('span', {}, 'Showing ' + shownCount + ' of ' + totalCount +
+        (q ? ' matches' : ' clients') + (showAll ? '' : ' — type to search')));
+      countWrap.appendChild(h('button', {
+        class: 'btn small', type: 'button',
+        onClick: function (e) {
+          e.preventDefault();
+          showAll = !showAll;
+          renderList();
+        }
+      }, showAll ? 'Show fewer' : 'Show all ' + totalCount));
+    }
+
     function render() {
       renderChips();
       renderList();
@@ -1546,6 +1581,7 @@ OC.ui = (function () {
     root.appendChild(chipsWrap);
     root.appendChild(topRow);
     root.appendChild(listWrap);
+    root.appendChild(countWrap);
 
     render();
 

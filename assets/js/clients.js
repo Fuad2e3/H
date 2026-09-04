@@ -103,38 +103,15 @@ OC.clients = (function () {
 
   function getClientDisplayInfo(c) {
     if (!c) return { name: 'Unknown', subBadge: '', code: '' };
-    var rawName = (c.name || '').trim();
     var rawId = (c.client_id || '').trim();
+    var rawName = (c.name || '').trim();
     var code = (c.client_code || '').trim();
-    var num = (c.client_number || '').trim();
 
-    var name = rawName;
-    if (!name && rawId) {
-      var parts = rawId.split(' - ');
-      if (parts.length >= 3) {
-        if (!num) num = parts[0].trim();
-        if (!code) code = parts[1].trim();
-        name = parts.slice(2).join(' - ').trim();
-      } else if (parts.length === 2) {
-        name = parts[1].trim();
-      } else {
-        name = rawId;
-      }
-    } else if (name && name.indexOf(' - ') > -1) {
-      var parts2 = name.split(' - ');
-      if (parts2.length >= 3) {
-        if (!num) num = parts2[0].trim();
-        if (!code) code = parts2[1].trim();
-        name = parts2.slice(2).join(' - ').trim();
-      } else if (parts2.length === 2) {
-        name = parts2[1].trim();
-      }
-    }
-
-    if (!name) name = code || rawId || 'Client #' + (c.id || '').slice(-4);
+    // Prefer Client ID over Name as requested ("name na . Client ID thakba.")
+    var displayTitle = rawId || rawName || code || 'Client #' + (c.id || '').slice(-4);
 
     return {
-      name: name,
+      name: displayTitle,
       code: code,
       subBadge: ''
     };

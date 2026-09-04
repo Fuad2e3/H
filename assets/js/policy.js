@@ -7,7 +7,9 @@
 window.OC = window.OC || {};
 
 OC.policy = (function () {
-  function me() { return OC.store.user(OC.store.session()); }
+  function me() {
+    return OC.store.user(OC.store.session()) || (OC.store.state && OC.store.state.users && OC.store.state.users[0]) || { id: '', name: 'User', admin: false };
+  }
 
   function render(host) {
     var h = OC.ui.h;

@@ -88,7 +88,9 @@ OC.clients = (function () {
   var todoFilterState = 'all'; /* all | open | progress | done | blocked */
   var isDetailsEditing = false; /* view mode vs edit mode in Details tab */
 
-  function me() { return OC.store.user(OC.store.session()); }
+  function me() {
+    return OC.store.user(OC.store.session()) || (OC.store.state && OC.store.state.users && OC.store.state.users[0]) || { id: '', name: 'User', admin: false };
+  }
 
   /* clientLabel() falls back through code → name → ID, so a client saved with
      only a Client ID is titled by that ID. A "Client ID: …" chip beside such a

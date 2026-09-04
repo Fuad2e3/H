@@ -156,18 +156,25 @@ OC.store = (function () {
     }
     return endpoint;
   }
-
+  var isSyncInProgress = false;
   function syncWithServer() {
-    if (!isHttp() || typeof fetch !== 'function') return;
+    if (!isHttp() || typeof fetch !== 'function' || isSyncInProgress) return;
+    isSyncInProgress = true;
+
+    var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 3500) : null;
 
     fetch(getApiUrl('/api/state'), {
+      signal: controller ? controller.signal : undefined,
       headers: { 'bypass-tunnel-reminder': 'true' }
     })
       .then(function (res) {
+        if (timer) clearTimeout(timer);
         if (res.ok) return res.json();
         throw new Error('Server returned ' + res.status);
       })
       .then(function (serverState) {
+        isSyncInProgress = false;
         if (serverState && serverState.version === 1) {
           var needsPush = false;
           if (state && Array.isArray(state.groups) && state.groups.length > 0) {
@@ -248,6 +255,7 @@ OC.store = (function () {
                   sc.assignees = Array.isArray(lc.assignees) ? lc.assignees.slice() : [];
                   sc.assigned_users = Array.isArray(lc.assigned_users) ? lc.assigned_users.slice() : (sc.assignees || []);
                   if (Array.isArray(lc.departments)) sc.departments = lc.departments.slice();
+                  if (Array.isArray(lc.tags)) sc.tags = lc.tags.slice();
                   if (lc.department !== undefined) sc.department = lc.department;
                   if (lc.name) sc.name = lc.name;
                   if (lc.client_id) sc.client_id = lc.client_id;
@@ -257,6 +265,12 @@ OC.store = (function () {
                   if (lc.status) sc.status = lc.status;
                   if (lc.details !== undefined) sc.details = lc.details;
                   if (lc.extended_fields) sc.extended_fields = lc.extended_fields;
+                  if (lc.billing_type && lc.billing_type !== sc.billing_type) sc.billing_type = lc.billing_type;
+                  if (lc.billing_rate !== undefined && lc.billing_rate !== sc.billing_rate) sc.billing_rate = lc.billing_rate;
+                  if (lc.retainer !== undefined && lc.retainer !== sc.retainer) sc.retainer = lc.retainer;
+                  if (lc.contract_start && lc.contract_start !== sc.contract_start) sc.contract_start = lc.contract_start;
+                  if (lc.contract_end !== undefined && lc.contract_end !== sc.contract_end) sc.contract_end = lc.contract_end;
+                  if (lc.notes !== undefined && lc.notes !== sc.notes) sc.notes = lc.notes;
                   sc.updated_at = lc.updated_at || new Date().toISOString();
                   needsPush = true;
                 } else {
@@ -333,6 +347,8 @@ OC.store = (function () {
         }
       })
       .catch(function () {
+        if (timer) clearTimeout(timer);
+        isSyncInProgress = false;
         if (OC.backend && OC.backend.setServerStatus) {
           OC.backend.setServerStatus(false);
         }
@@ -342,12 +358,17 @@ OC.store = (function () {
   function pushMutationToServer(entry) {
     if (!isHttp() || typeof fetch !== 'function') return;
 
+    var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 4000) : null;
+
     fetch(getApiUrl('/api/mutate'), {
       method: 'POST',
+      signal: controller ? controller.signal : undefined,
       headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': 'true' },
       body: JSON.stringify({ entry: entry, state: state })
     })
       .then(function (res) {
+        if (timer) clearTimeout(timer);
         if (!res.ok) {
           console.warn('[store] Server mutation response error HTTP ' + res.status);
           return res.json().then(function (err) {
@@ -368,7 +389,8 @@ OC.store = (function () {
         }
       })
       .catch(function (err) {
-        console.warn('[store] Network failure pushing mutation:', err.message);
+        if (timer) clearTimeout(timer);
+        console.warn('[store] Network failure pushing mutation:', err ? err.message : 'timeout');
       });
   }
 

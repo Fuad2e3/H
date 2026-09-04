@@ -22,6 +22,8 @@ OC.store = (function () {
   /* Tombstone: group IDs deleted this session so syncWithServer never
      re-adds them from stale local state on the next sync tick. */
   var _deletedGroupIds = {};
+  /* Track recent local client updates to protect active client edits from being clobbered by background polling */
+  var _recentClientUpdates = {};
 
   /* ---- date helpers ---------------------------------------------------- */
   function iso(d) { return d.toISOString().slice(0, 10); }
@@ -228,7 +230,7 @@ OC.store = (function () {
               }
             });
           }
-          // Merge offline-created clients back so they aren't lost when the server state overwrites local state
+          // Merge offline-created or locally-modified clients so local edits are never clobbered by background polling
           if (state && Array.isArray(state.clients) && state.clients.length > 0) {
             serverState.clients = serverState.clients || [];
             state.clients.forEach(function (lc) {
@@ -237,25 +239,44 @@ OC.store = (function () {
                 serverState.clients.push(lc);
                 needsPush = true;
               } else {
-                if (lc.extended_fields && (!sc.extended_fields || Object.keys(lc.extended_fields).length > Object.keys(sc.extended_fields).length)) {
-                  sc.extended_fields = lc.extended_fields;
+                var isRecentlyUpdatedLocally = !!(_recentClientUpdates[lc.id] && (Date.now() - _recentClientUpdates[lc.id] < 15000));
+                var lcTime = lc.updated_at ? new Date(lc.updated_at).getTime() : 0;
+                var scTime = sc.updated_at ? new Date(sc.updated_at).getTime() : 0;
+                var localIsNewer = isRecentlyUpdatedLocally || (lcTime > 0 && lcTime >= scTime);
+
+                if (localIsNewer) {
+                  sc.assignees = Array.isArray(lc.assignees) ? lc.assignees.slice() : [];
+                  sc.assigned_users = Array.isArray(lc.assigned_users) ? lc.assigned_users.slice() : (sc.assignees || []);
+                  if (Array.isArray(lc.departments)) sc.departments = lc.departments.slice();
+                  if (lc.department !== undefined) sc.department = lc.department;
+                  if (lc.name) sc.name = lc.name;
+                  if (lc.client_id) sc.client_id = lc.client_id;
+                  if (lc.client_code) sc.client_code = lc.client_code;
+                  if (lc.client_number) sc.client_number = lc.client_number;
+                  if (lc.contact) sc.contact = lc.contact;
+                  if (lc.status) sc.status = lc.status;
+                  if (lc.details !== undefined) sc.details = lc.details;
+                  if (lc.extended_fields) sc.extended_fields = lc.extended_fields;
+                  sc.updated_at = lc.updated_at || new Date().toISOString();
                   needsPush = true;
-                }
-                if (Array.isArray(lc.departments) && lc.departments.length > 0 && (!Array.isArray(sc.departments) || !sc.departments.length)) {
-                  sc.departments = lc.departments;
-                  needsPush = true;
-                }
-                if (lc.department && !sc.department) {
-                  sc.department = lc.department;
-                  needsPush = true;
-                }
-                if (Array.isArray(lc.assignees) && lc.assignees.length > 0 && (!Array.isArray(sc.assignees) || !sc.assignees.length)) {
-                  sc.assignees = lc.assignees;
-                  needsPush = true;
-                }
-                if (Array.isArray(lc.assigned_users) && lc.assigned_users.length > 0 && (!Array.isArray(sc.assigned_users) || !sc.assigned_users.length)) {
-                  sc.assigned_users = lc.assigned_users;
-                  needsPush = true;
+                } else {
+                  if (lc.extended_fields && (!sc.extended_fields || Object.keys(lc.extended_fields).length > Object.keys(sc.extended_fields).length)) {
+                    sc.extended_fields = lc.extended_fields;
+                    needsPush = true;
+                  }
+                  if (Array.isArray(lc.departments) && lc.departments.length > 0 && (!Array.isArray(sc.departments) || !sc.departments.length)) {
+                    sc.departments = lc.departments;
+                    needsPush = true;
+                  }
+                  if (lc.department && !sc.department) {
+                    sc.department = lc.department;
+                    needsPush = true;
+                  }
+                  if (Array.isArray(lc.assignees) && lc.assignees.length > 0 && (!Array.isArray(sc.assignees) || !sc.assignees.length)) {
+                    sc.assignees = lc.assignees;
+                    sc.assigned_users = lc.assignees;
+                    needsPush = true;
+                  }
                 }
               }
             });
@@ -325,7 +346,30 @@ OC.store = (function () {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': 'true' },
       body: JSON.stringify({ entry: entry, state: state })
-    }).catch(function () {});
+    })
+      .then(function (res) {
+        if (!res.ok) {
+          console.warn('[store] Server mutation response error HTTP ' + res.status);
+          return res.json().then(function (err) {
+            console.warn('[store] Mutation error details:', err);
+          }).catch(function () {});
+        }
+        return res.json();
+      })
+      .then(function (data) {
+        if (data && data.state && data.state.version === 1) {
+          var prev = JSON.stringify(state);
+          var next = JSON.stringify(data.state);
+          if (prev !== next) {
+            state = data.state;
+            write();
+            emit();
+          }
+        }
+      })
+      .catch(function (err) {
+        console.warn('[store] Network failure pushing mutation:', err.message);
+      });
   }
 
   function initSSE() {
@@ -541,6 +585,13 @@ OC.store = (function () {
       fn();
     }
     if (entry) {
+      if (entry.clientId) {
+        _recentClientUpdates[entry.clientId] = Date.now();
+      }
+      if (entry.action && entry.action.indexOf('client.') === 0 && entry.target) {
+        var cl = byIdOrName(state.clients, entry.target);
+        if (cl) _recentClientUpdates[cl.id] = Date.now();
+      }
       var clientIp = entry.ip || currentClientIp || '127.0.0.1';
       state.audit = state.audit || [];
       var isDup = false;

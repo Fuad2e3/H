@@ -676,8 +676,13 @@ OC.people = (function () {
           var primaryDept = selectedDepts.length ? selectedDepts[0] : '';
           var deptNote = '; visible to ' + deptNames(selectedDepts) + (selectedAssignees.length ? ' (' + selectedAssignees.length + ' assigned)' : '');
 
+          var nowIso = new Date().toISOString();
           OC.store.mutate({
             actor: user.id, action: 'client.update', target: cName,
+            clientId: client.id,
+            assignees: selectedAssignees,
+            departments: selectedDepts,
+            department: primaryDept,
             detail: 'Updated details for ' + client.name + deptNote
           }, function () {
             client.client_id = cIdVal;
@@ -685,6 +690,7 @@ OC.people = (function () {
             client.name = cName;
             client.contact = cContact;
             client.status = status.value;
+            client.updated_at = nowIso;
             if (canScope) {
               client.departments = selectedDepts;
               client.department = primaryDept;
@@ -700,6 +706,7 @@ OC.people = (function () {
               targetClient.name = cName;
               targetClient.contact = cContact;
               targetClient.status = status.value;
+              targetClient.updated_at = nowIso;
               if (canScope) {
                 targetClient.departments = selectedDepts;
                 targetClient.department = primaryDept;

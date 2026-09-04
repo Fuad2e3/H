@@ -146,14 +146,20 @@ OC.clients = (function () {
             var primaryDept = selectedDepts.length ? selectedDepts[0] : '';
             var selected = picker.getAssignees();
 
+            var nowIso = new Date().toISOString();
             OC.store.mutate({
               actor: user.id,
               action: 'client.assign',
               target: currentLabel,
+              clientId: client.id,
+              assignees: selected,
+              departments: selectedDepts,
+              department: primaryDept,
               detail: 'Updated assigned working members (' + selected.length + ' members) for ' + currentLabel
             }, function () {
               client.assignees = selected;
               client.assigned_users = selected;
+              client.updated_at = nowIso;
               if (canScope) {
                 client.departments = selectedDepts;
                 client.department = primaryDept;
@@ -162,6 +168,7 @@ OC.clients = (function () {
               if (targetClient) {
                 targetClient.assignees = selected;
                 targetClient.assigned_users = selected;
+                targetClient.updated_at = nowIso;
                 if (canScope) {
                   targetClient.departments = selectedDepts;
                   targetClient.department = primaryDept;
@@ -275,8 +282,13 @@ OC.clients = (function () {
           var deptNote = '; visible to ' + deptNames(selectedDepts) + (selectedAssignees.length ? ' (' + selectedAssignees.length + ' assigned)' : '');
 
           var auditLabel = cCodeVal || cName || cIdVal;
+          var nowIso = new Date().toISOString();
           OC.store.mutate({
             actor: user.id, action: 'client.update', target: auditLabel,
+            clientId: client.id,
+            assignees: selectedAssignees,
+            departments: selectedDepts,
+            department: primaryDept,
             detail: 'Updated details for ' + currentLabel + deptNote
           }, function () {
             client.name = cName;
@@ -285,6 +297,7 @@ OC.clients = (function () {
             client.client_number = cNumVal;
             client.contact = cNumVal || cName || cIdVal;
             client.status = status.value;
+            client.updated_at = nowIso;
             if (canScope) {
               client.departments = selectedDepts;
               client.department = primaryDept;
@@ -301,6 +314,7 @@ OC.clients = (function () {
               targetClient.client_number = cNumVal;
               targetClient.contact = cNumVal || cName || cIdVal;
               targetClient.status = status.value;
+              targetClient.updated_at = nowIso;
               if (canScope) {
                 targetClient.departments = selectedDepts;
                 targetClient.department = primaryDept;
@@ -392,11 +406,20 @@ OC.clients = (function () {
               var visible = r.checkbox.checked;
               if (val || visible) next[r.key] = { value: val, visible: visible };
             });
+            var nowIso = new Date().toISOString();
             OC.store.mutate({
               actor: user.id, action: 'client.update', target: currentLabel,
+              clientId: client.id,
+              extended_fields: next,
               detail: 'Updated extended info for ' + currentLabel
             }, function () {
               client.extended_fields = next;
+              client.updated_at = nowIso;
+              var targetClient = (OC.store.state.clients || []).find(function (c) { return c.id === client.id; });
+              if (targetClient) {
+                targetClient.extended_fields = next;
+                targetClient.updated_at = nowIso;
+              }
             });
             OC.ui.toast('Extended info saved.');
             if (onDone) onDone();

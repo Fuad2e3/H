@@ -880,18 +880,26 @@ OC.app = (function () {
     return '#' + id + (sub && sub.length ? '/' + sub.join('/') : '');
   }
 
-  function setHash(id, sub) {
+  /* push=true adds a fresh history entry (a real "page" the Back button can
+     return to); push=false (the default) just corrects the address bar in
+     place, the way it always has. A navigation the app initiates — a nav
+     click, opening a client, switching a tab — pushes; one already driven
+     by the browser's own Back/Forward (see the hashchange listener below)
+     must not push again, or Back would immediately re-add the entry it was
+     just leaving and Forward would end up somewhere wrong. */
+  function setHash(id, sub, push) {
     if (typeof location === 'undefined') return;
     var target = hashFor(id, sub);
     try {
-      if (history.replaceState) history.replaceState(null, '', target);
+      if (push && history.pushState) history.pushState(null, '', target);
+      else if (history.replaceState) history.replaceState(null, '', target);
       else location.hash = target;
     } catch (_) {
       location.hash = target;
     }
   }
 
-  function go(id, sub) {
+  function go(id, sub, fromHashChange) {
     var asked = id;
     if (id === 'groups' || id === 'people' || id === 'reports') {
       if (!canUseRoute('activities')) { id = 'dashboard'; sub = []; }
@@ -903,12 +911,15 @@ OC.app = (function () {
     if (route === id && subPath.join('/') === nextSub.join('/')) {
       /* the address named a section they may not open; put the bar back to the
          page they are actually looking at instead of leaving it lying */
-      if (asked !== id) setHash(id, nextSub);
+      if (asked !== id) setHash(id, nextSub, false);
       return;
     }
     route = id;
     subPath = nextSub;
-    setHash(id, subPath);
+    /* the browser already navigated here (Back/Forward already changed the
+       address and the history stack); reacting to that must not touch
+       history again, only catch the app's own state up to it */
+    if (!fromHashChange) setHash(id, subPath, true);
     render();
   }
 
@@ -1037,7 +1048,7 @@ OC.app = (function () {
         if (!id) return;
         var known = id === 'profile' || ROUTES.some(function (r) { return r.id === id; });
         if (!known) return;
-        if (id !== route || next.sub.join('/') !== subPath.join('/')) go(id, next.sub);
+        if (id !== route || next.sub.join('/') !== subPath.join('/')) go(id, next.sub, true);
       });
     }
 
@@ -1053,7 +1064,9 @@ OC.app = (function () {
     sub: function () { return subPath.slice(); },
     setSub: function (parts) {
       subPath = (parts || []).filter(Boolean).map(String);
-      setHash(route, subPath);
+      /* opening a client, switching a Management tab, etc. — a real step in
+         the workspace the user should be able to Back out of one at a time */
+      setHash(route, subPath, true);
     },
     logout: logout,
     openProfileModal: openProfileModal,

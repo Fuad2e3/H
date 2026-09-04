@@ -1697,6 +1697,7 @@ OC.ui = (function () {
           style: 'display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;padding:5px 8px;border-radius:4px;user-select:none;background:' + (isChecked ? 'rgba(56,189,248,0.12)' : 'transparent') + ';border:1px solid ' + (isChecked ? 'var(--brand-cyan, #0284c7)' : 'transparent') + ';transition:all 0.15s;'
         }, [
           chk,
+          mark(u.id),
           h('div', { style: 'display:flex;flex-direction:column;min-width:0;overflow:hidden;' }, [
             h('span', { style: 'font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;' }, u.name),
             h('span', { class: 'muted', style: 'font-size:11px;' }, role)

@@ -909,6 +909,29 @@ OC.board = (function () {
     return Object.keys(buckets).sort().map(function (k) { return { key: k, items: buckets[k] }; });
   }
 
+  function groupInstructions(notes) {
+    var buckets = {};
+    notes.forEach(function (n) {
+      var key;
+      if (grouping === 'client') {
+        var cid = n.client || (Array.isArray(n.clients) && n.clients.length ? n.clients[0] : '');
+        var c = cid ? OC.store.client(cid) : null;
+        key = c ? (OC.ui.clientLabel ? OC.ui.clientLabel(c) : c.name) : (cid || 'No client');
+      }
+      else if (grouping === 'department') {
+        var did = n.department || (Array.isArray(n.departments) && n.departments.length ? n.departments[0] : '');
+        var d = OC.store.department(did);
+        key = d ? d.name : 'No department';
+      }
+      else {
+        var a = OC.store.user(n.author);
+        key = a ? a.name : (n.author || 'Unknown');
+      }
+      (buckets[key] = buckets[key] || []).push(n);
+    });
+    return Object.keys(buckets).sort().map(function (k) { return { key: k, items: buckets[k] }; });
+  }
+
   /* ---- instruction item -------------------------------------------------- */
   function instructionItem(note, rerender) {
     var user = me();
@@ -951,22 +974,24 @@ OC.board = (function () {
     return h('article', { class: 'note' + (unread && !note.archived ? ' unread' : '') + (note.archived ? ' archived' : '') }, [
       h('div', { class: 'byline' }, [
         OC.ui.person(note.author, 'strong'),
+        ((Array.isArray(note.departments) && note.departments.length > 1) || note.department) && grouping !== 'department'
+          ? ((Array.isArray(note.departments) && note.departments.length > 1)
+              ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, note.departments.map(OC.ui.deptChip))
+              : OC.ui.deptChip(note.department))
+          : null,
+        ((Array.isArray(note.clients) && note.clients.length > 1) || note.client) && grouping !== 'client'
+          ? ((Array.isArray(note.clients) && note.clients.length > 1)
+              ? h('span', { class: 'multi-clients-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, note.clients.map(OC.ui.clientChip))
+              : OC.ui.clientChip(note.client))
+          : null,
         h('span', {}, OC.ui.fmtWhen(note.posted_at)),
         note.archived ? h('span', { class: 'chip custom' }, 'archived') : null,
         note.linked_todo ? h('span', { class: 'chip group' }, 'todo created') : null
-      ]),
+      ].filter(Boolean)),
       h('div', { class: 'body' }, note.body),
-      h('div', { class: 'tags' }, [
-        (Array.isArray(note.clients) && note.clients.length > 1)
-          ? h('span', { class: 'multi-clients-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, note.clients.map(OC.ui.clientChip))
-          : OC.ui.clientChip(note.client),
-        (Array.isArray(note.departments) && note.departments.length > 1)
-          ? h('span', { class: 'multi-depts-wrap', style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, note.departments.map(OC.ui.deptChip))
-          : OC.ui.deptChip(note.department),
-        /* a notice that arrives from the backend without tags must not take
-           the whole board down with it */
-        (note.tags || []).map(OC.ui.tagChip)
-      ]),
+      (note.tags && note.tags.length)
+        ? h('div', { class: 'tags' }, (note.tags || []).map(OC.ui.tagChip))
+        : null,
       h('div', { class: 'readers' }, readers.length
         ? 'Read by ' + readers.length + ': ' + readers.join(', ')
         : 'Nobody has read this yet'),
@@ -1011,7 +1036,7 @@ OC.board = (function () {
           if (!newBody) return 'Write the instruction text.';
           var selectedClients = clientPicker.getClients();
           var primaryClient = clientPicker.getValue();
-          if (!selectedClients.length || !primaryClient) return 'Please select at least one client.';
+          // client is optional for internal/department tasks (just like todo)
           var selectedDepts = lockDepartment ? lockedDeptIds : deptPicker.getDepartments();
           var primaryDept = lockDepartment ? (lockedDeptIds[0] || '') : deptPicker.getValue();
           if (!selectedDepts.length || !primaryDept) return 'Please select at least one department.';
@@ -1175,10 +1200,10 @@ OC.board = (function () {
         OC.ui.field('Instruction', body, { required: true, hint: 'Anyone may post an instruction — it is not restricted the way assignment is (6.3).' }),
         lockClient
           ? OC.ui.field('Client', h('div', { class: 'chip custom' }, lockedClientNames || 'This client'), { hint: 'Fixed to the client this instruction is posted from.' })
-          : OC.ui.field('Client', clientPicker.node, { required: true, hint: 'Select one or multiple clients or click "+ New Client" (5.2).' }),
+          : OC.ui.field('Client', clientPicker.node, { hint: 'Optional — leave empty for an internal/department instruction. Select one or more, or click "+ New Client".' }),
         lockDepartment
           ? OC.ui.field('Department', h('div', { class: 'chip custom' }, lockedDeptNames || 'This department'), { hint: isSysAdmin ? 'Fixed to the department this client is assigned to.' : 'Fixed to your assigned department (' + (lockedDeptNames || 'Department') + ').' })
-          : OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (3.2).' }),
+          : OC.ui.field('Department', deptPicker.node, { required: true, hint: 'Select one or multiple departments (5.2).' }),
         targetRow,
         OC.ui.field('Tags', tags.node, { hint: 'Typing narrows the list. A new tag is created inline and available to everyone immediately (6.4).' })
       ].filter(Boolean)),
@@ -1188,10 +1213,10 @@ OC.board = (function () {
           label: 'Post instruction', primary: true, onClick: function (close) {
             if (!body.value.trim()) return 'Write the instruction first.';
             var selectedClients = lockClient ? lockedClientIds : clientPicker.getClients();
-            var primaryClient = lockClient ? lockedClientIds[0] : clientPicker.getValue();
-            if (!selectedClients.length || !primaryClient) return 'Select at least one client or add a new one. This is required by 5.2.';
+            var primaryClient = lockClient ? (lockedClientIds[0] || null) : clientPicker.getValue();
+            // client is optional for internal/department instructions, matching todo
             var selectedDepts = lockDepartment ? lockedDeptIds : deptPicker.getDepartments();
-            var primaryDept = lockDepartment ? lockedDeptIds[0] : deptPicker.getValue();
+            var primaryDept = lockDepartment ? (lockedDeptIds[0] || '') : deptPicker.getValue();
             if (!selectedDepts.length || !primaryDept) return 'Select at least one department. This is required by 5.2.';
 
             var note = {
@@ -1277,20 +1302,22 @@ OC.board = (function () {
     var notes = visibleInstructions();
     var unreadCount = notes.filter(function (n) { return OC.ui.wasUnread(n, user.id); }).length;
 
-    var groupControl = h('div', { class: 'segmented', role: 'group', 'aria-label': 'Group todos by', title: 'Group todos by' },
-      [['person', 'Person'], ['client', 'Client'], ['department', 'Department']].map(function (opt) {
-        return h('button', {
-          type: 'button', 'aria-pressed': String(grouping === opt[0]),
-          onClick: function () { grouping = opt[0]; rerender(); }
-        }, opt[1]);
-      }));
+    function createGroupControl() {
+      return h('div', { class: 'segmented', role: 'group', 'aria-label': 'Group by', title: 'Group by' },
+        [['person', 'Person'], ['client', 'Client'], ['department', 'Department']].map(function (opt) {
+          return h('button', {
+            type: 'button', 'aria-pressed': String(grouping === opt[0]),
+            onClick: function () { grouping = opt[0]; rerender(); }
+          }, opt[1]);
+        }));
+    }
 
     var todoPanel = h('section', { class: 'panel panel--todos' }, [
       h('div', { class: 'panel-head' }, [
         h('h2', {}, 'Todos'),
         h('span', { class: 'chip count' }, todos.length + ' visible'),
         h('div', { class: 'tools' }, [
-          groupControl,
+          createGroupControl(),
           h('button', { class: 'btn small primary', type: 'button', onClick: function () { newTodo(); } },
             [OC.icon('plus'), 'New todo'])
         ])
@@ -1329,15 +1356,32 @@ OC.board = (function () {
         h('span', { class: 'chip count' }, notes.length + ' visible'),
         unreadCount ? h('span', { class: 'chip overdue' }, unreadCount + ' unread') : null,
         h('div', { class: 'tools' }, [
+          createGroupControl(),
           h('button', { class: 'btn small primary', type: 'button', onClick: newInstruction },
             [OC.icon('plus'), 'Post instruction'])
         ])
       ]),
       h('div', { class: 'panel-body scroll' }, notes.length
         ? (function () {
-            var nodes = notes.slice(0, noteLimit).map(function (n) { return instructionItem(n, rerender); });
-            if (notes.length > noteLimit) {
-              nodes.push(showMoreRow(notes.length - noteLimit, function () {
+            var buckets = groupInstructions(notes);
+            var nodes = [];
+            var shown = 0;
+            for (var bi = 0; bi < buckets.length && shown < noteLimit; bi++) {
+              var bucket = buckets[bi];
+              var ordered = bucket.items.slice().sort(function (a, b) {
+                var ap = a.posted_at || '';
+                var bp = b.posted_at || '';
+                return bp.localeCompare(ap);
+              });
+              var slice = ordered.slice(0, noteLimit - shown);
+              shown += slice.length;
+              nodes.push(h('div', { class: 'stack' }, [
+                h('div', { class: 'group-head' }, [bucket.key, h('span', { class: 'n push' }, bucket.items.length)]),
+                slice.map(function (n) { return instructionItem(n, rerender); })
+              ]));
+            }
+            if (notes.length > shown) {
+              nodes.push(showMoreRow(notes.length - shown, function () {
                 noteLimit += NOTE_PAGE;
                 rerender();
               }));

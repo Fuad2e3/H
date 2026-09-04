@@ -371,8 +371,38 @@ OC.app = (function () {
       completeSignIn(found);
     }
 
+    var submitBtn = h('button', {
+      class: 'portal-submit-btn',
+      type: 'submit'
+    }, [
+      OC.icon('lock'),
+      h('span', { class: 'btn-text' }, 'Sign In with Password')
+    ]);
+
+    var isSubmitting = false;
+    function setBtnLoading(loading) {
+      isSubmitting = !!loading;
+      if (submitBtn) {
+        submitBtn.disabled = isSubmitting;
+        OC.ui.clear(submitBtn);
+        if (isSubmitting) {
+          OC.ui.append(submitBtn, [
+            h('span', { class: 'btn-spinner' }),
+            h('span', { class: 'btn-text' }, 'Signing In...')
+          ]);
+        } else {
+          OC.ui.append(submitBtn, [
+            OC.icon('lock'),
+            h('span', { class: 'btn-text' }, 'Sign In with Password')
+          ]);
+        }
+      }
+    }
+
     function handlePasswordLogin(e) {
       if (e && e.preventDefault) e.preventDefault();
+      if (isSubmitting) return;
+
       var email = (emailInput.value || '').trim().toLowerCase();
       var pass = (passInput.value || '').trim();
 
@@ -400,44 +430,64 @@ OC.app = (function () {
         return;
       }
 
+      setBtnLoading(true);
+      errorBox.style.display = 'none';
+
       // Backend MySQL Database Verification via /api/auth/login
       var baseApi = (typeof OC.people !== 'undefined' && OC.people.getApiEndpoint)
         ? OC.people.getApiEndpoint('/api/auth/login')
         : '/api/auth/login';
 
+      function performFallbackVerification() {
+        var expectedPass = (found.invite && found.invite.passcode) ? found.invite.passcode.toLowerCase() : '';
+        var isInviteExp = found.invite ? OC.store.inviteExpired(found.invite) : false;
+        if (expectedPass && pass.toLowerCase() !== expectedPass && pass.toLowerCase() !== 'admin') {
+          setBtnLoading(false);
+          errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password for &quot;' + email + '&quot;.';
+          errorBox.style.display = 'flex';
+          return;
+        }
+        if (isInviteExp && !found.invite.claimed_at) {
+          setBtnLoading(false);
+          errorBox.innerHTML = '<strong>Access Denied:</strong> This 72-hour invitation link and password have expired.';
+          errorBox.style.display = 'flex';
+          return;
+        }
+        completeSignIn(found, 'Logged in successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
+      }
+
       if (typeof fetch === 'function') {
+        var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var timeoutId = controller ? setTimeout(function () {
+          try { controller.abort(); } catch (_) {}
+        }, 2500) : null;
+
         fetch(baseApi, {
           method: 'POST',
+          signal: controller ? controller.signal : undefined,
           headers: { 'Content-Type': 'application/json', 'bypass-tunnel-reminder': 'true' },
           body: JSON.stringify({ email: email, password: pass })
         })
-        .then(function (res) { return res.json(); })
+        .then(function (res) {
+          if (timeoutId) clearTimeout(timeoutId);
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
         .then(function (data) {
           if (data && data.ok) {
             completeSignIn(found);
           } else {
-            errorBox.innerHTML = '<strong>Access Denied:</strong> ' + OC.ui.escapeHtml((data && data.error) || 'Invalid credentials.');
+            setBtnLoading(false);
+            errorBox.innerHTML = '<strong>Access Denied:</strong> ' + ((data && data.error) || 'Invalid credentials.');
             errorBox.style.display = 'flex';
           }
         })
         .catch(function () {
-          // Offline local fallback verification
-          var expectedPass = (found.invite && found.invite.passcode) ? found.invite.passcode.toLowerCase() : '';
-          var isInviteExp = found.invite ? OC.store.inviteExpired(found.invite) : false;
-          if (expectedPass && pass.toLowerCase() !== expectedPass && pass.toLowerCase() !== 'admin') {
-            errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password for &quot;' + OC.ui.escapeHtml(email) + '&quot;.';
-            errorBox.style.display = 'flex';
-            return;
-          }
-          if (isInviteExp && !found.invite.claimed_at) {
-            errorBox.innerHTML = '<strong>Access Denied:</strong> This 72-hour invitation link and password have expired.';
-            errorBox.style.display = 'flex';
-            return;
-          }
-          completeSignIn(found, 'Logged in successfully as ' + found.name + ' (' + OC.can.roleLabel(found) + ')');
+          if (timeoutId) clearTimeout(timeoutId);
+          performFallbackVerification();
         });
       } else {
-        completeSignIn(found);
+        performFallbackVerification();
       }
     }
 
@@ -486,13 +536,7 @@ OC.app = (function () {
           h('label', {}, 'Password / 72-Hr Passcode'),
           passInput
         ]),
-        h('button', {
-          class: 'portal-submit-btn',
-          type: 'submit'
-        }, [
-          OC.icon('lock'),
-          'Sign In with Password'
-        ])
+        submitBtn
       ]),
 
       h('div', { class: 'portal-footer-notice' }, [

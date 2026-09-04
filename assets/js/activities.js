@@ -34,7 +34,7 @@ OC.activities = (function () {
 
   function render(host, rerender) {
     var h = OC.ui.h;
-    var user = me();
+    var user = me() || (OC.store.state && OC.store.state.users && OC.store.state.users[0]) || { id: '', name: 'User', admin: false };
     /* the address decides which tab is open, so a reload or a pasted link
        lands on the same one */
     readTabFromUrl();

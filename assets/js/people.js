@@ -12,7 +12,9 @@ window.OC = window.OC || {};
 OC.people = (function () {
   'use strict';
 
-  function me() { return OC.store.user(OC.store.session()); }
+  function me() {
+    return OC.store.user(OC.store.session()) || (OC.store.state && OC.store.state.users && OC.store.state.users[0]) || { id: '', name: 'User', admin: false };
+  }
 
   function invite(onSuccess) {
     var h = OC.ui.h;

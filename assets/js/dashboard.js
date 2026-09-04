@@ -176,7 +176,7 @@ OC.dashboard = (function () {
 
   function render(host, rerender) {
     var h = OC.ui.h;
-    var user = me();
+    var user = me() || (OC.store.state && OC.store.state.users && OC.store.state.users[0]) || { id: '', name: 'User', admin: false };
     var allTodos = allMyTodos(user);
     var todos = myTodos(user);
     var notes = myInstructions(user);

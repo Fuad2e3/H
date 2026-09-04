@@ -43,7 +43,9 @@ OC.board = (function () {
     ]);
   }
 
-  function me() { return OC.store.user(OC.store.session()); }
+  function me() {
+    return OC.store.user(OC.store.session()) || (OC.store.state && OC.store.state.users && OC.store.state.users[0]) || { id: '', name: 'User', admin: false };
+  }
 
   /* the client filter only offers clients this person is allowed to see */
   function visibleClientPool() {

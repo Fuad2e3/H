@@ -13,7 +13,9 @@ OC.profilePortal = (function () {
   'use strict';
 
   function h() { return OC.ui.h.apply(null, arguments); }
-  function me() { return OC.store.user(OC.store.session()); }
+  function me() {
+    return OC.store.user(OC.store.session()) || (OC.store.state && OC.store.state.users && OC.store.state.users[0]) || { id: '', name: 'User', admin: false };
+  }
 
   var targetUserId = null;
   function activeUser() { return (targetUserId ? OC.store.user(targetUserId) : null) || me(); }

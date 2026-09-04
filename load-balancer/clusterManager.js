@@ -11,7 +11,10 @@ class ClusterManager {
   constructor(options = {}) {
     this.workersCount = options.workersCount || 5;
     this.startPort = options.startPort || 7001;
-    this.apiScript = options.apiScript || path.join(__dirname, '../dev3/API/app.js');
+    const fs = require('fs');
+    const localApi = path.join(__dirname, '..', 'API', 'app.js');
+    const dev3Api = path.join(__dirname, '..', 'dev3', 'API', 'app.js');
+    this.apiScript = options.apiScript || (fs.existsSync(dev3Api) ? dev3Api : localApi);
     this.workers = new Map(); // port -> { process, port, id, restarts }
     this.isShuttingDown = false;
   }

@@ -26,6 +26,7 @@ class LoadBalancer {
 
   getHealthyBackends() {
     const healthy = this.backends.filter(b => b.isHealthy);
+    // Fallback: if all are marked unhealthy, attempt all to prevent complete lockout
     return healthy.length ? healthy : this.backends;
   }
 

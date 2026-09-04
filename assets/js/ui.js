@@ -1668,10 +1668,14 @@ OC.ui = (function () {
     }
 
     function getEligibleUsers() {
-      if (!currentDepts.length) return [];
       var allUsers = (OC.store.state.users || []).filter(function (u) {
         return u && u.status !== 'archived' && u.status !== 'suspended';
       });
+      /* no department to scope by means no restriction, not zero
+         candidates — a client left open to every department (or an admin
+         with nothing yet to scope to) still needs a full roster to pick
+         from, same as before departments started narrowing this list */
+      if (!currentDepts.length) return allUsers;
       return allUsers.filter(function (u) {
         return currentDepts.some(function (dId) {
           if (OC.can && OC.can.inDept) {
@@ -1703,13 +1707,6 @@ OC.ui = (function () {
 
     function renderList() {
       clear(listContainer);
-      if (!currentDepts.length) {
-        listContainer.appendChild(h('div', {
-          class: 'muted',
-          style: 'grid-column:1/-1;padding:16px 12px;text-align:center;font-size:12.5px;color:var(--brand-orange, #f59e0b);'
-        }, '⚠️ No department assigned to this client. Please assign a department first.'));
-        return;
-      }
       var users = getEligibleUsers();
       if (searchStr) {
         users = users.filter(function (u) {
@@ -1721,7 +1718,7 @@ OC.ui = (function () {
         listContainer.appendChild(h('div', {
           class: 'muted',
           style: 'grid-column:1/-1;padding:16px 12px;text-align:center;font-size:12px;'
-        }, 'No members found in ' + (dName || 'the assigned department') + '.'));
+        }, dName ? ('No members found in ' + dName + '.') : 'No matching team members found.'));
         return;
       }
       users.forEach(function (u) {

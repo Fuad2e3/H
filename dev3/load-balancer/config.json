@@ -7,8 +7,18 @@
   "workersCount": 2,
   "startWorkerPort": 7001,
   "backends": [
-    { "id": "backend-1", "host": "127.0.0.1", "port": 7001, "weight": 1 },
-    { "id": "backend-2", "host": "127.0.0.1", "port": 7002, "weight": 1 }
+    {
+      "id": "backend-1",
+      "host": "127.0.0.1",
+      "port": 7001,
+      "weight": 1
+    },
+    {
+      "id": "backend-2",
+      "host": "127.0.0.1",
+      "port": 7002,
+      "weight": 1
+    }
   ],
   "healthCheck": {
     "enabled": true,

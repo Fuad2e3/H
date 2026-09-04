@@ -5,7 +5,7 @@ const { fork } = require('child_process');
 
 /**
  * ClusterManager spawns and supervises multiple backend server worker processes.
- * Supports 5 backends (or any configurable number) with auto-respawn on crash.
+ * Ensures automatic respawn if any worker crashes.
  */
 class ClusterManager {
   constructor(options = {}) {
@@ -14,7 +14,7 @@ class ClusterManager {
     const fs = require('fs');
     const localApi = path.join(__dirname, '..', 'API', 'app.js');
     const dev3Api = path.join(__dirname, '..', 'dev3', 'API', 'app.js');
-    this.apiScript = options.apiScript || (fs.existsSync(dev3Api) ? dev3Api : localApi);
+    this.apiScript = options.apiScript || (fs.existsSync(localApi) ? localApi : (fs.existsSync(dev3Api) ? dev3Api : localApi));
     this.workers = new Map(); // port -> { process, port, id, restarts }
     this.isShuttingDown = false;
   }
@@ -53,9 +53,11 @@ class ClusterManager {
 
     child.stdout.on('data', (chunk) => {
       const msg = chunk.toString().trim();
+      // Filter out redundant banner lines from workers, keep essential logs
       if (msg.includes('Enterprise Manual Server') || msg.includes('═══')) return;
       if (msg.length > 0) {
-        // Output worker log if needed
+        // Prefix with worker tag
+        // console.log(`[${id}:${port}] ${msg}`);
       }
     });
 

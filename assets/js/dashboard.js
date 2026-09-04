@@ -118,7 +118,7 @@ OC.dashboard = (function () {
        competing for room on the row; the title still names it for anyone
        who cannot rely on colour alone */
     var priority = t.priority || 'normal';
-    var priorityLabel = priority.charAt(0).toUpperCase() + priority.slice(1);
+    var priorityLabel = priorityWord(priority);
 
     var checkbox = h('button', {
       type: 'button',
@@ -159,10 +159,31 @@ OC.dashboard = (function () {
         }, OC.ui.mark(assignerUser.id))
       : (assignerText ? h('span', { class: 'dashboard-assignee-text' }, assignerText) : null);
 
+    /* The row truncates the title to stay on one line, so there has to be a
+       way to read the whole thing — and the row already looked clickable
+       (cursor:pointer) without doing anything. The accessible control is the
+       title rather than the article, because the article wraps a real button
+       (the checkbox) and role="button" must not contain one. A mouse click
+       anywhere on the row bubbles to the same handler. */
+    function openDetail() { todoDetailModal(t, user, rerender); }
+
+    var titleNode = h('span', {
+      class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : ''),
+      role: 'button',
+      tabindex: '0',
+      title: t.title,
+      'aria-label': 'Open task: ' + t.title,
+      onKeydown: function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+        e.preventDefault();
+        openDetail();
+      }
+    }, t.title);
+
     var mainRow = h('div', { class: 'dashboard-todo-main-row' }, [
       checkbox,
       clientCode ? h('span', { class: 'dashboard-client-name' }, clientCode) : null,
-      h('span', { class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : '') }, t.title),
+      titleNode,
       channelBadge,
       dueNode,
       assigneeNode
@@ -170,8 +191,70 @@ OC.dashboard = (function () {
 
     return h('article', {
       class: 'dashboard-todo-row' + (isDone ? ' is-done' : '') + (overdue ? ' is-overdue' : ''),
-      'data-id': t.id
+      'data-id': t.id,
+      onClick: openDetail
     }, [mainRow]);
+  }
+
+  /* the full task, for when the one-line row could not show all of it */
+  function todoDetailModal(t, user, rerender) {
+    var h = OC.ui.h;
+    var priority = t.priority || 'normal';
+    var isDone = t.state === 'done';
+    var overdue = !isDone && OC.ui.daysLate(t.due) > 0;
+
+    var clientId = t.client || (Array.isArray(t.clients) ? t.clients[0] : '');
+    var dept = OC.store.department(t.department || (Array.isArray(t.departments) ? t.departments[0] : ''));
+    var assignerId = t.created_by || (t.assignee || (Array.isArray(t.assignees) ? t.assignees[0] : ''));
+    var assignerUser = OC.store.user(assignerId);
+
+    function line(label, value) {
+      if (!value) return null;
+      return h('div', { class: 'todo-detail-line' }, [
+        h('span', { class: 'todo-detail-label' }, label),
+        h('div', { class: 'todo-detail-value' }, value)
+      ]);
+    }
+
+    var actions = [{ label: 'Close', onClick: function (close) { close(); } }];
+    if (OC.can && OC.can.canEditTodo && OC.can.canEditTodo(user, t) && OC.board && OC.board.editTodo) {
+      actions.push({
+        label: 'Edit task', primary: true,
+        onClick: function (close) { close(); OC.board.editTodo(t); }
+      });
+    }
+
+    OC.ui.modal({
+      title: 'Task details',
+      className: 'todo-detail-modal',
+      content: h('div', { class: 'todo-detail' }, [
+        /* the title wraps here in full — this is the whole point of the popup */
+        h('h3', { class: 'todo-detail-title' + (isDone ? ' strikethrough' : '') }, t.title),
+        h('div', { class: 'todo-detail-chips' }, [
+          h('span', { class: 'chip prio-chip prio-' + priority }, priorityWord(priority) + ' priority'),
+          h('span', { class: 'chip' }, isDone ? 'Done' : (t.state || 'open')),
+          t.due ? h('span', { class: overdue ? 'chip overdue' : 'chip custom' }, OC.ui.dueLabel(t.due)) : null,
+          (t.recurrence && t.recurrence !== 'none') ? h('span', { class: 'chip recurring' }, t.recurrence) : null,
+          t.archived ? h('span', { class: 'chip custom' }, 'archived') : null
+        ].filter(Boolean)),
+        t.description ? line('Description', h('p', { class: 'todo-detail-desc' }, t.description)) : null,
+        clientId ? line('Client', OC.ui.clientLabel(clientId)) : null,
+        dept ? line('Department', dept.name) : null,
+        assignerUser
+          ? line('Assigned by', h('span', { class: 'todo-detail-person' }, [
+              OC.ui.mark(assignerUser.id),
+              h('span', {}, assignerUser.name + (assignerUser.title ? ' — ' + assignerUser.title : ''))
+            ]))
+          : null,
+        t.blocked_reason ? line('Blocked', t.blocked_reason) : null
+      ].filter(Boolean)),
+      actions: actions
+    });
+  }
+
+  function priorityWord(p) {
+    var v = String(p || 'normal');
+    return v.charAt(0).toUpperCase() + v.slice(1);
   }
 
   function render(host, rerender) {

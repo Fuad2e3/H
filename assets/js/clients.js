@@ -102,14 +102,13 @@ OC.clients = (function () {
   }
 
   function getClientDisplayInfo(c) {
-    if (!c) return { name: 'Unknown', code: '', number: '', idText: '' };
+    if (!c) return { name: 'Unknown', subBadge: '', code: '' };
     var rawName = (c.name || '').trim();
     var rawId = (c.client_id || '').trim();
     var code = (c.client_code || '').trim();
     var num = (c.client_number || '').trim();
 
     var name = rawName;
-    // If name is empty or formatted like "062 - SPN - Stephanie", parse clean name & identifiers
     if (!name && rawId) {
       var parts = rawId.split(' - ');
       if (parts.length >= 3) {
@@ -134,11 +133,16 @@ OC.clients = (function () {
 
     if (!name) name = code || rawId || 'Client #' + (c.id || '').slice(-4);
 
+    var subBadge = '';
+    if (code && num) subBadge = code + ' · #' + num;
+    else if (code) subBadge = code;
+    else if (num) subBadge = '#' + num;
+    else if (rawId && rawId !== name) subBadge = rawId;
+
     return {
       name: name,
       code: code,
-      number: num,
-      idText: rawId || (num && code ? num + ' - ' + code : (num || code || ''))
+      subBadge: subBadge
     };
   }
 
@@ -1558,50 +1562,40 @@ OC.clients = (function () {
         }))
       ]),
 
-      /* Clients Grid (Rich Visualized Cards) */
+      /* Clients Grid (Strictly 2 per line, Clean & Uncluttered) */
       filtered.length
-        ? h('div', { class: 'grid-2', style: 'margin:12px 0 24px;gap:16px;' }, filtered.map(function (c) {
+        ? h('div', { class: 'clients-grid-two' }, filtered.map(function (c) {
             var info = getClientDisplayInfo(c);
 
-            // Workload metrics & analytics
+            // Workload metrics
             var clientTodos = (OC.store.state.todos || []).filter(function (t) {
               return !t.archived && (t.client === c.id || (Array.isArray(t.clients) && t.clients.indexOf(c.id) > -1));
             });
-            var totalTasks = clientTodos.length;
-            var completedTasks = clientTodos.filter(function (t) { return t.state === 'done'; }).length;
-            var openTasks = totalTasks - completedTasks;
-            var overdueTasks = clientTodos.filter(function (t) {
-              return t.state !== 'done' && t.due && new Date(t.due) < new Date();
-            }).length;
-            var progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            var openTasks = clientTodos.filter(function (t) { return t.state !== 'done'; }).length;
 
-            var clientNotes = (OC.store.state.instructions || []).filter(function (n) {
-              return !n.archived && (n.client === c.id || (Array.isArray(n.clients) && n.clients.indexOf(c.id) > -1));
-            });
-
-            // Department chips
+            // Departments
             var depts = Array.isArray(c.departments) && c.departments.length ? c.departments : (c.department ? [c.department] : []);
             var deptNodes = depts.map(function (did) {
               var d = OC.store.department(did);
-              return d ? h('span', { class: 'chip dept', style: 'font-size:10.5px;padding:2px 7px;' }, d.name) : null;
+              return d ? h('span', { class: 'chip dept', style: 'font-size:11px;' }, d.name) : null;
             }).filter(Boolean);
 
             // Assignees
             var assigneeIds = (Array.isArray(c.assignees) && c.assignees.length) ? c.assignees : (Array.isArray(c.assigned_users) ? c.assigned_users : []);
-            var assigneeNodes = assigneeIds.slice(0, 4).map(function (uid) {
+            var assigneeNodes = assigneeIds.slice(0, 3).map(function (uid) {
               return OC.ui.mark(uid);
             });
-            if (assigneeIds.length > 4) {
-              assigneeNodes.push(h('span', { class: 'chip custom', style: 'font-size:10px;padding:1px 5px;' }, '+' + (assigneeIds.length - 4)));
+            if (assigneeIds.length > 3) {
+              assigneeNodes.push(h('span', { class: 'chip custom', style: 'font-size:10px;padding:1px 5px;' }, '+' + (assigneeIds.length - 3)));
             }
 
-            // Avatar badge letters (2-3 chars)
+            // Avatar badge text
             var avatarText = (info.code || info.name || 'CL').replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase();
             if (info.code && info.code.length <= 4) avatarText = info.code.toUpperCase();
 
             return h('div', {
               class: 'card client-item-card',
-              title: 'Click to open ' + info.name + ' workspace portal & reports',
+              title: 'Click to open ' + info.name + ' workspace portal',
               onClick: function () {
                 activePortalClientId = c.id;
                 isDetailsEditing = false;
@@ -1614,13 +1608,7 @@ OC.clients = (function () {
                 h('div', { class: 'client-avatar-badge' }, avatarText),
                 h('div', { class: 'client-head-info' }, [
                   h('h3', { class: 'client-card-title' }, info.name),
-                  h('div', { class: 'client-meta-pill-row' }, [
-                    info.code ? h('span', { class: 'client-sub-badge', style: 'font-weight:700;color:var(--ink);' }, info.code) : null,
-                    info.number ? h('span', { class: 'client-sub-badge' }, '#' + info.number) : null,
-                    (info.idText && info.idText !== info.name && info.idText !== info.code)
-                      ? h('span', { class: 'client-sub-badge', title: 'Client ID: ' + info.idText }, info.idText)
-                      : null
-                  ].filter(Boolean))
+                  info.subBadge ? h('span', { class: 'client-sub-badge' }, info.subBadge) : null
                 ]),
                 h('span', { class: 'client-status-indicator ' + (c.status === 'active' ? 'is-active' : 'is-paused') }, [
                   h('span', { class: 'client-status-dot' }),
@@ -1628,57 +1616,22 @@ OC.clients = (function () {
                 ])
               ]),
 
-              /* KPI Metrics Grid (Visualizing Workload & Output) */
-              h('div', { class: 'client-kpi-grid' }, [
-                h('div', { class: 'client-kpi-item' }, [
-                  h('span', { class: 'client-kpi-val', style: openTasks > 0 ? 'color:var(--brand-orange,#f97316);' : 'color:var(--text-secondary);' }, String(openTasks)),
-                  h('span', { class: 'client-kpi-lbl' }, 'Open')
-                ]),
-                h('div', { class: 'client-kpi-item' }, [
-                  h('span', { class: 'client-kpi-val', style: completedTasks > 0 ? 'color:var(--success,#10b981);' : 'color:var(--text-secondary);' }, String(completedTasks)),
-                  h('span', { class: 'client-kpi-lbl' }, 'Done')
-                ]),
-                h('div', { class: 'client-kpi-item' }, [
-                  h('span', { class: 'client-kpi-val', style: overdueTasks > 0 ? 'color:var(--danger,#ef4444);font-weight:800;' : 'color:var(--text-secondary);' }, String(overdueTasks)),
-                  h('span', { class: 'client-kpi-lbl' }, 'Overdue')
-                ]),
-                h('div', { class: 'client-kpi-item' }, [
-                  h('span', { class: 'client-kpi-val', style: clientNotes.length > 0 ? 'color:var(--blueprint,#3b82f6);' : 'color:var(--text-secondary);' }, String(clientNotes.length)),
-                  h('span', { class: 'client-kpi-lbl' }, 'Notices')
-                ])
-              ]),
-
-              /* Workload Progress Bar Visualization */
-              h('div', { class: 'client-progress-box' }, [
-                h('div', { class: 'client-progress-head' }, [
-                  h('span', {}, totalTasks > 0 ? (completedTasks + ' of ' + totalTasks + ' tasks completed') : 'No active tasks assigned'),
-                  h('span', { style: 'font-weight:700;font-family:var(--font-mono);' }, totalTasks > 0 ? (progressPercent + '%') : '0%')
-                ]),
-                h('div', { class: 'client-progress-track' }, [
-                  h('div', {
-                    class: 'client-progress-fill',
-                    style: 'width:' + (totalTasks > 0 ? progressPercent : 0) + '%;'
-                  })
-                ])
-              ]),
-
-              /* Departments & Assignees Row */
-              (deptNodes.length || assigneeNodes.length || c.contact) ? h('div', { class: 'row', style: 'margin:2px 0 10px;gap:6px;flex-wrap:wrap;align-items:center;' }, [
-                deptNodes.length ? h('div', { style: 'display:inline-flex;gap:4px;flex-wrap:wrap;' }, deptNodes) : null,
-                c.contact ? h('span', { class: 'chip custom', style: 'font-size:10.5px;' }, [OC.icon('users'), ' ' + c.contact]) : null,
-                assigneeNodes.length ? h('div', { class: 'client-card-team push', style: 'display:inline-flex;gap:3px;align-items:center;' }, [
-                  h('span', { style: 'font-size:10.5px;color:var(--text-secondary);margin-right:2px;' }, 'Assigned:'),
+              /* Clean meta row: Department, Tasks, Team */
+              h('div', { class: 'client-card-meta-row' }, [
+                deptNodes.length ? h('div', { style: 'display:inline-flex;gap:4px;' }, deptNodes) : null,
+                openTasks > 0
+                  ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, openTasks + ' open task' + (openTasks > 1 ? 's' : ''))
+                  : h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'All tasks done'),
+                assigneeNodes.length ? h('div', { style: 'display:inline-flex;gap:4px;align-items:center;margin-left:auto;' }, [
+                  h('span', { style: 'font-size:11px;color:var(--text-secondary);' }, 'Assigned:'),
                   h('div', { style: 'display:inline-flex;gap:3px;' }, assigneeNodes)
                 ]) : null
-              ].filter(Boolean)) : null,
+              ].filter(Boolean)),
 
-              /* Card Footer CTA */
+              /* Footer CTA */
               h('div', { class: 'client-card-footer' }, [
-                h('span', { style: 'font-size:11px;color:var(--text-secondary);font-style:italic;' },
-                  c.updated_at ? ('Updated ' + OC.ui.fmtWhen(c.updated_at)) : 'Workspace ready'
-                ),
                 h('span', { class: 'client-card-cta' }, [
-                  'Open Workspace & Reports',
+                  'Open Client Portal',
                   h('span', { style: 'font-size:14px;' }, '→')
                 ])
               ])

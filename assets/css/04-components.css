@@ -5186,46 +5186,53 @@ dialog.modal.fallback {
 }
 
 /* =========================================================================
-   Rich Client Cards & Workload Visualization
+   2-Column Clean Client Cards
    ========================================================================= */
+.clients-grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 16px;
+  margin: 14px 0 24px;
+}
+@media (max-width: 768px) {
+  .clients-grid-two {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .client-item-card {
   display: flex;
   flex-direction: column;
   background: var(--card-bg, #111827);
   border: 1px solid var(--rule, #1f2937);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 16px 18px;
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  min-height: 200px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 .client-item-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   border-color: var(--blueprint, #3b82f6);
-  box-shadow: 0 12px 28px -5px rgba(0, 0, 0, 0.45), 0 0 16px rgba(59, 130, 246, 0.22);
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.35);
 }
 .client-card-head {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
 }
 .client-avatar-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 14.5px;
-  letter-spacing: 0.5px;
+  font-weight: 700;
+  font-size: 14px;
   color: #ffffff;
   background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
   flex-shrink: 0;
 }
 .client-head-info {
@@ -5234,27 +5241,19 @@ dialog.modal.fallback {
 }
 .client-card-title {
   margin: 0;
-  font-size: 15.5px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--ink, #f9fafb);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: -0.2px;
-}
-.client-meta-pill-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 3px;
-  flex-wrap: wrap;
+  line-height: 1.3;
 }
 .client-sub-badge {
-  font-size: 11px;
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 11.5px;
   font-family: var(--font-mono, monospace);
   color: var(--text-secondary, #9ca3af);
   background: rgba(255, 255, 255, 0.05);
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -5264,7 +5263,7 @@ dialog.modal.fallback {
   gap: 5px;
   font-size: 11.5px;
   font-weight: 600;
-  padding: 3px 9px;
+  padding: 3px 8px;
   border-radius: 20px;
   flex-shrink: 0;
 }
@@ -5283,75 +5282,27 @@ dialog.modal.fallback {
   height: 6px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 6px currentColor;
 }
-.client-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+.client-card-meta-row {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin: 10px 0 12px;
-  padding: 10px 8px;
-  background: rgba(0, 0, 0, 0.22);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-}
-.client-kpi-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-.client-kpi-val {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ink, #ffffff);
-  font-family: var(--font-mono, monospace);
-  line-height: 1.2;
-}
-.client-kpi-lbl {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--text-secondary, #9ca3af);
-  margin-top: 2px;
-}
-.client-progress-box {
-  margin: 4px 0 12px;
-}
-.client-progress-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11.5px;
-  color: var(--text-secondary, #9ca3af);
-  margin-bottom: 5px;
-}
-.client-progress-track {
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.client-progress-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
-  background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+  flex-wrap: wrap;
+  margin: 14px 0 10px;
 }
 .client-card-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-top: 10px;
+  justify-content: flex-end;
   margin-top: auto;
+  padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 .client-card-cta {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 4px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--blueprint, #60a5fa);
   transition: color 0.15s ease, transform 0.15s ease;

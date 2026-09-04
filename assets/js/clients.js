@@ -133,16 +133,10 @@ OC.clients = (function () {
 
     if (!name) name = code || rawId || 'Client #' + (c.id || '').slice(-4);
 
-    var subBadge = '';
-    if (code && num) subBadge = code + ' · #' + num;
-    else if (code) subBadge = code;
-    else if (num) subBadge = '#' + num;
-    else if (rawId && rawId !== name) subBadge = rawId;
-
     return {
       name: name,
       code: code,
-      subBadge: subBadge
+      subBadge: ''
     };
   }
 
@@ -1607,8 +1601,7 @@ OC.clients = (function () {
               h('div', { class: 'client-card-head' }, [
                 h('div', { class: 'client-avatar-badge' }, avatarText),
                 h('div', { class: 'client-head-info' }, [
-                  h('h3', { class: 'client-card-title' }, info.name),
-                  info.subBadge ? h('span', { class: 'client-sub-badge' }, info.subBadge) : null
+                  h('h3', { class: 'client-card-title' }, info.name)
                 ]),
                 h('span', { class: 'client-status-indicator ' + (c.status === 'active' ? 'is-active' : 'is-paused') }, [
                   h('span', { class: 'client-status-dot' }),

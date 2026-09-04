@@ -216,3 +216,6 @@ test('7. Clean up test artifacts cleanly from DB', () => {
 console.log('\n====================================================================');
 console.log(` 🎉 ALL ${pass} DATABASE PERSISTENCE CHECKS VERIFIED & PASSED! ✅`);
 console.log('====================================================================\n');
+
+setTimeout(() => process.exit(0), 100);
+

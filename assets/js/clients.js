@@ -49,6 +49,45 @@ OC.clients = (function () {
     return y + '-' + (m < 10 ? '0' + m : m) + '-' + (day < 10 ? '0' + day : day);
   }
 
+  function openManageAssigneesModal(client, onDone) {
+    var user = me();
+    var initialDepts = Array.isArray(client.departments) && client.departments.length
+      ? client.departments
+      : (client.department ? [client.department] : []);
+    var currentAssignees = Array.isArray(client.assignees) ? client.assignees.slice() : (Array.isArray(client.assigned_users) ? client.assigned_users.slice() : []);
+
+    var picker = OC.ui.clientAssigneePicker(currentAssignees, initialDepts, null);
+    var currentLabel = OC.ui.clientLabel ? OC.ui.clientLabel(client) : (client.name || client.client_id);
+
+    (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
+      title: 'Assign Team Members — ' + currentLabel,
+      content: OC.ui.h('div', {}, [
+        OC.ui.field('Select Department Member(s)', picker.node, {
+          hint: 'Only selected members (along with Department Head & System Admin) will be able to see and work on this client.'
+        })
+      ]),
+      actions: [
+        { label: 'Cancel', onClick: function (close) { close(); } },
+        {
+          label: 'Save Assignment', primary: true, onClick: function (close) {
+            var selected = picker.getAssignees();
+            OC.store.mutate({
+              actor: user.id,
+              action: 'client.assign',
+              target: currentLabel,
+              detail: 'Updated assigned working members (' + selected.length + ' members) for ' + currentLabel
+            }, function () {
+              client.assignees = selected;
+            });
+            OC.ui.toast('Client team members updated.');
+            if (onDone) onDone();
+            close();
+          }
+        }
+      ]
+    });
+  }
+
   function editClient(client, onDone) {
     var h = OC.ui.h;
     var user = me();
@@ -66,11 +105,18 @@ OC.clients = (function () {
     var canDelete = !!(OC.can && OC.can.canDeleteClient ? OC.can.canDeleteClient(user, client) : (user && user.admin));
     var canScope = !!(OC.can && OC.can.assignClientDepartment
       ? OC.can.assignClientDepartment(user) : (user && user.admin));
+    var canAssign = !!(OC.can && OC.can.canAssignClientMembers
+      ? OC.can.canAssignClientMembers(user, client) : (user && (user.admin || (OC.can && OC.can.headOfAny && OC.can.headOfAny(user)))));
 
     var initialDepts = Array.isArray(client.departments) && client.departments.length
       ? client.departments
       : (client.department ? [client.department] : []);
-    var deptCheckboxes = OC.ui.deptCheckboxGroup(initialDepts);
+    var initialAssignees = Array.isArray(client.assignees) ? client.assignees : (Array.isArray(client.assigned_users) ? client.assigned_users : []);
+
+    var assigneePicker = canAssign ? OC.ui.clientAssigneePicker(initialAssignees, initialDepts, null) : null;
+    var deptCheckboxes = OC.ui.deptCheckboxGroup(initialDepts, function (newDepts) {
+      if (assigneePicker) assigneePicker.setDepartments(newDepts);
+    });
 
     function deptNames(ids) {
       if (!ids || !ids.length) return 'all departments';
@@ -86,6 +132,12 @@ OC.clients = (function () {
         hint: 'Check departments allowed to see this client. Leave unchecked for all departments (visible to everyone).'
       })
     ]);
+
+    var assigneeRow = canAssign ? h('div', { class: 'client-assignee-row', style: 'margin-top:10px;' }, [
+      OC.ui.field('7. Assigned Working Member(s) (Dept Head & Admin)', assigneePicker.node, {
+        hint: 'Select the specific person(s) allowed to see and work on this client. If left empty, only System Admin & Dept Head can access.'
+      })
+    ]) : null;
 
     var actions = [
       { label: 'Cancel', onClick: function (close) { close(); } },
@@ -129,8 +181,9 @@ OC.clients = (function () {
           }
 
           var selectedDepts = canScope ? deptCheckboxes.getDepartments() : (client.departments || []);
+          var selectedAssignees = (canAssign && assigneePicker) ? assigneePicker.getAssignees() : (client.assignees || []);
           var primaryDept = selectedDepts.length ? selectedDepts[0] : '';
-          var deptNote = '; visible to ' + deptNames(selectedDepts);
+          var deptNote = '; visible to ' + deptNames(selectedDepts) + (selectedAssignees.length ? ' (' + selectedAssignees.length + ' assigned)' : '');
 
           var auditLabel = cCodeVal || cName || cIdVal;
           OC.store.mutate({
@@ -146,6 +199,9 @@ OC.clients = (function () {
             if (canScope) {
               client.departments = selectedDepts;
               client.department = primaryDept;
+            }
+            if (canAssign) {
+              client.assignees = selectedAssignees;
             }
           });
           OC.ui.toast('Client updated.');
@@ -204,7 +260,8 @@ OC.clients = (function () {
         OC.ui.field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
         OC.ui.field('4. Client / Company name', name, { hint: 'Official client or company name (optional).' }),
         OC.ui.field('5. Status', status),
-        canScope ? deptRow : null
+        canScope ? deptRow : null,
+        canAssign ? assigneeRow : null
       ]),
       actions: actions
     });
@@ -369,6 +426,9 @@ OC.clients = (function () {
     var openTaskCount = clientTodos.filter(function (t) { return !t.archived && t.state !== 'done'; }).length;
 
     /* 1. Top Executive Hero Banner */
+    var canAssign = !!(OC.can && OC.can.canAssignClientMembers ? OC.can.canAssignClientMembers(user, client) : (user && (user.admin || (OC.can && OC.can.headOfAny && OC.can.headOfAny(user)))));
+    var clientAssignees = Array.isArray(client.assignees) ? client.assignees : (Array.isArray(client.assigned_users) ? client.assigned_users : []);
+
     var initials = (client.client_code || client.name || client.client_id || 'CL').slice(0, 3).toUpperCase();
     var heroBanner = h('div', { class: 'user-profile-banner' }, [
       h('div', { class: 'user-profile-banner-left' }, [
@@ -380,15 +440,22 @@ OC.clients = (function () {
             h('h2', { class: 'user-profile-name' }, clientName),
             h('span', { class: 'user-profile-badge' }, client.status === 'active' ? 'ACTIVE CLIENT' : 'PAUSED'),
             client.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Client ID: ' + client.client_id) : null,
-            client.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null
+            client.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null,
+            clientAssignees.length ? h('span', { class: 'chip dept', style: 'font-size:11px;' }, clientAssignees.length + ' Working Members') : null
           ].filter(Boolean))
           /* two details next to the name — ID and Code — same as the grid
              card's two chips; the phone number still shows in Edit Client */
         ])
       ]),
-      /* the ACTIVE CLIENT / PAUSED badge next to the name already says this;
-         a second "Live Operational" panel over here said it again */
-      h('div', { class: 'user-profile-right' }, [
+      h('div', { class: 'user-profile-right', style: 'display:flex;gap:8px;align-items:center;' }, [
+        canAssign ? h('button', {
+          class: 'btn small secondary',
+          type: 'button',
+          style: 'font-weight:600;display:inline-flex;align-items:center;gap:6px;',
+          onClick: function () {
+            openManageAssigneesModal(client, function () { renderClientPortal(host, client, onBack); });
+          }
+        }, [OC.icon('user'), 'Assign Team']) : null,
         h('button', {
           class: 'btn small primary',
           type: 'button',
@@ -397,7 +464,7 @@ OC.clients = (function () {
             editClient(client, function () { renderClientPortal(host, client, onBack); });
           }
         }, [OC.icon('edit'), 'Edit Client'])
-      ])
+      ].filter(Boolean))
     ]);
 
     /* 2. Sidebar Navigation Items */
@@ -786,7 +853,55 @@ OC.clients = (function () {
 
       if (!isDetailsEditing) {
         /* VIEW MODE: Direct clean text rendering with preserved lines & continuous Edit button */
+        var assignedUsers = clientAssignees.map(function (uid) { return OC.store.user(uid); }).filter(Boolean);
+
+        var teamCard = h('div', { class: 'portal-credential-card', style: 'padding:16px 20px;margin-bottom:18px;' }, [
+          h('div', { class: 'row', style: 'justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;' }, [
+            h('div', {}, [
+              h('h3', { style: 'margin:0;font-size:15px;display:flex;align-items:center;gap:8px;' }, [
+                OC.icon('user'),
+                'Assigned Working Members (' + assignedUsers.length + ')'
+              ]),
+              h('p', { class: 'muted', style: 'font-size:12px;margin:2px 0 0;' },
+                'Only assigned members, Department Heads, and System Admins can access and work on this client.')
+            ]),
+            canAssign ? h('button', {
+              class: 'btn small secondary',
+              type: 'button',
+              style: 'font-weight:600;display:inline-flex;align-items:center;gap:6px;',
+              onClick: function () {
+                openManageAssigneesModal(client, function () {
+                  renderClientPortal(host, client, onBack);
+                });
+              }
+            }, [OC.icon('edit'), 'Manage Team']) : null
+          ]),
+          assignedUsers.length ? h('div', { style: 'display:flex;flex-wrap:wrap;gap:10px;' }, assignedUsers.map(function (u) {
+            return h('div', {
+              style: 'display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(255,255,255,0.04);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:20px;'
+            }, [
+              OC.ui.initials(u),
+              h('div', { style: 'display:flex;flex-direction:column;' }, [
+                h('span', { style: 'font-size:13px;font-weight:600;' }, u.name),
+                h('span', { class: 'muted', style: 'font-size:11px;' }, OC.can && OC.can.roleLabel ? OC.can.roleLabel(u) : 'Member')
+              ])
+            ]);
+          })) : h('div', { style: 'padding:12px 14px;background:rgba(245,158,11,0.06);border:1px dashed rgba(245,158,11,0.3);border-radius:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;' }, [
+            h('span', { class: 'muted', style: 'font-size:13px;' }, '⚠️ No specific members assigned yet. Currently only Department Head and System Admin can access.'),
+            canAssign ? h('button', {
+              class: 'btn primary small',
+              type: 'button',
+              onClick: function () {
+                openManageAssigneesModal(client, function () {
+                  renderClientPortal(host, client, onBack);
+                });
+              }
+            }, ['+ Assign Person']) : null
+          ])
+        ]);
+
         detailsContent = h('div', { class: 'portal-view-content' }, [
+          teamCard,
           h('div', { class: 'portal-header-box' }, [
             h('div', {}, [
               h('h2', { class: 'portal-view-title' }, [OC.icon('edit'), 'Details & Documentation']),
@@ -1218,7 +1333,8 @@ OC.clients = (function () {
                  by at a glance. Code and phone number still show once the
                  client is open. */
               h('div', { class: 'row', style: 'margin:8px 0 6px;gap:6px;flex-wrap:wrap;' }, [
-                (c.client_id || c.client_code) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Client ID: ' + (c.client_id || c.client_code)) : null
+                (c.client_id || c.client_code) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Client ID: ' + (c.client_id || c.client_code)) : null,
+                (Array.isArray(c.assignees) && c.assignees.length) ? h('span', { class: 'chip dept', style: 'font-size:11px;' }, c.assignees.length + ' assigned') : null
               ].filter(Boolean)),
               h('div', { class: 'row', style: 'justify-content:flex-end;margin-top:6px;' }, [
                 h('span', { style: 'font-size:12px;color:var(--blueprint);font-weight:600;' }, 'Open Client Portal & Analytics →')

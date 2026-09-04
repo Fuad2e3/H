@@ -22,23 +22,47 @@ OC.can = (function () {
 
   /* ---- position in a department ---------------------------------------- */
   function levelIn(user, deptId) {
-    if (!user) return null;
-    for (var i = 0; i < user.departments.length; i++) {
-      if (user.departments[i].department === deptId) return user.departments[i].level;
+    if (!user || !deptId) return null;
+    var targetDept = S().department(deptId);
+    var targetId = targetDept ? targetDept.id : String(deptId).toLowerCase();
+    var targetName = targetDept ? targetDept.name.toLowerCase() : String(deptId).toLowerCase();
+
+    var userDepts = Array.isArray(user.departments) ? user.departments : [];
+    if (user.department) userDepts = userDepts.concat([{ department: user.department, level: user.level || 'member' }]);
+    if (user.invite && user.invite.department) userDepts = userDepts.concat([{ department: user.invite.department, level: user.invite.level || 'member' }]);
+
+    for (var i = 0; i < userDepts.length; i++) {
+      var m = userDepts[i];
+      var mDept = (typeof m === 'string') ? m : (m && m.department);
+      if (!mDept) continue;
+      if (mDept === deptId || mDept === targetId || String(mDept).toLowerCase() === targetName || String(mDept).toLowerCase() === targetId) {
+        return (m && m.level) || user.level || 'member';
+      }
+      var uDept = S().department(mDept);
+      if (uDept && (uDept.id === targetId || uDept.name.toLowerCase() === targetName)) {
+        return (m && m.level) || user.level || 'member';
+      }
     }
     return null;
   }
 
   function rank(deptId, level) {
+    if (!level) return Infinity;
+    if (String(level).toLowerCase() === 'head') return 0;
+    if (String(level).toLowerCase() === 'lead') return 1;
     var dept = S().department(deptId);
-    if (!dept || !level) return Infinity;
-    var i = dept.levels.indexOf(level);
-    return i === -1 ? Infinity : i;
+    if (!dept) return String(level).toLowerCase() === 'member' ? 2 : Infinity;
+    var i = Array.isArray(dept.levels) ? dept.levels.indexOf(level) : -1;
+    return i === -1 ? (String(level).toLowerCase() === 'member' ? 2 : Infinity) : i;
   }
 
   function rankOf(user, deptId) { return rank(deptId, levelIn(user, deptId)); }
 
-  function isHead(user, deptId) { return rankOf(user, deptId) === 0; }
+  function isHead(user, deptId) {
+    if (!user) return false;
+    if (user.admin) return true;
+    return rankOf(user, deptId) === 0;
+  }
   function isLead(user, deptId) { return rankOf(user, deptId) === 1; }
   function inDept(user, deptId) {
     if (!user || !deptId) return false;
@@ -64,7 +88,11 @@ OC.can = (function () {
   }
 
   function headOfAny(user) {
-    return !!user && Array.isArray(user.departments) && user.departments.some(function (m) { return rank(m.department, m.level) === 0; });
+    if (!user) return false;
+    if (user.admin) return true;
+    var userDepts = departmentsOf(user);
+    if (!userDepts.length && user.department) userDepts = [user.department];
+    return userDepts.some(function (d) { return isHead(user, d); });
   }
 
   function departmentsOf(user) {
@@ -328,22 +356,87 @@ OC.can = (function () {
   var editClient = canEditClient; // alias — identical logic, kept for backwards compat
   function canDeleteClient(user, client) { return !!(user && user.admin); }
 
-  /* A client may be scoped to one or multiple departments. Left unscoped it stays visible to
-     everyone, which is how every client behaved before scoping existed; scoped,
-     it is visible only to those departments' people and the system admin. */
+  /* A client may be scoped to one or multiple departments.
+     - System Admin: sees all clients across all departments.
+     - Department Head: sees all clients belonging to their department(s).
+     - Assigned members: if assignees are selected on the client, ONLY those selected
+       members (along with Dept Head & System Admin) can see and work on the client.
+     - General department members not selected/assigned cannot see or work on the client.
+     - Legacy unscoped clients (no departments & no assignees): visible to all.
+  */
   function seeClient(user, client) {
     if (!user || !client) return false;
     if (user.admin) return true;
+
     var depts = Array.isArray(client.departments) && client.departments.length
       ? client.departments
       : (client.department ? [client.department] : []);
-    if (!depts.length) return true;
-    return depts.some(function (deptId) { return inDept(user, deptId); });
+
+    var assignees = Array.isArray(client.assignees)
+      ? client.assignees
+      : (Array.isArray(client.assigned_users) ? client.assigned_users : null);
+
+    // If this specific user is assigned to the client, they can see and work on it
+    if (assignees && assignees.indexOf(user.id) > -1) {
+      return true;
+    }
+
+    if (depts.length) {
+      // Department Heads of any of the client's departments see all clients in their department
+      var isDeptHead = depts.some(function (deptId) { return isHead(user, deptId); });
+      if (isDeptHead) return true;
+
+      // If assignees list is defined, only assigned members (or dept head/admin) get access
+      if (assignees !== null) {
+        return false;
+      }
+
+      // If client has no assignees property defined yet (legacy scoped client),
+      // check if user is a member of the department
+      return depts.some(function (deptId) { return inDept(user, deptId); });
+    }
+
+    // Unscoped client
+    if (assignees !== null) {
+      return assignees.indexOf(user.id) > -1 || headOfAny(user);
+    }
+    return true;
   }
 
   function visibleClients(user) {
     if (!user) return [];
     return (S().state.clients || []).filter(function (c) { return seeClient(user, c); });
+  }
+
+  /* Who can assign members to a client: System Admin or Department Head of that client's department */
+  function canAssignClientMembers(user, client) {
+    if (!user) return false;
+    if (user.admin) return true;
+    if (!client) return headOfAny(user);
+    var depts = Array.isArray(client.departments) && client.departments.length
+      ? client.departments
+      : (client.department ? [client.department] : []);
+    if (!depts.length) return headOfAny(user);
+    return depts.some(function (deptId) { return isHead(user, deptId); });
+  }
+
+  /* Eligible members who can be assigned to this client */
+  function assignableClientMembers(client) {
+    if (!client) return [];
+    var depts = Array.isArray(client.departments) && client.departments.length
+      ? client.departments
+      : (client.department ? [client.department] : []);
+    var allUsers = (S().state.users || []).filter(function (u) {
+      return u && u.status !== 'archived' && u.status !== 'suspended';
+    });
+    if (!depts.length) return allUsers;
+    return allUsers.filter(function (u) {
+      return depts.some(function (d) { return inDept(u, d); });
+    });
+  }
+
+  function canWorkOnClient(user, client) {
+    return seeClient(user, client);
   }
 
   /* only the system admin decides which department a client belongs to */
@@ -465,7 +558,9 @@ OC.can = (function () {
     canReactGroupMessage: canReactGroupMessage,
     postInstruction: postInstruction, createTodo: createTodo,
     createClient: createClient, editClient: editClient, canEditClient: canEditClient, canDeleteClient: canDeleteClient,
-    seeClient: seeClient, visibleClients: visibleClients, assignClientDepartment: assignClientDepartment, canEditTodo: canEditTodo,
+    seeClient: seeClient, visibleClients: visibleClients, assignClientDepartment: assignClientDepartment,
+    canAssignClientMembers: canAssignClientMembers, assignableClientMembers: assignableClientMembers, canWorkOnClient: canWorkOnClient,
+    canEditTodo: canEditTodo,
     canEditInstruction: canEditInstruction, canDeleteInstruction: canDeleteInstruction,
     canEditComment: canEditComment, canDeleteComment: canDeleteComment,
     changeState: changeState, reassign: reassign, assignsOthers: assignsOthers, archiveInstruction: archiveInstruction,

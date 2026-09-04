@@ -1205,7 +1205,12 @@ OC.ui = (function () {
     var clientNumber = h('input', { type: 'text', placeholder: 'e.g. 0624, 7781' });
 
     var canScope = Boolean(user && user.admin);
-    var deptCheckboxes = canScope ? deptCheckboxGroup([]) : null;
+    var canAssign = !!(OC.can && OC.can.canAssignClientMembers ? OC.can.canAssignClientMembers(user) : (user && (user.admin || (OC.can && OC.can.headOfAny && OC.can.headOfAny(user)))));
+
+    var assigneePicker = canAssign ? clientAssigneePicker([], [], null) : null;
+    var deptCheckboxes = canScope ? deptCheckboxGroup([], function (newDepts) {
+      if (assigneePicker) assigneePicker.setDepartments(newDepts);
+    }) : null;
 
     (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
       title: 'Add new client',
@@ -1214,7 +1219,8 @@ OC.ui = (function () {
         field('2. Client number', clientNumber, { hint: 'The client\u2019s own number \u2014 not a phone number (optional).' }),
         field('3. Client code', clientCode, { hint: 'Short ticker or abbreviation code (optional).' }),
         field('4. Client / Company name', name, { hint: 'Official client or company name for task assignment (optional).' }),
-        canScope ? field('5. Visible to department(s)', deptCheckboxes.node, { hint: 'Check departments allowed to see this client. Leave unchecked for all departments (visible to everyone).' }) : null
+        canScope ? field('5. Visible to department(s) (Admin only)', deptCheckboxes.node, { hint: 'Check departments allowed to see this client. Leave unchecked for all departments (visible to everyone).' }) : null,
+        canAssign ? field('6. Assigned Working Member(s) (Dept Head & Admin)', assigneePicker.node, { hint: 'Select the specific team members allowed to see and work on this client. If none selected, only System Admin & Dept Head can access.' }) : null
       ].filter(Boolean)),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
@@ -1257,6 +1263,7 @@ OC.ui = (function () {
               if (numExists) return 'Duplicate Client Number: "' + cNumVal + '" is already used by another client.';
             }
 
+            var selectedAssignees = (canAssign && assigneePicker) ? assigneePicker.getAssignees() : [];
             var newClient = {
               id: OC.store.uid('c'),
               name: cName,
@@ -1266,6 +1273,7 @@ OC.ui = (function () {
               contact: cNumVal || cName || cIdVal,
               departments: (canScope && deptCheckboxes) ? deptCheckboxes.getDepartments() : [],
               department: (canScope && deptCheckboxes) ? deptCheckboxes.getValue() : '',
+              assignees: selectedAssignees,
               status: 'active'
             };
 
@@ -1602,6 +1610,120 @@ OC.ui = (function () {
       getValue: function () { return chosen.length ? chosen[0] : ''; },
       setValue: function (arr) {
         chosen = (Array.isArray(arr) ? arr : (arr ? [arr] : [])).slice();
+        updateSummary();
+      }
+    };
+  }
+
+  /* ---- client assignee picker (multi-select persons for client assignment) ---- */
+  function clientAssigneePicker(selectedUserIds, candidateDeptIds, onChange) {
+    var chosen = [];
+    (Array.isArray(selectedUserIds) ? selectedUserIds : (selectedUserIds ? [selectedUserIds] : [])).forEach(function (val) {
+      if (val && chosen.indexOf(val) === -1) chosen.push(val);
+    });
+
+    var currentDepts = Array.isArray(candidateDeptIds) ? candidateDeptIds.slice() : [];
+    var searchStr = '';
+
+    var root = h('div', { class: 'client-assignee-picker', style: 'display:flex;flex-direction:column;gap:8px;' });
+    var searchInput = h('input', {
+      type: 'search',
+      placeholder: 'Filter team members by name...',
+      style: 'width:100%;font-size:12.5px;padding:6px 10px;',
+      onInput: function (e) {
+        searchStr = (e.target.value || '').toLowerCase().trim();
+        renderList();
+      }
+    });
+
+    var summaryText = h('div', { class: 'muted', style: 'font-size:12px;line-height:1.4;' });
+    var listContainer = h('div', {
+      class: 'client-assignee-list',
+      style: 'max-height:170px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:6px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:6px;'
+    });
+
+    function getEligibleUsers() {
+      var allUsers = (OC.store.state.users || []).filter(function (u) {
+        return u && u.status !== 'archived' && u.status !== 'suspended';
+      });
+      if (!currentDepts.length) return allUsers;
+      return allUsers.filter(function (u) {
+        return currentDepts.some(function (d) {
+          return OC.can && OC.can.inDept ? OC.can.inDept(u, d) : true;
+        });
+      });
+    }
+
+    function updateSummary() {
+      if (!chosen.length) {
+        summaryText.innerHTML = '<span style="color:var(--brand-orange, #f59e0b);font-weight:600;">⚠️ No specific member assigned:</span> Accessible only by System Admin and Department Head.';
+      } else {
+        var names = chosen.map(function (uid) {
+          var u = OC.store.user(uid);
+          return u ? u.name : uid;
+        }).join(', ');
+        summaryText.innerHTML = '<span style="color:var(--success, #10b981);font-weight:600;">👥 Assigned Members (' + chosen.length + '):</span> ' + names;
+      }
+    }
+
+    function renderList() {
+      clear(listContainer);
+      var users = getEligibleUsers();
+      if (searchStr) {
+        users = users.filter(function (u) {
+          return (u.name || '').toLowerCase().indexOf(searchStr) > -1 || (u.email || '').toLowerCase().indexOf(searchStr) > -1;
+        });
+      }
+      if (!users.length) {
+        listContainer.appendChild(h('div', { class: 'muted', style: 'grid-column:1/-1;padding:12px;text-align:center;font-size:12px;' }, 'No matching team members found in the selected department(s).'));
+        return;
+      }
+      users.forEach(function (u) {
+        var isChecked = chosen.indexOf(u.id) > -1;
+        var chk = h('input', {
+          type: 'checkbox',
+          checked: isChecked,
+          style: 'cursor:pointer;width:15px;height:15px;margin:0;',
+          onChange: function (e) {
+            var at = chosen.indexOf(u.id);
+            if (e.target.checked && at === -1) chosen.push(u.id);
+            if (!e.target.checked && at > -1) chosen.splice(at, 1);
+            updateSummary();
+            if (onChange) onChange(chosen.slice());
+          }
+        });
+        var role = OC.can && OC.can.roleLabel ? OC.can.roleLabel(u) : 'Member';
+        var label = h('label', {
+          style: 'display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;padding:5px 8px;border-radius:4px;user-select:none;background:' + (isChecked ? 'rgba(56,189,248,0.12)' : 'transparent') + ';border:1px solid ' + (isChecked ? 'var(--brand-cyan, #0284c7)' : 'transparent') + ';transition:all 0.15s;'
+        }, [
+          chk,
+          h('div', { style: 'display:flex;flex-direction:column;min-width:0;overflow:hidden;' }, [
+            h('span', { style: 'font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;' }, u.name),
+            h('span', { class: 'muted', style: 'font-size:11px;' }, role)
+          ])
+        ]);
+        listContainer.appendChild(label);
+      });
+    }
+
+    renderList();
+    updateSummary();
+
+    root.appendChild(searchInput);
+    root.appendChild(listContainer);
+    root.appendChild(summaryText);
+
+    return {
+      node: root,
+      getAssignees: function () { return chosen.slice(); },
+      setDepartments: function (newDepts) {
+        currentDepts = Array.isArray(newDepts) ? newDepts.slice() : [];
+        renderList();
+        updateSummary();
+      },
+      setAssignees: function (newArr) {
+        chosen = (Array.isArray(newArr) ? newArr : []).slice();
+        renderList();
         updateSummary();
       }
     };
@@ -2023,6 +2145,7 @@ OC.ui = (function () {
     field: field, select: select, clientPicker: clientPicker, newClientModal: newClientModal,
     capturePlace: capturePlace, restorePlace: restorePlace, keepingPlace: keepingPlace,
     assigneePicker: assigneePicker, deptPicker: deptPicker, deptCheckboxGroup: deptCheckboxGroup,
+    clientAssigneePicker: clientAssigneePicker,
     tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
     instructionReaders: instructionReaders, markInstructionRead: markInstructionRead,
     formatMentions: formatMentions, extractMentionedUserIds: extractMentionedUserIds, attachMentionAutocomplete: attachMentionAutocomplete,

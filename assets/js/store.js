@@ -169,12 +169,58 @@ OC.store = (function () {
     return window.location.protocol === 'http:' || window.location.protocol === 'https:';
   }
 
+  var dynamicApiUrl = null;
+  var lastConfigFetchTime = 0;
+
+  function autoDiscoverApiUrl() {
+    if (typeof window === 'undefined' || !window.location) return;
+    var host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || window.location.port === '7000') return;
+    if (Date.now() - lastConfigFetchTime < 5000) return;
+    lastConfigFetchTime = Date.now();
+
+    var urlsToTry = [
+      'assets/config.js?t=' + Date.now(),
+      'https://raw.githubusercontent.com/Fuad2e3/Originate-Command/main/assets/config.js?t=' + Date.now()
+    ];
+
+    function tryNext(i) {
+      if (i >= urlsToTry.length) return;
+      fetch(urlsToTry[i], { cache: 'no-store' })
+        .then(function (res) { return res.text(); })
+        .then(function (text) {
+          var match = text.match(/API_URL:\s*"([^"]+)"/);
+          if (match && match[1] && match[1].indexOf('http') === 0) {
+            var newUrl = match[1].trim();
+            if (!dynamicApiUrl || dynamicApiUrl !== newUrl) {
+              dynamicApiUrl = newUrl;
+              window.OC_CONFIG = window.OC_CONFIG || {};
+              window.OC_CONFIG.API_URL = newUrl;
+              window.LGS_CONFIG = window.OC_CONFIG;
+              console.log('🔄 [store] Connected to active Cloudflare Tunnel API:', newUrl);
+              isSyncInProgress = false;
+              syncWithServer();
+            }
+          }
+        })
+        .catch(function () {
+          tryNext(i + 1);
+        });
+    }
+
+    tryNext(0);
+  }
+
   function getApiUrl(endpoint) {
     if (typeof window === 'undefined' || !window.location) return endpoint;
     var host = window.location.hostname;
     // If running on local server directly, use relative URL
     if (host === 'localhost' || host === '127.0.0.1' || window.location.port === '7000') {
       return endpoint;
+    }
+    // If we resolved a dynamic API URL from fresh config, prioritize it
+    if (dynamicApiUrl && dynamicApiUrl.indexOf('http') === 0) {
+      return dynamicApiUrl.replace(/\/+$/, '') + endpoint;
     }
     // Otherwise use configured tunnel URL from assets/config.js
     var cfg = window.OC_CONFIG || window.LGS_CONFIG;
@@ -430,6 +476,7 @@ OC.store = (function () {
         if (OC.backend && OC.backend.setServerStatus) {
           OC.backend.setServerStatus(false);
         }
+        autoDiscoverApiUrl();
       });
   }
 
@@ -493,6 +540,7 @@ OC.store = (function () {
       .catch(function (err) {
         if (timer) clearTimeout(timer);
         console.warn('[store] Network failure pushing mutation:', err ? err.message : 'timeout');
+        autoDiscoverApiUrl();
       });
   }
 
@@ -629,6 +677,7 @@ OC.store = (function () {
       }
       if (modified) write();
     }
+    autoDiscoverApiUrl();
     syncWithServer();
     initSSE(); // start SSE immediately in parallel with first sync poll — don't wait for fetch to succeed
     fetchClientIp();

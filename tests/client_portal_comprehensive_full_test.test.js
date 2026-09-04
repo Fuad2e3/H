@@ -245,8 +245,8 @@ const editClientBtn = heroBtns[1];
 assert.ok(capturedModal === null, 'Modal must not be open yet');
 assignTeamBtn.click();
 
-assert.ok(capturedModal !== null, 'Assign Team modal must open');
-assert.ok(capturedModal.title.indexOf('Assign Team') > -1, 'Modal title must indicate Assign Team');
+assert.ok(capturedModal !== null, 'Assign Member modal must open');
+assert.ok(capturedModal.title.indexOf('Assign Member') > -1 || capturedModal.title.indexOf('Assign Team') > -1, 'Modal title must indicate Assign Member or Assign Team');
 
 // Find Save button in modal actions
 const saveAction = capturedModal.actions.find(a => a.label === 'Save Assignment' || a.primary);

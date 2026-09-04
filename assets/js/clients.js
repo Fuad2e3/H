@@ -192,7 +192,7 @@ OC.clients = (function () {
     }));
 
     (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
-      title: 'Assign Team & Scoping — ' + currentLabel,
+      title: 'Assign Member & Scoping — ' + currentLabel,
       content: OC.ui.h('div', {}, modalFields),
       actions: [
         { label: 'Cancel', onClick: function (close) { close(); } },
@@ -657,18 +657,15 @@ OC.clients = (function () {
         h('div', { class: 'user-profile-info' }, [
           h('div', { class: 'user-profile-title-row' }, [
             h('h2', { class: 'user-profile-name' }, clientName),
-            h('span', { class: 'user-profile-badge' }, client.status === 'active' ? 'ACTIVE CLIENT' : 'PAUSED'),
             (client.client_id && !saysSameAs(client.client_id, clientName))
               ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Client ID: ' + client.client_id) : null,
             (client.client_code && !saysSameAs(client.client_code, clientName))
-              ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null,
-            clientAssignees.length ? h('span', { class: 'chip dept', style: 'font-size:11px;' }, clientAssignees.length + ' Working Members') : null
+              ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null
           ].filter(Boolean))
-          /* two details next to the name — ID and Code — same as the grid
-             card's two chips; the phone number still shows in Edit Client */
         ])
       ]),
-      h('div', { class: 'user-profile-right', style: 'display:flex;gap:8px;align-items:center;' }, [
+      h('div', { class: 'user-profile-right', style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;' }, [
+        h('span', { class: 'user-profile-badge', style: 'margin:0;padding:3px 10px;font-size:11px;' }, client.status === 'active' ? 'ACTIVE CLIENT' : 'PAUSED'),
         canAssign ? h('button', {
           class: 'btn small secondary',
           type: 'button',
@@ -679,7 +676,10 @@ OC.clients = (function () {
               renderClientPortal(host, freshClient, onBack);
             });
           }
-        }, [OC.icon('user'), 'Assign Team']) : null,
+        }, [
+          OC.icon('user'),
+          clientAssignees.length ? ('Assign Member (' + clientAssignees.length + ')') : 'Assign Member'
+        ]) : null,
         h('button', {
           class: 'btn small primary',
           type: 'button',

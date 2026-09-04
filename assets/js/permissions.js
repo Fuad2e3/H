@@ -439,10 +439,8 @@ OC.can = (function () {
     return seeClient(user, client);
   }
 
-  /* who decides which department a client belongs to: system admin or department head */
-  function assignClientDepartment(user) {
-    return !!user && (user.admin || headOfAny(user));
-  }
+  /* only the system admin decides which department a client belongs to */
+  function assignClientDepartment(user) { return !!(user && user.admin); }
 
   /* an unclaimed invite may be withdrawn by whoever sent it, or by the
      system admin (6.1) */

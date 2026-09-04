@@ -103,16 +103,39 @@ OC.clients = (function () {
     var initialDepts = Array.isArray(client.departments) && client.departments.length
       ? client.departments
       : (client.department ? [client.department] : []);
+
+    // If client has no department explicitly saved, but current user is a Department Head, scope to Department Head's department
+    if (!initialDepts.length && user && !user.admin) {
+      var uDepts = (user.departments || []).map(function (m) { return typeof m === 'string' ? m : m.department; }).filter(Boolean);
+      if (!uDepts.length && user.department) uDepts = [user.department];
+      if (uDepts.length) {
+        initialDepts = uDepts;
+      }
+    }
+
     var currentAssignees = Array.isArray(client.assignees) ? client.assignees.slice() : (Array.isArray(client.assigned_users) ? client.assigned_users.slice() : []);
 
     var picker = OC.ui.clientAssigneePicker(currentAssignees, initialDepts, null);
     var currentLabel = OC.ui.clientLabel ? OC.ui.clientLabel(client) : (client.name || client.client_id);
 
+    var dNames = initialDepts.map(function (did) {
+      var d = OC.store && OC.store.department ? OC.store.department(did) : null;
+      return d ? d.name : did;
+    }).filter(Boolean).join(', ');
+
+    var modalTitle = dNames 
+      ? ('Assign ' + dNames + ' Team Members — ' + currentLabel)
+      : ('Assign Team Members — ' + currentLabel);
+
+    var fieldHint = dNames
+      ? ('Showing only members of ' + dNames + '. Selected members (along with Department Head & System Admin) will be able to see and work on this client.')
+      : 'Select specific members allowed to work on this client.';
+
     (OC.ui && OC.ui.modal ? OC.ui.modal : modal)({
-      title: 'Assign Team Members — ' + currentLabel,
+      title: modalTitle,
       content: OC.ui.h('div', {}, [
-        OC.ui.field('Select Department Member(s)', picker.node, {
-          hint: 'Only selected members (along with Department Head & System Admin) will be able to see and work on this client.'
+        OC.ui.field(dNames ? ('Select ' + dNames + ' Member(s)') : 'Select Department Member(s)', picker.node, {
+          hint: fieldHint
         })
       ]),
       actions: [
@@ -127,6 +150,10 @@ OC.clients = (function () {
               detail: 'Updated assigned working members (' + selected.length + ' members) for ' + currentLabel
             }, function () {
               client.assignees = selected;
+              if ((!client.departments || !client.departments.length) && !client.department && initialDepts.length) {
+                client.departments = initialDepts;
+                client.department = initialDepts[0];
+              }
             });
             OC.ui.toast('Client team members updated.');
             if (onDone) onDone();

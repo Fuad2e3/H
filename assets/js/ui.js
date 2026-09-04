@@ -1207,7 +1207,13 @@ OC.ui = (function () {
     var canScope = Boolean(user && user.admin);
     var canAssign = !!(OC.can && OC.can.canAssignClientMembers ? OC.can.canAssignClientMembers(user) : (user && (user.admin || (OC.can && OC.can.headOfAny && OC.can.headOfAny(user)))));
 
-    var assigneePicker = canAssign ? clientAssigneePicker([], [], null) : null;
+    var defaultDepts = [];
+    if (user && !user.admin) {
+      defaultDepts = (user.departments || []).map(function (m) { return typeof m === 'string' ? m : m.department; }).filter(Boolean);
+      if (!defaultDepts.length && user.department) defaultDepts = [user.department];
+    }
+
+    var assigneePicker = canAssign ? clientAssigneePicker([], defaultDepts, null) : null;
     var deptCheckboxes = canScope ? deptCheckboxGroup([], function (newDepts) {
       if (assigneePicker) assigneePicker.setDepartments(newDepts);
     }) : null;
@@ -1271,8 +1277,8 @@ OC.ui = (function () {
               client_code: cCodeVal,
               client_number: cNumVal,
               contact: cNumVal || cName || cIdVal,
-              departments: (canScope && deptCheckboxes) ? deptCheckboxes.getDepartments() : [],
-              department: (canScope && deptCheckboxes) ? deptCheckboxes.getValue() : '',
+              departments: (canScope && deptCheckboxes) ? deptCheckboxes.getDepartments() : defaultDepts,
+              department: (canScope && deptCheckboxes) ? deptCheckboxes.getValue() : (defaultDepts.length ? defaultDepts[0] : ''),
               assignees: selectedAssignees,
               status: 'active'
             };
@@ -1622,7 +1628,18 @@ OC.ui = (function () {
       if (val && chosen.indexOf(val) === -1) chosen.push(val);
     });
 
-    var currentDepts = Array.isArray(candidateDeptIds) ? candidateDeptIds.slice() : [];
+    function normalizeDepts(depts) {
+      var res = [];
+      (Array.isArray(depts) ? depts : (depts ? [depts] : [])).forEach(function (did) {
+        if (!did) return;
+        var dObj = OC.store && OC.store.department ? OC.store.department(did) : null;
+        var cid = dObj ? dObj.id : String(did);
+        if (cid && res.indexOf(cid) === -1) res.push(cid);
+      });
+      return res;
+    }
+
+    var currentDepts = normalizeDepts(candidateDeptIds);
     var searchStr = '';
 
     var root = h('div', { class: 'client-assignee-picker', style: 'display:flex;flex-direction:column;gap:8px;' });
@@ -1642,32 +1659,57 @@ OC.ui = (function () {
       style: 'max-height:170px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:6px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:6px;'
     });
 
+    function getDeptNames() {
+      if (!currentDepts.length) return '';
+      return currentDepts.map(function (did) {
+        var d = OC.store && OC.store.department ? OC.store.department(did) : null;
+        return d ? d.name : did;
+      }).join(', ');
+    }
+
     function getEligibleUsers() {
+      if (!currentDepts.length) return [];
       var allUsers = (OC.store.state.users || []).filter(function (u) {
         return u && u.status !== 'archived' && u.status !== 'suspended';
       });
-      if (!currentDepts.length) return allUsers;
       return allUsers.filter(function (u) {
-        return currentDepts.some(function (d) {
-          return OC.can && OC.can.inDept ? OC.can.inDept(u, d) : true;
+        return currentDepts.some(function (dId) {
+          if (OC.can && OC.can.inDept) {
+            return OC.can.inDept(u, dId);
+          }
+          var uDepts = Array.isArray(u.departments) ? u.departments : [];
+          if (u.department) uDepts = uDepts.concat([u.department]);
+          return uDepts.some(function (m) {
+            var mId = typeof m === 'string' ? m : (m && m.department);
+            return mId === dId;
+          });
         });
       });
     }
 
     function updateSummary() {
+      var dName = getDeptNames();
+      var deptBadge = dName ? ('<div style="font-size:11.5px;color:var(--brand-cyan, #38bdf8);margin-bottom:4px;font-weight:600;">Department: ' + dName + '</div>') : '';
       if (!chosen.length) {
-        summaryText.innerHTML = '<span style="color:var(--brand-orange, #f59e0b);font-weight:600;">⚠️ No specific member assigned:</span> Accessible only by System Admin and Department Head.';
+        summaryText.innerHTML = deptBadge + '<span style="color:var(--brand-orange, #f59e0b);font-weight:600;">⚠️ No specific member assigned:</span> Accessible only by System Admin and Department Head.';
       } else {
         var names = chosen.map(function (uid) {
           var u = OC.store.user(uid);
           return u ? u.name : uid;
         }).join(', ');
-        summaryText.innerHTML = '<span style="color:var(--success, #10b981);font-weight:600;">👥 Assigned Members (' + chosen.length + '):</span> ' + names;
+        summaryText.innerHTML = deptBadge + '<span style="color:var(--success, #10b981);font-weight:600;">👥 Assigned Members (' + chosen.length + '):</span> ' + names;
       }
     }
 
     function renderList() {
       clear(listContainer);
+      if (!currentDepts.length) {
+        listContainer.appendChild(h('div', {
+          class: 'muted',
+          style: 'grid-column:1/-1;padding:16px 12px;text-align:center;font-size:12.5px;color:var(--brand-orange, #f59e0b);'
+        }, '⚠️ No department assigned to this client. Please assign a department first.'));
+        return;
+      }
       var users = getEligibleUsers();
       if (searchStr) {
         users = users.filter(function (u) {
@@ -1675,7 +1717,11 @@ OC.ui = (function () {
         });
       }
       if (!users.length) {
-        listContainer.appendChild(h('div', { class: 'muted', style: 'grid-column:1/-1;padding:12px;text-align:center;font-size:12px;' }, 'No matching team members found in the selected department(s).'));
+        var dName = getDeptNames();
+        listContainer.appendChild(h('div', {
+          class: 'muted',
+          style: 'grid-column:1/-1;padding:16px 12px;text-align:center;font-size:12px;'
+        }, 'No members found in ' + (dName || 'the assigned department') + '.'));
         return;
       }
       users.forEach(function (u) {
@@ -1718,9 +1764,12 @@ OC.ui = (function () {
       node: root,
       getAssignees: function () { return chosen.slice(); },
       setDepartments: function (newDepts) {
-        currentDepts = Array.isArray(newDepts) ? newDepts.slice() : [];
+        currentDepts = normalizeDepts(newDepts);
+        var eligibleIds = getEligibleUsers().map(function (u) { return u.id; });
+        chosen = chosen.filter(function (uid) { return eligibleIds.indexOf(uid) > -1; });
         renderList();
         updateSummary();
+        if (onChange) onChange(chosen.slice());
       },
       setAssignees: function (newArr) {
         chosen = (Array.isArray(newArr) ? newArr : []).slice();

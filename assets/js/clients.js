@@ -619,9 +619,7 @@ OC.clients = (function () {
   function renderClientPortal(host, client, onBack) {
     var h = OC.ui.h;
     var user = me();
-    /* the name is optional now, so prose falls back to the code or the ID
-       rather than printing an empty string mid-sentence */
-    var clientName = OC.ui.clientLabel ? OC.ui.clientLabel(client) : (client.name || client.client_id);
+    var clientName = client.client_id || client.name || client.client_code || (OC.ui.clientLabel ? OC.ui.clientLabel(client) : 'Client');
     var canCreate = !!(OC.can && OC.can.createClient ? OC.can.createClient(user) : (user && user.admin));
 
     var clientTodos = OC.store.state.todos.filter(function (t) {
@@ -650,12 +648,8 @@ OC.clients = (function () {
         ]),
         h('div', { class: 'user-profile-info' }, [
           h('div', { class: 'user-profile-title-row' }, [
-            h('h2', { class: 'user-profile-name' }, clientName),
-            (client.client_id && !saysSameAs(client.client_id, clientName))
-              ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Client ID: ' + client.client_id) : null,
-            (client.client_code && !saysSameAs(client.client_code, clientName))
-              ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null
-          ].filter(Boolean))
+            h('h2', { class: 'user-profile-name' }, clientName)
+          ])
         ])
       ]),
       h('div', { class: 'user-profile-right', style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;' }, [

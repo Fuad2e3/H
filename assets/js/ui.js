@@ -1574,10 +1574,7 @@ OC.ui = (function () {
       }
     }
 
-    var listContainer = h('div', {
-      class: 'dept-checkbox-list',
-      style: 'display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:6px;padding:8px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:6px;'
-    });
+    var listContainer = h('div', { class: 'dept-checkbox-list' });
 
     (OC.store.state.departments || []).forEach(function (d) {
       var isChecked = chosen.indexOf(d.id) > -1;
@@ -1654,10 +1651,7 @@ OC.ui = (function () {
     });
 
     var summaryText = h('div', { class: 'muted', style: 'font-size:12px;line-height:1.4;' });
-    var listContainer = h('div', {
-      class: 'client-assignee-list',
-      style: 'max-height:170px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));gap:6px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:6px;'
-    });
+    var listContainer = h('div', { class: 'client-assignee-list' });
 
     function getDeptNames() {
       if (!currentDepts.length) return '';
@@ -1693,7 +1687,7 @@ OC.ui = (function () {
 
     function updateSummary() {
       var dName = getDeptNames();
-      var deptBadge = dName ? ('<div style="font-size:11.5px;color:var(--brand-cyan, #38bdf8);margin-bottom:4px;font-weight:600;">Department: ' + dName + '</div>') : '';
+      var deptBadge = dName ? ('<div style="font-size:11.5px;color:var(--cyan);margin-bottom:4px;font-weight:600;">Department: ' + dName + '</div>') : '';
       if (!chosen.length) {
         summaryText.innerHTML = deptBadge + '<span style="color:var(--brand-orange, #f59e0b);font-weight:600;">⚠️ No specific member assigned:</span> Accessible only by System Admin and Department Head.';
       } else {
@@ -1737,12 +1731,12 @@ OC.ui = (function () {
         });
         var role = OC.can && OC.can.roleLabel ? OC.can.roleLabel(u) : 'Member';
         var label = h('label', {
-          style: 'display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;padding:5px 8px;border-radius:4px;user-select:none;background:' + (isChecked ? 'rgba(56,189,248,0.12)' : 'transparent') + ';border:1px solid ' + (isChecked ? 'var(--brand-cyan, #0284c7)' : 'transparent') + ';transition:all 0.15s;'
+          class: 'assignee-item-line' + (isChecked ? ' is-selected' : '')
         }, [
           chk,
           mark(u.id),
-          h('div', { style: 'display:flex;flex-direction:column;min-width:0;overflow:hidden;' }, [
-            h('span', { style: 'font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;' }, u.name),
+          h('div', { class: 'assignee-item-text' }, [
+            h('span', { class: 'assignee-item-name' }, u.name),
             h('span', { class: 'muted', style: 'font-size:11px;' }, role)
           ])
         ]);

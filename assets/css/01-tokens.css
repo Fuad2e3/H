@@ -29,6 +29,7 @@
   /* Brand Accent Tokens (Vibrant, high-energy executive colors) */
   --brand-orange: #F97316;   /* Energetic Originate Orange */
   --brand-orange-soft: #FFF7ED; /* Warm peach wash */
+  --brand-orange-strong: #C2410C; /* Orange for small text on a warm wash */
   --blueprint: #2563EB;      /* Vivid royal cobalt blue */
   --blueprint-soft: #EFF6FF; /* Soft sky wash */
   --indigo: #6366F1;         /* Vivid royal indigo */
@@ -37,7 +38,7 @@
   --purple-soft: #F5F3FF;    /* Soft purple wash */
   --cyan: #0284C7;           /* Electric cyan-blue */
   --cyan-soft: #E0F2FE;      /* Soft cyan wash */
-  --brass: #D97706;          /* Luminous honey amber */
+  --brass: #B45309;          /* Deep honey amber — AA on --brass-soft */
   --brass-soft: #FEF3C7;     /* Soft amber wash */
   --slate: #64748B;          /* Balanced slate secondary */
   --signal: #E11D48;         /* Vibrant coral rose / red */
@@ -137,6 +138,7 @@
     --card-bg-alt: #16243D;
     --brand-orange: #FB923C;
     --brand-orange-soft: rgba(251, 146, 60, 0.15);
+    --brand-orange-strong: #FB923C;
     --blueprint: #3B82F6;      /* Electric sapphire blue */
     --blueprint-soft: rgba(59, 130, 246, 0.15);
     --indigo: #818CF8;
@@ -220,6 +222,7 @@
   --card-bg-alt: #16243D;
   --brand-orange: #FB923C;
   --brand-orange-soft: rgba(251, 146, 60, 0.15);
+  --brand-orange-strong: #FB923C;
   --blueprint: #3B82F6;      /* Electric sapphire blue */
   --blueprint-soft: rgba(59, 130, 246, 0.15);
   --indigo: #818CF8;

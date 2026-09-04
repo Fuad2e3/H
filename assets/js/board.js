@@ -688,8 +688,7 @@ OC.board = (function () {
     if (deptMemberUsers.length) {
       var initialAssigneeIds = initialAssignees.map(function (v) { return v.split(':')[1]; });
       lockedAssigneeList = h('div', {
-        class: 'dept-checkbox-list',
-        style: 'display:grid;grid-template-columns:repeat(auto-fill, minmax(190px, 1fr));gap:6px;padding:8px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:6px;'
+        class: 'dept-checkbox-list'
       });
       deptMemberUsers.forEach(function (u) {
         var isChecked = initialAssigneeIds.indexOf(u.id) > -1;
@@ -1081,8 +1080,7 @@ OC.board = (function () {
     var targetRow = null;
     if (deptMemberUsers.length) {
       var targetList = h('div', {
-        class: 'dept-checkbox-list',
-        style: 'display:grid;grid-template-columns:repeat(auto-fill, minmax(190px, 1fr));gap:6px;padding:8px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--rule, rgba(255,255,255,0.12));border-radius:6px;'
+        class: 'dept-checkbox-list'
       });
       deptMemberUsers.forEach(function (u) {
         var chk = h('input', {

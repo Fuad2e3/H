@@ -90,6 +90,15 @@ OC.clients = (function () {
 
   function me() { return OC.store.user(OC.store.session()); }
 
+  /* clientLabel() falls back through code → name → ID, so a client saved with
+     only a Client ID is titled by that ID. A "Client ID: …" chip beside such a
+     title just prints the heading a second time, which is what this guards:
+     a detail chip earns its place only when it says something the title
+     doesn't already say. */
+  function saysSameAs(value, title) {
+    return String(value || '').trim().toLowerCase() === String(title || '').trim().toLowerCase();
+  }
+
   function getLocalDateStr(d) {
     d = d || new Date();
     var y = d.getFullYear();
@@ -602,8 +611,10 @@ OC.clients = (function () {
           h('div', { class: 'user-profile-title-row' }, [
             h('h2', { class: 'user-profile-name' }, clientName),
             h('span', { class: 'user-profile-badge' }, client.status === 'active' ? 'ACTIVE CLIENT' : 'PAUSED'),
-            client.client_id ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Client ID: ' + client.client_id) : null,
-            client.client_code ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null,
+            (client.client_id && !saysSameAs(client.client_id, clientName))
+              ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Client ID: ' + client.client_id) : null,
+            (client.client_code && !saysSameAs(client.client_code, clientName))
+              ? h('span', { class: 'chip custom', style: 'font-size:11px;font-family:var(--font-mono);' }, 'Code: ' + client.client_code) : null,
             clientAssignees.length ? h('span', { class: 'chip dept', style: 'font-size:11px;' }, clientAssignees.length + ' Working Members') : null
           ].filter(Boolean))
           /* two details next to the name — ID and Code — same as the grid
@@ -1499,7 +1510,11 @@ OC.clients = (function () {
                  by at a glance. Code and phone number still show once the
                  client is open. */
               h('div', { class: 'row', style: 'margin:8px 0 6px;gap:6px;flex-wrap:wrap;' }, [
-                (c.client_id || c.client_code) ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Client ID: ' + (c.client_id || c.client_code)) : null,
+                (function () {
+                  var idText = c.client_id || c.client_code;
+                  return (idText && !saysSameAs(idText, displayTitle))
+                    ? h('span', { class: 'chip custom', style: 'font-size:11px;' }, 'Client ID: ' + idText) : null;
+                })(),
                 (Array.isArray(c.assignees) && c.assignees.length) ? h('span', { class: 'chip dept', style: 'font-size:11px;' }, c.assignees.length + ' assigned') : null
               ].filter(Boolean)),
               h('div', { class: 'row', style: 'justify-content:flex-end;margin-top:6px;' }, [

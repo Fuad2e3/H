@@ -62,10 +62,10 @@ OC.dashboard = (function () {
         return Array.isArray(n.target_users) && n.target_users.indexOf(user.id) > -1;
       })
       .sort(function (a, b) {
-        var aRead = Array.isArray(a.read_by) ? a.read_by : [];
-        var bRead = Array.isArray(b.read_by) ? b.read_by : [];
-        var au = aRead.indexOf(user.id) === -1 ? 0 : 1;
-        var bu = bRead.indexOf(user.id) === -1 ? 0 : 1;
+        /* the arrival snapshot, not read_by — otherwise the list reshuffles
+           under the reader the instant the items mark themselves read */
+        var au = OC.ui.wasUnread(a, user.id) ? 0 : 1;
+        var bu = OC.ui.wasUnread(b, user.id) ? 0 : 1;
         if (au !== bu) return au - bu;                       /* unread first */
         return (b.posted_at || '').localeCompare(a.posted_at || '');
       });
@@ -171,7 +171,7 @@ OC.dashboard = (function () {
     var allTodos = allMyTodos(user);
     var todos = myTodos(user);
     var notes = myInstructions(user);
-    var unread = notes.filter(function (n) { return (n.read_by || []).indexOf(user.id) === -1; });
+    var unread = notes.filter(function (n) { return OC.ui.wasUnread(n, user.id); });
     var overdue = allTodos.filter(function (t) { return OC.ui.daysLate(t.due) > 0; });
     var upcoming = allTodos.filter(function (t) { return OC.ui.daysLate(t.due) < 0; });
 
@@ -373,22 +373,15 @@ OC.dashboard = (function () {
           ]),
           h('div', { class: 'panel-body' }, notes.length
             ? notes.slice(0, 12).map(function (n) {
+                var isUnread = OC.ui.wasUnread(n, user.id);
                 if (user && user.id && OC.ui.markInstructionRead) {
                   OC.ui.markInstructionRead(n, user.id);
                 }
-                var isUnread = (n.read_by || []).indexOf(user.id) === -1;
                 var readers = (OC.ui && OC.ui.instructionReaders)
                   ? OC.ui.instructionReaders(n)
                   : (n.read_by || []).map(OC.ui.personName);
 
                 var actions = [];
-                if (isUnread) {
-                  actions.push(h('button', {
-                    class: 'btn small', type: 'button', onClick: function () {
-                      OC.store.mutate(null, function () { n.read_by = n.read_by || []; n.read_by.push(user.id); });
-                    }
-                  }, 'Mark as read'));
-                }
                 if (!n.linked_todo && OC.board && OC.board.convertToTodo) {
                   actions.push(h('button', {
                     class: 'btn small', type: 'button', onClick: function () { OC.board.convertToTodo(n); }

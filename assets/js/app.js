@@ -357,7 +357,7 @@ OC.app = (function () {
       var clean = email.trim().toLowerCase();
       var found = OC.store.userByEmail(clean);
       if (!found) {
-        errorBox.innerHTML = '<strong>Access Denied:</strong> &quot;' + clean + '&quot; is not registered in the database.<br><span style="font-size:12px;opacity:0.9;">Only authorized staff and invited team members can access. Please contact your System Admin.</span>';
+        errorBox.innerHTML = '<strong>Access Denied:</strong> &quot;' + OC.ui.escapeHtml(clean) + '&quot; is not registered in the database.<br><span style="font-size:12px;opacity:0.9;">Only authorized staff and invited team members can access. Please contact your System Admin.</span>';
         errorBox.style.display = 'flex';
         return;
       }
@@ -389,7 +389,7 @@ OC.app = (function () {
 
       var found = OC.store.userByEmail(email);
       if (!found) {
-        errorBox.innerHTML = '<strong>Access Denied:</strong> &quot;' + email + '&quot; is not registered in the database.<br><span style="font-size:12px;opacity:0.9;">Please request an invite from the workspace administrator.</span>';
+        errorBox.innerHTML = '<strong>Access Denied:</strong> &quot;' + OC.ui.escapeHtml(email) + '&quot; is not registered in the database.<br><span style="font-size:12px;opacity:0.9;">Please request an invite from the workspace administrator.</span>';
         errorBox.style.display = 'flex';
         return;
       }
@@ -416,7 +416,7 @@ OC.app = (function () {
           if (data && data.ok) {
             completeSignIn(found);
           } else {
-            errorBox.innerHTML = '<strong>Access Denied:</strong> ' + ((data && data.error) || 'Invalid credentials.');
+            errorBox.innerHTML = '<strong>Access Denied:</strong> ' + OC.ui.escapeHtml((data && data.error) || 'Invalid credentials.');
             errorBox.style.display = 'flex';
           }
         })
@@ -425,7 +425,7 @@ OC.app = (function () {
           var expectedPass = (found.invite && found.invite.passcode) ? found.invite.passcode.toLowerCase() : '';
           var isInviteExp = found.invite ? OC.store.inviteExpired(found.invite) : false;
           if (expectedPass && pass.toLowerCase() !== expectedPass && pass.toLowerCase() !== 'admin') {
-            errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password for &quot;' + email + '&quot;.';
+            errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password for &quot;' + OC.ui.escapeHtml(email) + '&quot;.';
             errorBox.style.display = 'flex';
             return;
           }

@@ -163,39 +163,21 @@ OC.people = (function () {
             class: 'btn',
             type: 'button',
             onClick: function () {
-              if (navigator.clipboard) {
-                navigator.clipboard.writeText(details.fullText).then(function () {
-                  OC.ui.toast('Full invite message copied to clipboard!');
-                });
-              } else {
-                prompt('Copy full message:', details.fullText);
-              }
+              OC.ui.copyText(details.fullText, 'Full invite message copied to clipboard!');
             }
           }, [OC.icon('copy'), 'Copy Full Message']),
           h('button', {
             class: 'btn',
             type: 'button',
             onClick: function () {
-              if (navigator.clipboard) {
-                navigator.clipboard.writeText(details.pass).then(function () {
-                  OC.ui.toast('Password (' + details.pass + ') copied!');
-                });
-              } else {
-                prompt('Copy Passcode:', details.pass);
-              }
+              OC.ui.copyText(details.pass, 'Password (' + details.pass + ') copied!');
             }
           }, 'Copy Passcode'),
           h('button', {
             class: 'btn',
             type: 'button',
             onClick: function () {
-              if (navigator.clipboard) {
-                navigator.clipboard.writeText(details.link).then(function () {
-                  OC.ui.toast('Link copied to clipboard!');
-                });
-              } else {
-                prompt('Copy Link:', details.link);
-              }
+              OC.ui.copyText(details.link, 'Link copied to clipboard!');
             }
           }, 'Copy Link')
         ])
@@ -359,38 +341,20 @@ OC.people = (function () {
 
         actions.push(h('button', {
           class: 'btn small', type: 'button', onClick: function () {
-            if (navigator.clipboard) {
-              navigator.clipboard.writeText(details.fullText).then(function () {
-                OC.ui.toast('Full invite message copied to clipboard!');
-              });
-            } else {
-              prompt('Copy full message:', details.fullText);
-            }
+            OC.ui.copyText(details.fullText, 'Full invite message copied to clipboard!');
           }
         }, 'Copy Message'));
 
         actions.push(h('button', {
           class: 'btn small', type: 'button', onClick: function () {
-            if (navigator.clipboard) {
-              navigator.clipboard.writeText(details.link).then(function () {
-                OC.ui.toast('Invite link copied to clipboard!');
-              });
-            } else {
-              prompt('Copy invite link:', details.link);
-            }
+            OC.ui.copyText(details.link, 'Invite link copied to clipboard!');
           }
         }, 'Copy Link'));
 
         if (account.invite && account.invite.passcode) {
           actions.push(h('button', {
             class: 'btn small', type: 'button', onClick: function () {
-              if (navigator.clipboard) {
-                navigator.clipboard.writeText(account.invite.passcode).then(function () {
-                  OC.ui.toast('72-Hour Password (' + account.invite.passcode + ') copied!');
-                });
-              } else {
-                prompt('Copy 72-Hour Password:', account.invite.passcode);
-              }
+              OC.ui.copyText(account.invite.passcode, '72-Hour Password (' + account.invite.passcode + ') copied!');
             }
           }, 'Copy Passcode'));
         }

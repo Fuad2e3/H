@@ -856,22 +856,15 @@ OC.board = (function () {
   /* ---- instruction item -------------------------------------------------- */
   function instructionItem(note, rerender) {
     var user = me();
+    var unread = OC.ui.wasUnread(note, user.id);
     if (user && user.id && OC.ui.markInstructionRead) {
       OC.ui.markInstructionRead(note, user.id);
     }
-    var unread = (note.read_by || []).indexOf(user.id) === -1;
     var readers = (OC.ui && OC.ui.instructionReaders)
       ? OC.ui.instructionReaders(note)
       : (note.read_by || []).map(OC.ui.personName);
 
     var actions = [];
-    if (unread) {
-      actions.push(h('button', {
-        class: 'btn small', type: 'button', onClick: function () {
-          OC.store.mutate(null, function () { note.read_by = note.read_by || []; note.read_by.push(user.id); });
-        }
-      }, 'Mark as read'));
-    }
     if (!note.linked_todo) {
       actions.push(h('button', {
         class: 'btn small', type: 'button', onClick: function () { convertToTodo(note); }
@@ -1205,7 +1198,7 @@ OC.board = (function () {
     var user = me();
     var todos = visibleTodos();
     var notes = visibleInstructions();
-    var unreadCount = notes.filter(function (n) { return (n.read_by || []).indexOf(user.id) === -1; }).length;
+    var unreadCount = notes.filter(function (n) { return OC.ui.wasUnread(n, user.id); }).length;
 
     var groupControl = h('div', { class: 'segmented', role: 'group', 'aria-label': 'Group todos by', title: 'Group todos by' },
       [['person', 'Person'], ['client', 'Client'], ['department', 'Department']].map(function (opt) {
@@ -1348,6 +1341,9 @@ OC.board = (function () {
     editTodo: editTodo,
     editInstruction: editInstruction,
     deleteInstruction: deleteInstruction,
+    /* the dashboard offers the same action on its instruction list and guards
+       on this being present, so leaving it unexported silently hid the button */
+    convertToTodo: convertToTodo,
     changeState: changeState,
     stateSelect: stateSelect,
     reassignTodo: reassignTodo,

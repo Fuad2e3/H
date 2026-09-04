@@ -132,6 +132,11 @@ button, input, select, textarea {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+/* used on table cells across the profile portal and reports, which were
+   asking for bold text from a class that had no rule behind it */
+.bold {
+  font-weight: 700;
+}
 .eyebrow {
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 11px;

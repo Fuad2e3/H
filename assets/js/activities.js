@@ -335,12 +335,7 @@ OC.activities = (function () {
               class: 'btn small push', type: 'button',
               onClick: function () {
                 var link = location.origin + location.pathname + '#claim=' + inv.token;
-                if (navigator.clipboard) {
-                  navigator.clipboard.writeText(link);
-                  OC.ui.toast('Invite link copied to clipboard.');
-                } else {
-                  OC.ui.toast('Token: ' + inv.token);
-                }
+                OC.ui.copyText(link, 'Invite link copied to clipboard.');
               }
             }, 'Copy link'),
             h('button', {

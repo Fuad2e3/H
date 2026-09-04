@@ -11,6 +11,20 @@ window.OC = window.OC || {};
 OC.ui = (function () {
   'use strict';
 
+  /* Names — of people, departments, clients — are stored values another user
+     typed, so any of them can carry markup. Everywhere one is interpolated
+     into an innerHTML string rather than passed as a text node, it goes
+     through here first; otherwise a display name like <img onerror=...>
+     executes for every viewer the name is rendered to. */
+  function escapeHtml(value) {
+    return String(value === null || value === undefined ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   /* ---- element construction -------------------------------------------- */
   /* This runs once per element on every render, so it is written flat: a for-in
      rather than Object.keys().forEach avoids allocating a key array and a
@@ -295,6 +309,23 @@ OC.ui = (function () {
     }).filter(function (name) {
       return name && name !== 'Unknown';
     });
+  }
+
+  /* Instructions mark themselves read as soon as they are listed, which is
+     what the "read by" receipts want — but it also meant every unread cue
+     (the highlight, the chip, the counters, the unread-first sort) evaluated
+     to false a few milliseconds after the list appeared. This remembers what
+     was unread the first time this page load showed it, so the cues stay put
+     for as long as the reader is looking at them and reset on the next visit. */
+  var unreadOnArrival = {};
+
+  function wasUnread(note, userId) {
+    if (!note || !userId) return false;
+    var key = userId + '|' + (note.id || '');
+    if (!(key in unreadOnArrival)) {
+      unreadOnArrival[key] = (Array.isArray(note.read_by) ? note.read_by : []).indexOf(userId) === -1;
+    }
+    return unreadOnArrival[key];
   }
 
   function markInstructionRead(note, userId) {
@@ -1098,6 +1129,68 @@ OC.ui = (function () {
   }
 
   /* ---- modal ------------------------------------------------------------ */
+  /* ---- copy to clipboard ------------------------------------------------ */
+  /* Every copy button in the app goes through here. Three things this fixes
+     over calling navigator.clipboard directly at each site:
+       - the promise is actually settled before claiming success, so a denied
+         or rejected write no longer reports "copied" when nothing was;
+       - a rejection (permission denied, or the document not focused, which is
+         common while a modal is open) falls back instead of failing silently;
+       - the last-resort path is a selectable text box, not prompt(), which
+         blocks the page and is disabled outright in some browsers. */
+  function copyText(text, okMessage) {
+    var value = String(text === null || text === undefined ? '' : text);
+    var ok = function () { toast(okMessage || 'Copied to clipboard.'); };
+    var fallback = function () { copyByExecCommand(value, okMessage); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        navigator.clipboard.writeText(value).then(ok, fallback);
+        return;
+      } catch (_) { /* some browsers throw synchronously; fall through */ }
+    }
+    fallback();
+  }
+
+  function copyByExecCommand(value, okMessage) {
+    /* a modal <dialog> makes the rest of the document inert, so the scratch
+       textarea has to live inside the open dialog or there is nothing
+       selectable for execCommand to copy from */
+    var dialogs = document.querySelectorAll('dialog[open]');
+    var host = dialogs.length ? dialogs[dialogs.length - 1] : document.body;
+    var ta = h('textarea', { readonly: true, style: 'position:fixed;top:0;left:-9999px;opacity:0;' });
+    ta.value = value;
+    host.appendChild(ta);
+    var copied = false;
+    try {
+      ta.focus();
+      ta.select();
+      if (ta.setSelectionRange) ta.setSelectionRange(0, value.length);
+      copied = document.execCommand('copy');
+    } catch (_) { copied = false; }
+    if (ta.parentNode) ta.parentNode.removeChild(ta);
+    if (copied) { toast(okMessage || 'Copied to clipboard.'); return; }
+    showCopyBox(value);
+  }
+
+  /* last resort: show the text so it can be selected and copied by hand */
+  function showCopyBox(value) {
+    var box = h('textarea', {
+      readonly: true, rows: Math.min(10, Math.max(3, value.split('\n').length + 1)),
+      style: 'width:100%;font-family:var(--font-mono);font-size:12px;line-height:1.5;'
+    });
+    box.value = value;
+    modal({
+      title: 'Copy manually',
+      content: h('div', {}, [
+        h('p', { class: 'muted', style: 'margin:0 0 10px;font-size:12.5px;' },
+          'Automatic copying is unavailable here. Select the text below and press Ctrl+C (\u2318C on Mac).'),
+        box
+      ]),
+      actions: [{ label: 'Done', primary: true, onClick: function (close) { close(); } }]
+    });
+    setTimeout(function () { try { box.focus(); box.select(); } catch (_) {} }, 50);
+  }
+
   function modal(opts) {
     opts = opts || {};
     var dlgClass = 'modal' + (opts.className ? ' ' + opts.className : '');
@@ -1568,7 +1661,7 @@ OC.ui = (function () {
       } else {
         var names = chosen.map(function (did) {
           var d = OC.store.department(did);
-          return d ? d.name : did;
+          return escapeHtml(d ? d.name : did);
         }).join(', ');
         summaryText.innerHTML = '<span style="color:var(--brand-orange, #f59e0b);font-weight:600;">🔒 Visible only to:</span> ' + names + ' & System Admin';
       }
@@ -1687,13 +1780,13 @@ OC.ui = (function () {
 
     function updateSummary() {
       var dName = getDeptNames();
-      var deptBadge = dName ? ('<div style="font-size:11.5px;color:var(--cyan);margin-bottom:4px;font-weight:600;">Department: ' + dName + '</div>') : '';
+      var deptBadge = dName ? ('<div style="font-size:11.5px;color:var(--cyan);margin-bottom:4px;font-weight:600;">Department: ' + escapeHtml(dName) + '</div>') : '';
       if (!chosen.length) {
         summaryText.innerHTML = deptBadge + '<span style="color:var(--brand-orange, #f59e0b);font-weight:600;">⚠️ No specific member assigned:</span> Accessible only by System Admin and Department Head.';
       } else {
         var names = chosen.map(function (uid) {
           var u = OC.store.user(uid);
-          return u ? u.name : uid;
+          return escapeHtml(u ? u.name : uid);
         }).join(', ');
         summaryText.innerHTML = deptBadge + '<span style="color:var(--success, #10b981);font-weight:600;">👥 Assigned Members (' + chosen.length + '):</span> ' + names;
       }
@@ -2189,8 +2282,10 @@ OC.ui = (function () {
     clientAssigneePicker: clientAssigneePicker,
     tagPicker: tagPicker, reactionsBar: reactionsBar, commentThread: commentThread,
     instructionReaders: instructionReaders, markInstructionRead: markInstructionRead,
+    wasUnread: wasUnread,
     formatMentions: formatMentions, extractMentionedUserIds: extractMentionedUserIds, attachMentionAutocomplete: attachMentionAutocomplete,
     modal: modal, confirm: confirm, toast: toast, debounce: debounce,
+    escapeHtml: escapeHtml, copyText: copyText,
     newTodoModal: function (cb, opts) {
       if (OC.board && OC.board.newTodo) OC.board.newTodo(opts, cb);
     },

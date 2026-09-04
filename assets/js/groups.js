@@ -592,7 +592,7 @@ OC.groups = (function () {
           });
 
           var pickerBtn = h('button', {
-            class: 'btn small add-react-btn',
+            class: 'reaction-picker-btn',
             type: 'button',
             title: 'Add reaction',
             onClick: function (e) {
@@ -600,10 +600,10 @@ OC.groups = (function () {
               e.stopPropagation();
               if (pickerPop) { pickerPop.remove(); pickerPop = null; return; }
 
-              pickerPop = h('div', { class: 'reaction-picker-popover', style: 'top:-38px;' }, EMOJIS.map(function (em) {
+              pickerPop = h('div', { class: 'reaction-picker-pop' }, EMOJIS.map(function (em) {
                 return h('button', {
                   type: 'button',
-                  class: 'emoji-opt',
+                  class: 'reaction-emoji-btn',
                   onClick: function (ev) {
                     ev.preventDefault(); ev.stopPropagation();
                     toggleMsgReact(em);

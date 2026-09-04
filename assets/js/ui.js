@@ -156,6 +156,40 @@ OC.ui = (function () {
   }
 
   /* ---- chips ------------------------------------------------------------ */
+  /* Client identifiers are routinely stored as one composite string —
+     "0583 - TFR - Tafor Niba" — because the whole line was pasted into a
+     single field. On a compact one-line row only the short code belongs, so
+     pull that token out rather than printing the entire line. */
+  function shortCodeOf(raw) {
+    var text = String(raw === null || raw === undefined ? '' : raw).trim();
+    if (!text) return '';
+    var parts = text.split(/\s*[-\u2013\u2014|/]\s*/).filter(function (s) { return s.length; });
+    if (parts.length < 2) return text;
+    /* a purely alphabetic 2-6 character token is the code */
+    for (var i = 0; i < parts.length; i++) {
+      if (/^[A-Za-z]{2,6}$/.test(parts[i])) return parts[i].toUpperCase();
+    }
+    /* no clean letter code, so take the shortest part — an account number
+       beats a person's name as an identifier */
+    var best = parts[0];
+    for (var j = 1; j < parts.length; j++) if (parts[j].length < best.length) best = parts[j];
+    return best;
+  }
+
+  function clientCode(c) {
+    if (!c) return '';
+    if (typeof c === 'string') {
+      var obj = OC.store.client(c);
+      if (!obj) return shortCodeOf(c);
+      c = obj;
+    }
+    /* an explicitly entered Short Code always wins over anything parsed */
+    var ext = c.extended_fields && c.extended_fields.short_code;
+    var explicit = (ext && ext.value) ? String(ext.value).trim() : '';
+    if (explicit) return explicit;
+    return shortCodeOf(c.client_code || c.client_id || c.name || '');
+  }
+
   function clientLabel(c) {
     if (!c) return 'No client';
     if (typeof c === 'string') {
@@ -2272,7 +2306,7 @@ OC.ui = (function () {
     h: h, clear: clear, append: append,
     today: today, dayOf: dayOf, daysFromToday: daysFromToday, dueDay: dueDay,
     localNowISO: localNowISO, fmtDate: fmtDate, fmtWhen: fmtWhen, daysLate: daysLate, dueLabel: dueLabel,
-    clientChip: clientChip, clientLabel: clientLabel, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
+    clientChip: clientChip, clientLabel: clientLabel, clientCode: clientCode, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
     personName: personName, assigneeName: assigneeName,
     initials: initials, mark: mark, person: person, photoUploader: photoUploader,
     STATE_LABEL: STATE_LABEL,

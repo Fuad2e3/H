@@ -104,8 +104,9 @@ OC.dashboard = (function () {
       badgeStyleClass = 'badge-default';
     }
 
-    // Client name - now standardized to show only Client code via OC.ui.clientLabel
-    var clientCode = OC.ui.clientLabel(t.client || (Array.isArray(t.clients) ? t.clients[0] : ''));
+    /* only the short code belongs on a one-line row — the full
+       "0583 - TFR - Tafor Niba" identifier is too long to sit inline */
+    var clientCode = OC.ui.clientCode(t.client || (Array.isArray(t.clients) ? t.clients[0] : ''));
 
     // Assigner (the person who assigned the task / creator)
     var assignerId = t.created_by || (t.assignee || (Array.isArray(t.assignees) ? t.assignees[0] : ''));
@@ -113,10 +114,17 @@ OC.dashboard = (function () {
     var assignerText = assignerUser ? assignerUser.name : (assignerId || '');
     var assignerTitle = assignerUser ? assignerUser.title : '';
 
+    /* priority reads as the colour of the box rather than another chip
+       competing for room on the row; the title still names it for anyone
+       who cannot rely on colour alone */
+    var priority = t.priority || 'normal';
+    var priorityLabel = priority.charAt(0).toUpperCase() + priority.slice(1);
+
     var checkbox = h('button', {
       type: 'button',
-      class: 'todo-check-btn' + (isDone ? ' checked' : ''),
-      'aria-label': isDone ? 'Mark as incomplete' : 'Mark as completed',
+      class: 'todo-check-btn prio-' + priority + (isDone ? ' checked' : ''),
+      title: priorityLabel + ' priority',
+      'aria-label': (isDone ? 'Mark as incomplete' : 'Mark as completed') + ' — ' + priorityLabel + ' priority',
       onClick: function (e) {
         e.stopPropagation();
         var nextState = isDone ? 'open' : 'done';
@@ -137,32 +145,33 @@ OC.dashboard = (function () {
       h('span', {}, badgeLabel)
     ]);
 
-    var topBar = h('div', { class: 'dashboard-todo-top-bar' }, [
-      channelBadge,
-      overdue
-        ? h('span', { class: 'chip overdue due', style: 'font-size:10.5px;padding:1px 7px;' }, OC.ui.dueLabel(t.due))
-        : (t.due ? h('span', { class: 'due muted mono', style: 'font-size:11px;' }, OC.ui.dueLabel(t.due)) : null)
-    ].filter(Boolean));
+    var dueNode = overdue
+      ? h('span', { class: 'chip overdue due', style: 'font-size:10.5px;padding:1px 7px;' }, OC.ui.dueLabel(t.due))
+      : (t.due ? h('span', { class: 'due muted mono', style: 'font-size:11px;' }, OC.ui.dueLabel(t.due)) : null);
+
+    /* the avatar alone identifies the person; their name lives in the
+       tooltip so the row keeps its width for the task itself */
+    var assigneeNode = assignerUser
+      ? h('span', {
+          class: 'dashboard-assignee-mark',
+          title: 'Assigned by ' + assignerText + (assignerTitle ? ' (' + assignerTitle + ')' : ''),
+          'aria-label': 'Assigned by ' + assignerText
+        }, OC.ui.mark(assignerUser.id))
+      : (assignerText ? h('span', { class: 'dashboard-assignee-text' }, assignerText) : null);
 
     var mainRow = h('div', { class: 'dashboard-todo-main-row' }, [
       checkbox,
       clientCode ? h('span', { class: 'dashboard-client-name' }, clientCode) : null,
       h('span', { class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : '') }, t.title),
-      assignerUser
-        ? h('span', { class: 'dashboard-assignee-text', style: 'display:inline-flex;align-items:center;gap:6px;', title: 'Assigned by ' + assignerText + (assignerTitle ? ' (' + assignerTitle + ')' : '') }, [
-            OC.ui.mark(assignerUser.id),
-            h('span', { class: 'name' }, assignerText)
-          ])
-        : (assignerText ? h('span', { class: 'dashboard-assignee-text' }, assignerText) : null)
+      channelBadge,
+      dueNode,
+      assigneeNode
     ].filter(Boolean));
 
     return h('article', {
       class: 'dashboard-todo-row' + (isDone ? ' is-done' : '') + (overdue ? ' is-overdue' : ''),
       'data-id': t.id
-    }, [
-      topBar,
-      mainRow
-    ]);
+    }, [mainRow]);
   }
 
   function render(host, rerender) {

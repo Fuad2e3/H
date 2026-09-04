@@ -14,6 +14,7 @@ OC.dashboard = (function () {
   function me() { return OC.store.user(OC.store.session()); }
 
   var showUpcoming = true;
+  var showDoneTodos = false;
 
   /* The instruction panel already stops at 12; the todo panel did not, so a
      person with hundreds of open tasks paid for all of them on every render. */
@@ -38,6 +39,31 @@ OC.dashboard = (function () {
       })) return true;
       return false;
     }).sort(function (a, b) { return (a.due || '').localeCompare(b.due || ''); });
+  }
+
+  function allMyDoneTodos(user) {
+    if (!user || !OC.store.state.todos) return [];
+    return OC.store.state.todos.filter(function (t) {
+      if (t.archived || t.state !== 'done') return false;
+      // Check single-assignee fields
+      if (t.assignee === user.id || (t.assignee_type === 'user' && t.assignee === user.id)) return true;
+      if (OC.can.inGroup(user, t.assignee) || (t.assignee_type === 'group' && OC.can.inGroup(user, t.assignee))) return true;
+      // Check multi-assignee array (handles raw ids, user:uid, group:gid prefixes)
+      if (Array.isArray(t.assignees) && t.assignees.some(function (aid) {
+        if (aid === user.id) return true;
+        if (typeof aid === 'string') {
+          if (aid.indexOf('user:') === 0 && aid.slice(5) === user.id) return true;
+          if (aid.indexOf('group:') === 0 && OC.can.inGroup(user, aid.slice(6))) return true;
+        }
+        return OC.can.inGroup(user, aid);
+      })) return true;
+      if (t.created_by === user.id) return true;
+      return false;
+    }).sort(function (a, b) {
+      var at = b.completed_at || b.updated_at || b.created_at || '';
+      var bt = a.completed_at || a.updated_at || a.created_at || '';
+      return at.localeCompare(bt);
+    });
   }
 
   function myTodos(user) {
@@ -170,7 +196,28 @@ OC.dashboard = (function () {
       }, clientCode) : null,
       titleNode,
       dueNode,
-      assigneeNode
+      assigneeNode,
+      isDone ? h('button', {
+        class: 'btn small secondary',
+        type: 'button',
+        title: 'Undo: Mark this task as open again',
+        style: 'font-size:11px;padding:2px 8px;font-weight:700;display:inline-flex;align-items:center;gap:4px;margin-left:auto;color:#f87171;border-color:rgba(239,68,68,0.35);cursor:pointer;',
+        onClick: function (e) {
+          e.stopPropagation();
+          OC.store.mutate({
+            actor: user.id, action: 'todo.state', target: t.title, detail: 'open', todoId: t.id
+          }, function () {
+            t.state = 'open';
+            t.updated_at = new Date().toISOString();
+            delete t.completed_at;
+          });
+          OC.ui.toast('Task undone! Restored to open todos.');
+          rerender();
+        }
+      }, [
+        OC.icon('reset'),
+        'Undo'
+      ]) : null
     ].filter(Boolean));
 
     return h('article', {
@@ -202,6 +249,24 @@ OC.dashboard = (function () {
     }
 
     var actions = [{ label: 'Close', onClick: function (close) { close(); } }];
+    if (isDone) {
+      actions.unshift({
+        label: 'Undo / Reopen task',
+        primary: true,
+        onClick: function (close) {
+          OC.store.mutate({
+            actor: user.id, action: 'todo.state', target: t.title, detail: 'open', todoId: t.id
+          }, function () {
+            t.state = 'open';
+            t.updated_at = new Date().toISOString();
+            delete t.completed_at;
+          });
+          OC.ui.toast('Task undone! Restored to open todos.');
+          close();
+          rerender();
+        }
+      });
+    }
     if (OC.can && OC.can.canEditTodo && OC.can.canEditTodo(user, t) && OC.board && OC.board.editTodo) {
       actions.push({
         label: 'Edit task', primary: true,
@@ -247,6 +312,8 @@ OC.dashboard = (function () {
     var user = me() || (OC.store.state && OC.store.state.users && OC.store.state.users[0]) || { id: '', name: 'User', admin: false };
     var allTodos = allMyTodos(user);
     var todos = myTodos(user);
+    var doneTodos = allMyDoneTodos(user);
+    var todosToDisplay = showDoneTodos ? doneTodos : todos;
     var notes = myInstructions(user);
     var unread = notes.filter(function (n) { return OC.ui.wasUnread(n, user.id); });
     var overdue = allTodos.filter(function (t) { return OC.ui.daysLate(t.due) > 0; });
@@ -413,34 +480,66 @@ OC.dashboard = (function () {
         h('section', { class: 'panel' }, [
           h('div', { class: 'panel-head' }, [
             h('h2', {}, 'My todos'),
-            h('span', { class: 'sub' }, showUpcoming ? 'showing all open tasks' : 'due today & overdue first'),
-            upcoming.length ? h('button', {
-              class: 'btn small',
-              type: 'button',
-              style: 'margin-left:auto;',
-              onClick: function () {
-                showUpcoming = !showUpcoming;
-                todoLimit = TODO_PAGE;
-                rerender();
-              }
-            }, showUpcoming ? 'Show Today & Overdue only' : 'Show Upcoming (' + upcoming.length + ')') : null
+            h('span', { class: 'sub' }, showDoneTodos
+              ? (doneTodos.length ? 'showing ' + doneTodos.length + ' completed tasks · click Undo to restore' : 'no completed tasks')
+              : (showUpcoming ? 'showing all open tasks' : 'due today & overdue first')),
+            h('div', { class: 'tools', style: 'margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;' }, [
+              h('div', { class: 'segmented', role: 'tablist', style: 'display:inline-flex;padding:2px;background:rgba(255,255,255,0.06);border-radius:9999px;' }, [
+                h('button', {
+                  type: 'button',
+                  'aria-pressed': String(!showDoneTodos),
+                  style: 'padding:4px 12px;font-size:12px;border-radius:9999px;font-weight:700;transition:all 0.15s ease;' + (!showDoneTodos ? 'background:var(--accent,#0284c7);color:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.25);' : 'background:transparent;color:var(--text-secondary);'),
+                  onClick: function () {
+                    if (showDoneTodos) {
+                      showDoneTodos = false;
+                      todoLimit = TODO_PAGE;
+                      rerender();
+                    }
+                  }
+                }, 'Open (' + allTodos.length + ')'),
+                h('button', {
+                  type: 'button',
+                  'aria-pressed': String(showDoneTodos),
+                  style: 'padding:4px 12px;font-size:12px;border-radius:9999px;font-weight:700;transition:all 0.15s ease;' + (showDoneTodos ? 'background:var(--accent,#0284c7);color:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.25);' : 'background:transparent;color:var(--text-secondary);'),
+                  onClick: function () {
+                    if (!showDoneTodos) {
+                      showDoneTodos = true;
+                      todoLimit = TODO_PAGE;
+                      rerender();
+                    }
+                  }
+                }, 'Done (' + doneTodos.length + ')')
+              ]),
+              (!showDoneTodos && upcoming.length) ? h('button', {
+                class: 'btn small',
+                type: 'button',
+                onClick: function () {
+                  showUpcoming = !showUpcoming;
+                  todoLimit = TODO_PAGE;
+                  rerender();
+                }
+              }, showUpcoming ? 'Today & Overdue only' : 'Upcoming (' + upcoming.length + ')') : null
+            ])
           ]),
-          h('div', { class: 'panel-body', style: 'padding:12px;' }, todos.length
+          h('div', { class: 'panel-body', style: 'padding:12px;' }, todosToDisplay.length
             ? (function () {
-                var rows = todos.slice(0, todoLimit).map(function (t) {
+                var rows = todosToDisplay.slice(0, todoLimit).map(function (t) {
                   return dashboardTodoRow(t, user, rerender);
                 });
-                if (todos.length > todoLimit) {
+                if (todosToDisplay.length > todoLimit) {
                   rows.push(h('div', { class: 'list-more' }, [
                     h('button', { class: 'btn small', type: 'button', onClick: function () {
                       todoLimit += TODO_PAGE;
                       rerender();
-                    } }, [OC.icon('down'), 'Show ' + (todos.length - todoLimit) + ' more'])
+                    } }, [OC.icon('down'), 'Show ' + (todosToDisplay.length - todoLimit) + ' more'])
                   ]));
                 }
                 return rows;
               })()
-            : h('div', { class: 'empty' }, [OC.icon('check'), 'Nothing assigned to you right now.']))
+            : h('div', { class: 'empty' }, [
+                OC.icon(showDoneTodos ? 'check' : 'check'),
+                showDoneTodos ? 'No completed tasks yet.' : 'Nothing assigned to you right now.'
+              ]))
         ]),
 
         h('section', { class: 'panel' }, [

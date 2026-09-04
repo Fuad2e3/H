@@ -230,8 +230,13 @@ OC.store = (function () {
     return endpoint;
   }
   var isSyncInProgress = false;
+  var isMutationInProgress = false;
+  var lastLocalMutationTime = 0;
+
   function syncWithServer() {
-    if (!isHttp() || typeof fetch !== 'function' || isSyncInProgress) return;
+    if (!isHttp() || typeof fetch !== 'function' || isSyncInProgress || isMutationInProgress) return;
+    // Pause background polling for 3.5s after user modification to eliminate race-condition bounce
+    if (Date.now() - lastLocalMutationTime < 3500) return;
     isSyncInProgress = true;
 
     var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -483,8 +488,11 @@ OC.store = (function () {
   function pushMutationToServer(entry) {
     if (!isHttp() || typeof fetch !== 'function') return;
 
+    isMutationInProgress = true;
+    lastLocalMutationTime = Date.now();
+
     var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var timer = controller ? setTimeout(function () { controller.abort(); }, 4000) : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 4500) : null;
 
     fetch(getApiUrl('/api/mutate'), {
       method: 'POST',
@@ -494,6 +502,7 @@ OC.store = (function () {
     })
       .then(function (res) {
         if (timer) clearTimeout(timer);
+        isMutationInProgress = false;
         if (!res.ok) {
           console.warn('[store] Server mutation response error HTTP ' + res.status);
           return res.json().then(function (err) {
@@ -503,6 +512,7 @@ OC.store = (function () {
         return res.json();
       })
       .then(function (data) {
+        isMutationInProgress = false;
         if (data && data.state && data.state.version === 1) {
           // Preserve active local modifications from being clobbered by server echo
           if (state && Array.isArray(state.todos)) {
@@ -513,8 +523,10 @@ OC.store = (function () {
               if (!st) {
                 data.state.todos.push(lt);
               } else {
-                var isRecent = !!(_recentTodoUpdates[lt.id] && (Date.now() - _recentTodoUpdates[lt.id] < 15000));
-                if (isRecent) Object.assign(st, lt);
+                var isRecent = !!(_recentTodoUpdates[lt.id] && (Date.now() - _recentTodoUpdates[lt.id] < 30000));
+                var ltTime = lt.updated_at ? new Date(lt.updated_at).getTime() : 0;
+                var stTime = st.updated_at ? new Date(st.updated_at).getTime() : 0;
+                if (isRecent || (ltTime > 0 && ltTime >= stTime)) Object.assign(st, lt);
               }
             });
             data.state.todos = data.state.todos.filter(function (t) { return !_deletedTodoIds[t.id]; });
@@ -523,10 +535,41 @@ OC.store = (function () {
             data.state.clients = data.state.clients || [];
             state.clients.forEach(function (lc) {
               var sc = data.state.clients.find(function (c) { return c.id === lc.id; });
-              if (sc && _recentClientUpdates[lc.id] && (Date.now() - _recentClientUpdates[lc.id] < 15000)) {
+              if (sc && _recentClientUpdates[lc.id] && (Date.now() - _recentClientUpdates[lc.id] < 30000)) {
                 Object.assign(sc, lc);
               }
             });
+          }
+          if (state && Array.isArray(state.instructions)) {
+            data.state.instructions = data.state.instructions || [];
+            state.instructions.forEach(function (li) {
+              if (_deletedInstructionIds[li.id]) return;
+              var si = data.state.instructions.find(function (i) { return i.id === li.id; });
+              if (!si) {
+                data.state.instructions.push(li);
+              } else {
+                var isRecentIns = !!(_recentInstructionUpdates[li.id] && (Date.now() - _recentInstructionUpdates[li.id] < 30000));
+                var liTime = li.updated_at ? new Date(li.updated_at).getTime() : 0;
+                var siTime = si.updated_at ? new Date(si.updated_at).getTime() : 0;
+                if (isRecentIns || (liTime > 0 && liTime >= siTime)) Object.assign(si, li);
+              }
+            });
+            data.state.instructions = data.state.instructions.filter(function (i) { return !_deletedInstructionIds[i.id]; });
+          }
+          if (state && Array.isArray(state.groups)) {
+            data.state.groups = data.state.groups || [];
+            data.state.groups = data.state.groups.filter(function (g) { return !_deletedGroupIds[g.id]; });
+          }
+          if (state && Array.isArray(state.users)) {
+            data.state.users = data.state.users || [];
+            state.users.forEach(function (lu) {
+              if (_deletedUserIds[lu.id]) return;
+              var su = data.state.users.find(function (u) { return u.id === lu.id; });
+              if (su && _recentUserUpdates[lu.id] && (Date.now() - _recentUserUpdates[lu.id] < 30000)) {
+                Object.assign(su, lu);
+              }
+            });
+            data.state.users = data.state.users.filter(function (u) { return !_deletedUserIds[u.id]; });
           }
           var prev = JSON.stringify(state);
           var next = JSON.stringify(data.state);
@@ -539,6 +582,7 @@ OC.store = (function () {
       })
       .catch(function (err) {
         if (timer) clearTimeout(timer);
+        isMutationInProgress = false;
         console.warn('[store] Network failure pushing mutation:', err ? err.message : 'timeout');
         autoDiscoverApiUrl();
       });
@@ -553,16 +597,9 @@ OC.store = (function () {
         try {
           var data = JSON.parse(event.data);
           if (data.type === 'mutate' || data.type === 'reset' || data.type === 'state_saved') {
-            fetch(getApiUrl('/api/state'), { headers: { 'bypass-tunnel-reminder': 'true' } })
-              .then(function (res) { return res.json(); })
-              .then(function (fresh) {
-                if (fresh && fresh.version === 1) {
-                  state = fresh;
-                  write();
-                  emit();
-                }
-              })
-              .catch(function () {});
+            // If this client just modified something locally, ignore server echo to prevent bounce
+            if (isMutationInProgress || (Date.now() - lastLocalMutationTime < 3500)) return;
+            syncWithServer();
           }
         } catch (_) {}
       };
@@ -570,14 +607,15 @@ OC.store = (function () {
     } catch (_) {}
   }
 
-  /* Live auto-refresh, once a second. syncWithServer only emits when the state
-     actually came back different, so a quiet second costs one request and
-     rebuilds nothing. A tab in the background is not polled at all. */
+  /* Live background auto-refresh (every 3.5s).
+     SSE provides instant 0ms push updates across devices, while this 3.5s poll
+     ensures a quiet connection without collision or bounce. */
   if (typeof setInterval === 'function' && isHttp()) {
     var syncTimer = setInterval(function () {
       if (typeof document !== 'undefined' && document.hidden) return;
+      if (isMutationInProgress || (Date.now() - lastLocalMutationTime < 3500)) return;
       syncWithServer();
-    }, 1000);
+    }, 3500);
     if (syncTimer && typeof syncTimer.unref === 'function') {
       syncTimer.unref();
     }
@@ -754,6 +792,7 @@ OC.store = (function () {
         return false;
       }
     }
+    lastLocalMutationTime = Date.now();
     if (typeof fn === 'function') {
       fn();
     }

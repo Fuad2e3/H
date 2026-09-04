@@ -408,7 +408,7 @@ OC.board = (function () {
                   ? h('span', { class: 'chip group' }, OC.ui.assigneeName(todo))
                   : OC.ui.person(todo.assignee)))
           : null,
-        todo.recurrence !== 'none' ? h('span', { class: 'chip recurring' }, todo.recurrence) : null,
+        (todo.recurrence && todo.recurrence !== 'none') ? h('span', { class: 'chip recurring' }, todo.recurrence) : null,
         todo.archived ? h('span', { class: 'chip custom' }, 'archived') : null,
         h('span', { class: overdue ? 'chip overdue due' : 'due' }, OC.ui.dueLabel(todo.due))
       ]),

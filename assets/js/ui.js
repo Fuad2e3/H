@@ -1343,7 +1343,7 @@ OC.ui = (function () {
       backdrop = h('div', { class: 'modal-backdrop', onClick: close });
       document.body.appendChild(backdrop);
       dlg.setAttribute('open', '');
-      dlg.classList.add('fallback');
+      if (dlg.classList && dlg.classList.add) dlg.classList.add('fallback');
       escapeHandler = function (e) { if (e.key === 'Escape') close(); };
       document.addEventListener('keydown', escapeHandler);
     }
@@ -1552,7 +1552,7 @@ OC.ui = (function () {
 
     function renderList() {
       clear(listWrap);
-      var q = searchInput.value.trim().toLowerCase();
+      var q = (searchInput.value || '').trim().toLowerCase();
       var pickerUser = OC.store.user(OC.store.session());
       var pool = (OC.can && OC.can.visibleClients && pickerUser)
         ? OC.can.visibleClients(pickerUser)
@@ -1662,6 +1662,11 @@ OC.ui = (function () {
       if (val && chosen.indexOf(val) === -1) chosen.push(val);
     });
 
+    var isFixed = !(currentUser && currentUser.admin);
+    if (isFixed && !chosen.length && allowedDepts.length > 0) {
+      chosen = allowedDepts.map(function (d) { return d.id; });
+    }
+
     var root = h('div', { class: 'multi-picker dept-multi-picker' });
     var chipsWrap = h('div', { class: 'multi-picker-chips' });
     var searchInput = h('input', { type: 'search', placeholder: 'Search departments...', 'aria-label': 'Filter departments' });
@@ -1677,7 +1682,7 @@ OC.ui = (function () {
         var d = OC.store.department(did);
         var label = d ? d.name : did;
 
-        var removeBtn = h('button', {
+        var removeBtn = isFixed ? null : h('button', {
           type: 'button',
           class: 'chip-remove',
           title: 'Remove ' + label,
@@ -1692,16 +1697,16 @@ OC.ui = (function () {
         }, OC.icon('close'));
 
         var chip = h('span', { class: 'multi-picker-chip dept-chip' }, [
-          h('span', {}, label),
+          h('span', {}, label + (isFixed ? ' (Fixed)' : '')),
           removeBtn
-        ]);
+        ].filter(Boolean));
         chipsWrap.appendChild(chip);
       });
     }
 
     function renderList() {
       clear(listWrap);
-      var q = searchInput.value.trim().toLowerCase();
+      var q = (searchInput.value || '').trim().toLowerCase();
       var depts = allowedDepts.filter(function (d) {
         return !q || d.name.toLowerCase().indexOf(q) > -1 || d.id.toLowerCase().indexOf(q) > -1;
       });
@@ -1717,7 +1722,10 @@ OC.ui = (function () {
           type: 'checkbox',
           value: d.id,
           checked: isChecked,
+          disabled: isFixed,
+          title: isFixed ? 'Fixed to your assigned department' : '',
           onChange: function (e) {
+            if (isFixed) return;
             var at = chosen.indexOf(d.id);
             if (e.target.checked && at === -1) chosen.push(d.id);
             if (!e.target.checked && at > -1) chosen.splice(at, 1);
@@ -1728,9 +1736,9 @@ OC.ui = (function () {
           }
         });
 
-        var line = h('label', { class: 'multi-picker-item-line' }, [
+        var line = h('label', { class: 'multi-picker-item-line', style: isFixed ? 'cursor:default;opacity:0.85;' : '' }, [
           chk,
-          h('span', { style: 'font-weight:500;' }, d.name),
+          h('span', { style: 'font-weight:500;' }, d.name + (isFixed ? ' (Fixed)' : '')),
           h('span', { class: 'chip custom', style: 'margin-left:auto;font-size:10.5px;' }, d.id)
         ]);
         listWrap.appendChild(line);

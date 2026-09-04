@@ -250,14 +250,25 @@ assert.strictEqual(openedProfileUser.id, 'u-emp1', 'Clicking person element must
 console.log('  ✓ OC.ui.person click properly opens employee profile portal');
 
 // Test dashboardTodoRow
+let openedModalTitle = null;
 let editedTodo = null;
+const origModal = OC.ui.modal;
+OC.ui.modal = function (cfg) {
+  openedModalTitle = cfg.title;
+  if (cfg.actions) {
+    const editAction = cfg.actions.find(a => a.label === 'Edit task');
+    if (editAction) editAction.onClick(function () {});
+  }
+};
 OC.board.editTodo = function (t) { editedTodo = t; };
+testTodos[0].created_by = 'u-emp1';
 const dRow = OC.dashboard.dashboardTodoRow(testTodos[0], userA, function () {});
 assert(dRow, 'dashboardTodoRow should return element');
 assert(typeof dRow.events.click === 'function', 'dashboardTodoRow article must have click handler');
 dRow.events.click();
-assert.strictEqual(editedTodo.id, 't-101', 'Clicking dashboard row must open task modal for t-101');
-console.log('  ✓ Dashboard todo row click properly opens task modal');
+assert.strictEqual(openedModalTitle, 'Task details', 'Clicking dashboard row must open task details modal');
+assert.strictEqual(editedTodo.id, 't-101', 'Clicking dashboard row modal action opens editTodo for t-101');
+console.log('  ✓ Dashboard todo row click properly opens task detail modal and edit action');
 
 console.log('\n======================================================');
 console.log(' 🎉 ALL USER COUNTS, CLIENT DATES & LINKS VERIFIED! ✅');

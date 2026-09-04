@@ -2071,9 +2071,9 @@ dialog.modal.todo-detail-modal {
   flex: none;
 }
 .dashboard-assignee-mark .mark-tint {
-  width: 22px;
-  height: 22px;
-  font-size: 9.5px;
+  width: 25px;
+  height: 25px;
+  font-size: 10.5px;
 }
 
 .dashboard-checkbox {
@@ -2106,7 +2106,7 @@ dialog.modal.todo-detail-modal {
 .dashboard-client-name {
   font-weight: 700;
   color: var(--blueprint);
-  font-size: 11px;
+  font-size: 12.5px;
   white-space: nowrap;
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   padding: 2px 7px;
@@ -2118,7 +2118,7 @@ dialog.modal.todo-detail-modal {
 }
 
 .dashboard-todo-title {
-  font-size: 13.5px;
+  font-size: 15px;
   color: var(--ink);
   flex: 1 1 auto;
   min-width: 0;
@@ -4929,7 +4929,7 @@ dialog.modal.fallback {
   contain-intrinsic-size: auto 220px;
 }
 .dashboard-todo-row {
-  contain-intrinsic-size: auto 60px;
+  contain-intrinsic-size: auto 64px;
 }
 .client-item-card {
   contain-intrinsic-size: auto 170px;

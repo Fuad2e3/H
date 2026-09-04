@@ -114,8 +114,8 @@ OC.dashboard = (function () {
     ]);
 
     var dueNode = overdue
-      ? h('span', { class: 'chip overdue due', style: 'font-size:10.5px;padding:1px 7px;' }, OC.ui.dueLabel(t.due))
-      : (t.due ? h('span', { class: 'due muted mono', style: 'font-size:11px;' }, OC.ui.dueLabel(t.due)) : null);
+      ? h('span', { class: 'chip overdue due', style: 'font-size:12px;padding:2px 9px;' }, OC.ui.dueLabel(t.due))
+      : (t.due ? h('span', { class: 'due muted mono', style: 'font-size:12.5px;' }, OC.ui.dueLabel(t.due)) : null);
 
     /* the avatar alone identifies the person; their name lives in the
        tooltip so the row keeps its width for the task itself */

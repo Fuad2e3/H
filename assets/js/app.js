@@ -443,7 +443,7 @@ OC.app = (function () {
         var isInviteExp = found.invite ? OC.store.inviteExpired(found.invite) : false;
         if (expectedPass && pass.toLowerCase() !== expectedPass && pass.toLowerCase() !== 'admin') {
           setBtnLoading(false);
-          errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password for &quot;' + email + '&quot;.';
+          errorBox.innerHTML = '<strong>Access Denied:</strong> Incorrect password for &quot;' + OC.ui.escapeHtml(email) + '&quot;.';
           errorBox.style.display = 'flex';
           return;
         }
@@ -478,7 +478,7 @@ OC.app = (function () {
             completeSignIn(found);
           } else {
             setBtnLoading(false);
-            errorBox.innerHTML = '<strong>Access Denied:</strong> ' + ((data && data.error) || 'Invalid credentials.');
+            errorBox.innerHTML = '<strong>Access Denied:</strong> ' + OC.ui.escapeHtml((data && data.error) || 'Invalid credentials.');
             errorBox.style.display = 'flex';
           }
         })

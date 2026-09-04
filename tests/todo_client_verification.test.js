@@ -161,12 +161,16 @@ const hostDashboard = document.createElement('div');
 OC.dashboard.render(hostDashboard, function () {});
 const hasDashboardRow = hasClassInChildren(hostDashboard, 'dashboard-todo-row');
 const hasCheckBtn = hasClassInChildren(hostDashboard, 'todo-check-btn');
+// the department badge was dropped from the row: it costs the width the task
+// title needs, and the department is still on the task itself
 const hasChannelBadge = hasClassInChildren(hostDashboard, 'channel-badge');
+const hasClientCode = hasClassInChildren(hostDashboard, 'dashboard-client-name');
 
 assert.strictEqual(hasDashboardRow, true, 'Dashboard must render dashboard-todo-row');
 assert.strictEqual(hasCheckBtn, true, 'Dashboard row must have todo-check-btn');
-assert.strictEqual(hasChannelBadge, true, 'Dashboard row must have channel-badge');
-console.log('  ✓ Dashboard renders modern todo row strip with checkbox & channel badge');
+assert.strictEqual(hasChannelBadge, false, 'Dashboard row must not carry a department badge');
+assert.strictEqual(hasClientCode, true, 'Dashboard row must show the client code');
+console.log('  ✓ Dashboard renders one-line todo row with checkbox & client code');
 
 // 7. Verify unified Activities view rendering (combining groups & people)
 console.log('7. Testing unified Activities view rendering');

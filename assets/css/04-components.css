@@ -588,6 +588,32 @@
   outline-offset: 2px;
 }
 
+/* Priority is carried by the checkbox colour instead of another chip on the
+   row: grey for low, blue for normal, red for high, each filling the whole
+   box so it reads at a glance down a long list. Colour is never the only cue
+   — the button's title and aria-label name the priority too, and a completed
+   task turns green with a tick whatever its priority. */
+.todo-check-btn.prio-low:not(.checked) {
+  border-color: var(--slate);
+  background: var(--slate);
+}
+.todo-check-btn.prio-normal:not(.checked) {
+  border-color: var(--blueprint);
+  background: var(--blueprint);
+}
+.todo-check-btn.prio-high:not(.checked) {
+  border-color: var(--signal);
+  background: var(--signal);
+}
+/* the filled box beats the generic hover tint on specificity, so the hover
+   feedback has to be restated here or it is lost */
+.todo-check-btn.prio-low:not(.checked):hover,
+.todo-check-btn.prio-normal:not(.checked):hover,
+.todo-check-btn.prio-high:not(.checked):hover {
+  filter: brightness(1.18);
+  transform: scale(1.08);
+}
+
 .todo-check-btn.checked {
   background: var(--success);
   border-color: var(--success);
@@ -1393,6 +1419,24 @@ dialog.modal.client-fields-modal {
   flex-direction: column;
   gap: 3px;
 }
+/* sits under a capped picker list, saying how much of the book is on screen
+   and offering the rest */
+.multi-picker-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.multi-picker-count:empty {
+  display: none;
+}
+.multi-picker-count .btn {
+  margin-left: auto;
+}
+
 .multi-picker-item-line {
   display: flex;
   align-items: center;
@@ -1884,7 +1928,8 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
    ========================================================================= */
 .dashboard-todo-row {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 8px;
   background: var(--card-bg);
   border: 1px solid var(--rule);
@@ -1923,7 +1968,112 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
   gap: 10px;
   width: 100%;
   min-width: 0;
+  flex-wrap: nowrap;
+}
+
+/* everything after the title is trailing metadata: it keeps its own size and
+   the title absorbs whatever is left, so the row never wraps to two lines */
+.dashboard-todo-main-row > .due,
+.dashboard-todo-main-row > .dashboard-assignee-mark {
+  flex: none;
+}
+
+/* ---- task detail popup ------------------------------------------------- */
+/* Opened from a dashboard row, whose one-line layout has to ellipsise long
+   titles; here the title wraps in full, which is the reason the popup exists. */
+dialog.modal.todo-detail-modal {
+  max-width: 560px;
+}
+.todo-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.todo-detail-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.todo-detail-title.strikethrough {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+.todo-detail-chips {
+  display: flex;
   flex-wrap: wrap;
+  gap: 6px;
+}
+.todo-detail-line {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+}
+.todo-detail-label {
+  flex: none;
+  width: 96px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.todo-detail-value {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.todo-detail-desc {
+  margin: 0;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.todo-detail-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* the priority chip mirrors the filled box on the row it was opened from */
+.chip.prio-chip {
+  color: #ffffff;
+  border-color: transparent;
+}
+.chip.prio-chip.prio-low {
+  background: var(--slate);
+}
+.chip.prio-chip.prio-normal {
+  background: var(--blueprint);
+}
+.chip.prio-chip.prio-high {
+  background: var(--signal);
+}
+
+/* the title is the row's accessible control, so it needs a visible focus ring */
+.dashboard-todo-title[role="button"] {
+  cursor: pointer;
+  border-radius: 4px;
+}
+.dashboard-todo-title[role="button"]:focus-visible {
+  outline: 2px solid var(--blueprint);
+  outline-offset: 2px;
+}
+
+/* the avatar stands in for the assignee; the name is in its tooltip */
+.dashboard-assignee-mark {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+.dashboard-assignee-mark .mark-tint {
+  width: 22px;
+  height: 22px;
+  font-size: 9.5px;
 }
 
 .dashboard-checkbox {
@@ -1970,8 +2120,8 @@ dialog.modal.modal-chat .modal-body.chat-modal-body {
 .dashboard-todo-title {
   font-size: 13.5px;
   color: var(--ink);
-  flex: 1;
-  min-width: 180px;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4779,7 +4929,7 @@ dialog.modal.fallback {
   contain-intrinsic-size: auto 220px;
 }
 .dashboard-todo-row {
-  contain-intrinsic-size: auto 92px;
+  contain-intrinsic-size: auto 60px;
 }
 .client-item-card {
   contain-intrinsic-size: auto 170px;

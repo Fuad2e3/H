@@ -77,35 +77,9 @@ OC.dashboard = (function () {
     var late = OC.ui.daysLate(t.due) > 0;
     var overdue = !isDone && late;
 
-    // Determine channel / department badge info
-    var dept = OC.store.department(t.department || (Array.isArray(t.departments) ? t.departments[0] : ''));
-    var deptName = dept ? dept.name : '';
-    var tag = (t.tags && t.tags.length) ? ((OC.store.tag(t.tags[0]) || {}).label || t.tags[0]) : '';
-
-    var badgeLabel = tag || deptName || (t.priority && t.priority !== 'normal' ? t.priority.toUpperCase() : 'General');
-    var badgeIcon = 'mail';
-    var badgeStyleClass = 'badge-channel';
-
-    var lowerBadge = badgeLabel.toLowerCase();
-    if (lowerBadge.indexOf('urgent') > -1 || lowerBadge.indexOf('high') > -1) {
-      badgeIcon = 'alert';
-      badgeStyleClass = 'badge-urgent';
-    } else if (lowerBadge.indexOf('linkedin') > -1) {
-      badgeIcon = 'linkedin';
-      badgeStyleClass = 'badge-linkedin';
-    } else if (lowerBadge.indexOf('mail') > -1 || lowerBadge.indexOf('email') > -1 || lowerBadge.indexOf('outreach') > -1) {
-      badgeIcon = 'mail';
-      badgeStyleClass = 'badge-email';
-    } else if (lowerBadge.indexOf('web') > -1 || lowerBadge.indexOf('dev') > -1) {
-      badgeIcon = 'monitor';
-      badgeStyleClass = 'badge-web';
-    } else {
-      badgeIcon = 'inbox';
-      badgeStyleClass = 'badge-default';
-    }
-
-    // Client name - now standardized to show only Client code via OC.ui.clientLabel
-    var clientCode = OC.ui.clientLabel(t.client || (Array.isArray(t.clients) ? t.clients[0] : ''));
+    /* only the short code belongs on a one-line row — the full
+       "0583 - TFR - Tafor Niba" identifier is too long to sit inline */
+    var clientCode = OC.ui.clientCode(t.client || (Array.isArray(t.clients) ? t.clients[0] : ''));
 
     // Assigner (the person who assigned the task / creator)
     var assignerId = t.created_by || (t.assignee || (Array.isArray(t.assignees) ? t.assignees[0] : ''));
@@ -113,10 +87,17 @@ OC.dashboard = (function () {
     var assignerText = assignerUser ? assignerUser.name : (assignerId || '');
     var assignerTitle = assignerUser ? assignerUser.title : '';
 
+    /* priority reads as the colour of the box rather than another chip
+       competing for room on the row; the title still names it for anyone
+       who cannot rely on colour alone */
+    var priority = t.priority || 'normal';
+    var priorityLabel = priorityWord(priority);
+
     var checkbox = h('button', {
       type: 'button',
-      class: 'todo-check-btn' + (isDone ? ' checked' : ''),
-      'aria-label': isDone ? 'Mark as incomplete' : 'Mark as completed',
+      class: 'todo-check-btn prio-' + priority + (isDone ? ' checked' : ''),
+      title: priorityLabel + ' priority',
+      'aria-label': (isDone ? 'Mark as incomplete' : 'Mark as completed') + ' — ' + priorityLabel + ' priority',
       onClick: function (e) {
         e.stopPropagation();
         var nextState = isDone ? 'open' : 'done';
@@ -134,17 +115,40 @@ OC.dashboard = (function () {
       isDone ? (OC.icon ? OC.icon('check', 'check-icon') : '✓') : null
     ]);
 
-    var channelBadge = h('span', { class: 'channel-badge ' + badgeStyleClass }, [
-      (OC.icon && badgeIcon) ? OC.icon(badgeIcon, 'channel-icon') : null,
-      h('span', {}, badgeLabel)
-    ]);
+    var dueNode = overdue
+      ? h('span', { class: 'chip overdue due', style: 'font-size:10.5px;padding:1px 7px;' }, OC.ui.dueLabel(t.due))
+      : (t.due ? h('span', { class: 'due muted mono', style: 'font-size:11px;' }, OC.ui.dueLabel(t.due)) : null);
 
-    var topBar = h('div', { class: 'dashboard-todo-top-bar' }, [
-      channelBadge,
-      overdue
-        ? h('span', { class: 'chip overdue due', style: 'font-size:10.5px;padding:1px 7px;' }, OC.ui.dueLabel(t.due))
-        : (t.due ? h('span', { class: 'due muted mono', style: 'font-size:11px;' }, OC.ui.dueLabel(t.due)) : null)
-    ].filter(Boolean));
+    /* the avatar alone identifies the person; their name lives in the
+       tooltip so the row keeps its width for the task itself */
+    var assigneeNode = assignerUser
+      ? h('span', {
+          class: 'dashboard-assignee-mark',
+          title: 'Assigned by ' + assignerText + (assignerTitle ? ' (' + assignerTitle + ')' : ''),
+          'aria-label': 'Assigned by ' + assignerText
+        }, OC.ui.mark(assignerUser.id))
+      : (assignerText ? h('span', { class: 'dashboard-assignee-text' }, assignerText) : null);
+
+    /* The row truncates the title to stay on one line, so there has to be a
+       way to read the whole thing — and the row already looked clickable
+       (cursor:pointer) without doing anything. The accessible control is the
+       title rather than the article, because the article wraps a real button
+       (the checkbox) and role="button" must not contain one. A mouse click
+       anywhere on the row bubbles to the same handler. */
+    function openDetail() { todoDetailModal(t, user, rerender); }
+
+    var titleNode = h('span', {
+      class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : ''),
+      role: 'button',
+      tabindex: '0',
+      title: t.title,
+      'aria-label': 'Open task: ' + t.title,
+      onKeydown: function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+        e.preventDefault();
+        openDetail();
+      }
+    }, t.title);
 
     var mainRow = h('div', { class: 'dashboard-todo-main-row' }, [
       checkbox,
@@ -164,48 +168,78 @@ OC.dashboard = (function () {
           }
         }
       }, clientCode) : null,
-      h('span', {
-        class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : ''),
-        style: 'cursor:pointer;',
-        title: 'Click to view / edit task',
-        onClick: function (e) {
-          e.stopPropagation();
-          if (OC.board && OC.board.editTodo) {
-            OC.board.editTodo(t, rerender);
-          }
-        }
-      }, t.title),
-      assignerUser
-        ? h('span', {
-            class: 'dashboard-assignee-text',
-            style: 'display:inline-flex;align-items:center;gap:6px;cursor:pointer;',
-            title: 'Assigned by ' + assignerText + (assignerTitle ? ' (' + assignerTitle + ')' : '') + ' — click to view profile',
-            onClick: function (e) {
-              e.stopPropagation();
-              if (OC.profilePortal && OC.profilePortal.openForUser) {
-                OC.profilePortal.openForUser(assignerUser);
-              }
-            }
-          }, [
-            OC.ui.mark(assignerUser.id),
-            h('span', { class: 'name' }, assignerText)
-          ])
-        : (assignerText ? h('span', { class: 'dashboard-assignee-text' }, assignerText) : null)
+      titleNode,
+      dueNode,
+      assigneeNode
     ].filter(Boolean));
 
     return h('article', {
       class: 'dashboard-todo-row' + (isDone ? ' is-done' : '') + (overdue ? ' is-overdue' : ''),
       'data-id': t.id,
       style: 'cursor:pointer;',
-      onClick: function () {
-        if (OC.board && OC.board.editTodo) {
-          OC.board.editTodo(t, rerender);
-        }
-      }
-    }, [
-      topBar,
-      mainRow
-    ]);
+      onClick: openDetail
+    }, [mainRow]);
+  }
+
+  /* the full task, for when the one-line row could not show all of it */
+  function todoDetailModal(t, user, rerender) {
+    var h = OC.ui.h;
+    var priority = t.priority || 'normal';
+    var isDone = t.state === 'done';
+    var overdue = !isDone && OC.ui.daysLate(t.due) > 0;
+
+    var clientId = t.client || (Array.isArray(t.clients) ? t.clients[0] : '');
+    var dept = OC.store.department(t.department || (Array.isArray(t.departments) ? t.departments[0] : ''));
+    var assignerId = t.created_by || (t.assignee || (Array.isArray(t.assignees) ? t.assignees[0] : ''));
+    var assignerUser = OC.store.user(assignerId);
+
+    function line(label, value) {
+      if (!value) return null;
+      return h('div', { class: 'todo-detail-line' }, [
+        h('span', { class: 'todo-detail-label' }, label),
+        h('div', { class: 'todo-detail-value' }, value)
+      ]);
+    }
+
+    var actions = [{ label: 'Close', onClick: function (close) { close(); } }];
+    if (OC.can && OC.can.canEditTodo && OC.can.canEditTodo(user, t) && OC.board && OC.board.editTodo) {
+      actions.push({
+        label: 'Edit task', primary: true,
+        onClick: function (close) { close(); OC.board.editTodo(t); }
+      });
+    }
+
+    OC.ui.modal({
+      title: 'Task details',
+      className: 'todo-detail-modal',
+      content: h('div', { class: 'todo-detail' }, [
+        /* the title wraps here in full — this is the whole point of the popup */
+        h('h3', { class: 'todo-detail-title' + (isDone ? ' strikethrough' : '') }, t.title),
+        h('div', { class: 'todo-detail-chips' }, [
+          h('span', { class: 'chip prio-chip prio-' + priority }, priorityWord(priority) + ' priority'),
+          h('span', { class: 'chip' }, isDone ? 'Done' : (t.state || 'open')),
+          t.due ? h('span', { class: overdue ? 'chip overdue' : 'chip custom' }, OC.ui.dueLabel(t.due)) : null,
+          (t.recurrence && t.recurrence !== 'none') ? h('span', { class: 'chip recurring' }, t.recurrence) : null,
+          t.archived ? h('span', { class: 'chip custom' }, 'archived') : null
+        ].filter(Boolean)),
+        t.description ? line('Description', h('p', { class: 'todo-detail-desc' }, t.description)) : null,
+        clientId ? line('Client', OC.ui.clientLabel(clientId)) : null,
+        dept ? line('Department', dept.name) : null,
+        assignerUser
+          ? line('Assigned by', h('span', { class: 'todo-detail-person' }, [
+              OC.ui.mark(assignerUser.id),
+              h('span', {}, assignerUser.name + (assignerUser.title ? ' — ' + assignerUser.title : ''))
+            ]))
+          : null,
+        t.blocked_reason ? line('Blocked', t.blocked_reason) : null
+      ].filter(Boolean)),
+      actions: actions
+    });
+  }
+
+  function priorityWord(p) {
+    var v = String(p || 'normal');
+    return v.charAt(0).toUpperCase() + v.slice(1);
   }
 
   function render(host, rerender) {

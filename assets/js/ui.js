@@ -156,6 +156,40 @@ OC.ui = (function () {
   }
 
   /* ---- chips ------------------------------------------------------------ */
+  /* Client identifiers are routinely stored as one composite string —
+     "0583 - TFR - Tafor Niba" — because the whole line was pasted into a
+     single field. On a compact one-line row only the short code belongs, so
+     pull that token out rather than printing the entire line. */
+  function shortCodeOf(raw) {
+    var text = String(raw === null || raw === undefined ? '' : raw).trim();
+    if (!text) return '';
+    var parts = text.split(/\s*[-\u2013\u2014|/]\s*/).filter(function (s) { return s.length; });
+    if (parts.length < 2) return text;
+    /* a purely alphabetic 2-6 character token is the code */
+    for (var i = 0; i < parts.length; i++) {
+      if (/^[A-Za-z]{2,6}$/.test(parts[i])) return parts[i].toUpperCase();
+    }
+    /* no clean letter code, so take the shortest part — an account number
+       beats a person's name as an identifier */
+    var best = parts[0];
+    for (var j = 1; j < parts.length; j++) if (parts[j].length < best.length) best = parts[j];
+    return best;
+  }
+
+  function clientCode(c) {
+    if (!c) return '';
+    if (typeof c === 'string') {
+      var obj = OC.store.client(c);
+      if (!obj) return shortCodeOf(c);
+      c = obj;
+    }
+    /* an explicitly entered Short Code always wins over anything parsed */
+    var ext = c.extended_fields && c.extended_fields.short_code;
+    var explicit = (ext && ext.value) ? String(ext.value).trim() : '';
+    if (explicit) return explicit;
+    return shortCodeOf(c.client_code || c.client_id || c.name || '');
+  }
+
   function clientLabel(c) {
     if (!c) return 'No client';
     if (typeof c === 'string') {
@@ -1458,6 +1492,15 @@ OC.ui = (function () {
     var chipsWrap = h('div', { class: 'multi-picker-chips' });
     var searchInput = h('input', { type: 'search', placeholder: 'Search clients...', 'aria-label': 'Filter clients', style: 'flex:1;' });
     var listWrap = h('div', { class: 'multi-picker-list', role: 'group', 'aria-label': 'Clients' });
+    var countWrap = h('div', { class: 'multi-picker-count' });
+
+    /* A client book runs to hundreds. Rendering all of them put ~23 screens of
+       scrolling inside a 170px box and built a DOM row for every one on every
+       keystroke, so the list is capped and the search is the way through it.
+       Anything already ticked is exempt from the cap and sorted to the top —
+       a selection you cannot see is worse than a long list. */
+    var LIST_LIMIT = 10;
+    var showAll = false;
 
     var addBtn = canAdd ? h('button', {
       class: 'btn small',
@@ -1522,10 +1565,19 @@ OC.ui = (function () {
 
       if (!clients.length) {
         listWrap.appendChild(h('p', { class: 'ticklist-empty' }, 'No clients found' + (q ? ' matching "' + q + '"' : '') + '. Click "+ New Client" above.'));
+        renderCount(0, 0, q);
         return;
       }
 
-      clients.forEach(function (c) {
+      /* stable sort, so unticked clients keep the order they came in */
+      clients.sort(function (a, b) {
+        return (chosen.indexOf(a.id) > -1 ? 0 : 1) - (chosen.indexOf(b.id) > -1 ? 0 : 1);
+      });
+
+      var visible = showAll ? clients : clients.slice(0, Math.max(LIST_LIMIT, chosen.length));
+      renderCount(visible.length, clients.length, q);
+
+      visible.forEach(function (c) {
         var isChecked = chosen.indexOf(c.id) > -1;
         var display = clientLabel(c);
         var chk = h('input', {
@@ -1552,6 +1604,23 @@ OC.ui = (function () {
       });
     }
 
+    /* says how much of the book is on screen, and offers the rest — without it
+       a capped list silently hides clients the user knows exist */
+    function renderCount(shownCount, totalCount, q) {
+      clear(countWrap);
+      if (totalCount <= LIST_LIMIT) return;
+      countWrap.appendChild(h('span', {}, 'Showing ' + shownCount + ' of ' + totalCount +
+        (q ? ' matches' : ' clients') + (showAll ? '' : ' — type to search')));
+      countWrap.appendChild(h('button', {
+        class: 'btn small', type: 'button',
+        onClick: function (e) {
+          e.preventDefault();
+          showAll = !showAll;
+          renderList();
+        }
+      }, showAll ? 'Show fewer' : 'Show all ' + totalCount));
+    }
+
     function render() {
       renderChips();
       renderList();
@@ -1562,6 +1631,7 @@ OC.ui = (function () {
     root.appendChild(chipsWrap);
     root.appendChild(topRow);
     root.appendChild(listWrap);
+    root.appendChild(countWrap);
 
     render();
 
@@ -2322,7 +2392,7 @@ OC.ui = (function () {
     h: h, clear: clear, append: append,
     today: today, dayOf: dayOf, daysFromToday: daysFromToday, dueDay: dueDay,
     localNowISO: localNowISO, fmtDate: fmtDate, fmtWhen: fmtWhen, daysLate: daysLate, dueLabel: dueLabel,
-    clientChip: clientChip, clientLabel: clientLabel, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
+    clientChip: clientChip, clientLabel: clientLabel, clientCode: clientCode, deptChip: deptChip, tagChip: tagChip, stateChip: stateChip,
     personName: personName, assigneeName: assigneeName,
     initials: initials, mark: mark, person: person, photoUploader: photoUploader,
     STATE_LABEL: STATE_LABEL,

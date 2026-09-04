@@ -21,20 +21,23 @@ A production-grade, zero-dependency Node.js Reverse Proxy Load Balancer designed
    - Streaming HTTP reverse proxy without memory buffering.
    - Preserves `Connection: keep-alive` and `Cache-Control: no-cache` for real-time live events (`/api/events`).
 5. **Real-time Metrics Dashboard**:
-   - Status & Metrics: `http://localhost:7000/lb/status`
-   - Health Endpoint: `http://localhost:7000/lb/health`
+   - Endpoint: `http://localhost:7000/lb/status`
+   - Health: `http://localhost:7000/lb/health`
 
 ---
 
 ## Quick Start
 
-### Command Line
+### Option 1: Double-Click Batch File (Windows)
+Double-click [`start-balancer.bat`](../../start-balancer.bat) in the project root.
+
+### Option 2: Command Line
 ```bash
-cd load-balancer
+cd dev3/load-balancer
 node server.js
 ```
 
-### Custom Port, Workers, or Algorithm
+### Option 3: With Custom Port, Workers, or Algorithm
 ```bash
 # Run on port 8000 with 5 backend workers
 node server.js --port 8000 --workers 5 --algo round-robin

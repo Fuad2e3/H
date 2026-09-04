@@ -14,8 +14,8 @@
 
 const http = require('http');
 const assert = require('assert');
-const LoadBalancer = require('../load-balancer/balancer');
-const HealthChecker = require('../load-balancer/healthCheck');
+const LoadBalancer = require('../dev3/load-balancer/balancer');
+const HealthChecker = require('../dev3/load-balancer/healthCheck');
 
 const MOCK_PORTS = [9201, 9202, 9203, 9204, 9205];
 const LB_PORT = 9200;

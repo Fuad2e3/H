@@ -121,9 +121,11 @@ OC.dashboard = (function () {
         e.stopPropagation();
         var nextState = isDone ? 'open' : 'done';
         OC.store.mutate({
-          actor: user.id, action: 'todo.state', target: t.title, detail: nextState
+          actor: user.id, action: 'todo.state', target: t.title, detail: nextState, todoId: t.id
         }, function () {
           t.state = nextState;
+          t.updated_at = new Date().toISOString();
+          if (nextState === 'done') t.completed_at = new Date().toISOString();
         });
         OC.ui.toast(nextState === 'done' ? 'Task completed.' : 'Task reopened.');
         rerender();
@@ -146,10 +148,45 @@ OC.dashboard = (function () {
 
     var mainRow = h('div', { class: 'dashboard-todo-main-row' }, [
       checkbox,
-      clientCode ? h('span', { class: 'dashboard-client-name' }, clientCode) : null,
-      h('span', { class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : '') }, t.title),
+      clientCode ? h('span', {
+        class: 'dashboard-client-name',
+        style: 'cursor:pointer;',
+        title: 'Open ' + clientCode + ' workspace portal',
+        onClick: function (e) {
+          e.stopPropagation();
+          var primaryCid = t.client || (Array.isArray(t.clients) ? t.clients[0] : null);
+          if (primaryCid) {
+            if (OC.clients && OC.clients.openClientPortal) {
+              OC.clients.openClientPortal(primaryCid);
+            } else {
+              window.location.hash = '#clients/' + primaryCid;
+            }
+          }
+        }
+      }, clientCode) : null,
+      h('span', {
+        class: 'dashboard-todo-title' + (isDone ? ' strikethrough' : ''),
+        style: 'cursor:pointer;',
+        title: 'Click to view / edit task',
+        onClick: function (e) {
+          e.stopPropagation();
+          if (OC.board && OC.board.editTodo) {
+            OC.board.editTodo(t, rerender);
+          }
+        }
+      }, t.title),
       assignerUser
-        ? h('span', { class: 'dashboard-assignee-text', style: 'display:inline-flex;align-items:center;gap:6px;', title: 'Assigned by ' + assignerText + (assignerTitle ? ' (' + assignerTitle + ')' : '') }, [
+        ? h('span', {
+            class: 'dashboard-assignee-text',
+            style: 'display:inline-flex;align-items:center;gap:6px;cursor:pointer;',
+            title: 'Assigned by ' + assignerText + (assignerTitle ? ' (' + assignerTitle + ')' : '') + ' — click to view profile',
+            onClick: function (e) {
+              e.stopPropagation();
+              if (OC.profilePortal && OC.profilePortal.openForUser) {
+                OC.profilePortal.openForUser(assignerUser);
+              }
+            }
+          }, [
             OC.ui.mark(assignerUser.id),
             h('span', { class: 'name' }, assignerText)
           ])
@@ -158,7 +195,13 @@ OC.dashboard = (function () {
 
     return h('article', {
       class: 'dashboard-todo-row' + (isDone ? ' is-done' : '') + (overdue ? ' is-overdue' : ''),
-      'data-id': t.id
+      'data-id': t.id,
+      style: 'cursor:pointer;',
+      onClick: function () {
+        if (OC.board && OC.board.editTodo) {
+          OC.board.editTodo(t, rerender);
+        }
+      }
     }, [
       topBar,
       mainRow
@@ -444,5 +487,5 @@ OC.dashboard = (function () {
     ].filter(Boolean));
   }
 
-  return { render: render };
+  return { render: render, dashboardTodoRow: dashboardTodoRow };
 })();

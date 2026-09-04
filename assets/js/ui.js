@@ -170,7 +170,19 @@ OC.ui = (function () {
 
   function clientChip(id) {
     var c = OC.store.client(id);
-    return h('span', { class: 'chip client', title: 'Client' }, c ? clientLabel(c) : 'No client');
+    return h('span', {
+      class: 'chip client' + (c ? ' clickable' : ''),
+      title: c ? 'Open ' + clientLabel(c) + ' Workspace' : 'Client',
+      style: c ? 'cursor:pointer;' : '',
+      onClick: c ? function (e) {
+        e.stopPropagation();
+        if (OC.clients && OC.clients.openClientPortal) {
+          OC.clients.openClientPortal(c.id);
+        } else {
+          window.location.hash = '#clients/' + id;
+        }
+      } : null
+    }, c ? clientLabel(c) : 'No client');
   }
 
   function deptChip(id) {
@@ -244,7 +256,17 @@ OC.ui = (function () {
     var name = u ? u.name : 'Unknown';
     var title = u ? u.title : '';
 
-    return h('span', { class: 'person' + (extraClass ? ' ' + extraClass : '') }, [
+    return h('span', {
+      class: 'person' + (u ? ' clickable' : '') + (extraClass ? ' ' + extraClass : ''),
+      style: u ? 'cursor:pointer;' : '',
+      title: u ? 'View profile / portal of ' + name : name,
+      onClick: u ? function (e) {
+        e.stopPropagation();
+        if (OC.profilePortal && OC.profilePortal.openForUser) {
+          OC.profilePortal.openForUser(u);
+        }
+      } : null
+    }, [
       mark(cleanId),
       h('span', { class: 'name' }, name),
       title ? h('span', { class: 'chip role', style: 'margin-left:4px;font-size:10.5px;' }, title) : null
@@ -356,8 +378,10 @@ OC.ui = (function () {
     var nodes = root.querySelectorAll(selector);
     for (var i = 0; i < nodes.length; i++) {
       var el = nodes[i];
+      var id = el.id ? '#' + el.id : '';
+      var name = (el.getAttribute && el.getAttribute('name')) ? ('[name=' + el.getAttribute('name') + ']') : '';
       var label = (el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('placeholder'))) || '';
-      var base = el.tagName + '.' + (el.className || '') + '.' + label;
+      var base = el.tagName + id + name + '.' + (el.className || '') + '.' + label;
       seen[base] = (seen[base] || 0) + 1;
       out.push({ el: el, key: base + '#' + (seen[base] - 1) });
     }
@@ -368,6 +392,10 @@ OC.ui = (function () {
     if (typeof document === 'undefined' || !root) return null;
 
     var scrolls = [];
+    var pageEl = document.getElementById('page');
+    if (pageEl && (pageEl.scrollTop > 0 || pageEl.scrollLeft > 0)) {
+      scrolls.push({ isPageRoot: true, top: pageEl.scrollTop, left: pageEl.scrollLeft });
+    }
     placeKeys(root, '*').forEach(function (rec) {
       /* a chat pins itself to the newest message; restoring the old offset
          underneath it only produces a visible jump */
@@ -382,7 +410,7 @@ OC.ui = (function () {
     if (active && active !== document.body && root.contains(active)) {
       var match = placeKeys(root, active.tagName).filter(function (r) { return r.el === active; })[0];
       if (match) {
-        focus = { key: match.key, tag: active.tagName };
+        focus = { key: match.key, tag: active.tagName, id: active.id || null };
         try {
           if (typeof active.selectionStart === 'number') {
             focus.start = active.selectionStart;
@@ -402,25 +430,39 @@ OC.ui = (function () {
   function restorePlace(place, root) {
     if (!place || typeof document === 'undefined' || !root) return;
 
-    if (place.scrolls.length) {
+    if (place.scrolls && place.scrolls.length) {
       var byKey = {};
       placeKeys(root, '*').forEach(function (rec) { byKey[rec.key] = rec.el; });
       place.scrolls.forEach(function (rec) {
+        if (rec.isPageRoot) {
+          var pEl = document.getElementById('page');
+          if (pEl) { pEl.scrollTop = rec.top; pEl.scrollLeft = rec.left; }
+          return;
+        }
         var el = byKey[rec.key];
         if (el) { el.scrollTop = rec.top; el.scrollLeft = rec.left; }
       });
     }
 
-    if (typeof window !== 'undefined' && place.win) window.scrollTo(0, place.win);
+    if (typeof window !== 'undefined' && typeof place.win === 'number') {
+      window.scrollTo(0, place.win);
+    }
 
     if (place.focus) {
-      var target = placeKeys(root, place.focus.tag).filter(function (r) {
-        return r.key === place.focus.key;
-      })[0];
-      if (target && target.el && target.el.focus) {
-        target.el.focus({ preventScroll: true });
-        if (typeof place.focus.start === 'number' && target.el.setSelectionRange) {
-          try { target.el.setSelectionRange(place.focus.start, place.focus.end); } catch (e) { }
+      var targetEl = null;
+      if (place.focus.id) {
+        targetEl = document.getElementById(place.focus.id);
+      }
+      if (!targetEl) {
+        var targetMatch = placeKeys(root, place.focus.tag).filter(function (r) {
+          return r.key === place.focus.key;
+        })[0];
+        if (targetMatch) targetEl = targetMatch.el;
+      }
+      if (targetEl && targetEl.focus) {
+        try { targetEl.focus({ preventScroll: true }); } catch (_) { targetEl.focus(); }
+        if (typeof place.focus.start === 'number' && targetEl.setSelectionRange) {
+          try { targetEl.setSelectionRange(place.focus.start, place.focus.end); } catch (e) { }
         }
       }
     }
@@ -433,7 +475,15 @@ OC.ui = (function () {
     fn();
     var after = (live && live.isConnected) ? live
       : (typeof document !== 'undefined' ? document.getElementById('page') : null);
-    if (place && after) restorePlace(place, after);
+    if (place && after) {
+      restorePlace(place, after);
+      /* Also schedule a 0ms frame restore in case children resize during paint */
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(function () {
+          if (after.isConnected) restorePlace(place, after);
+        });
+      }
+    }
   }
 
   function field(labelText, control, opts) {

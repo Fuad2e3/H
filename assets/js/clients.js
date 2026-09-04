@@ -746,20 +746,45 @@ OC.clients = (function () {
       /* 'T00:00:00' (no timezone designator) makes the engine parse the
          picked date as local midnight instead of UTC midnight, so the day
          selected in the field is the day actually shown. */
-      var dayRef = activeCustomDate ? new Date(activeCustomDate + 'T00:00:00') : now;
+      var isSameDay = function (dateStr, refDate) {
+        if (!dateStr) return false;
+        var d = new Date(dateStr.length === 10 ? dateStr + 'T00:00:00' : dateStr);
+        return !isNaN(d.getTime()) &&
+               d.getFullYear() === refDate.getFullYear() &&
+               d.getMonth() === refDate.getMonth() &&
+               d.getDate() === refDate.getDate();
+      };
+      var isSameMonth = function (dateStr, refDate) {
+        if (!dateStr) return false;
+        var d = new Date(dateStr.length === 10 ? dateStr + 'T00:00:00' : dateStr);
+        return !isNaN(d.getTime()) &&
+               d.getFullYear() === refDate.getFullYear() &&
+               d.getMonth() === refDate.getMonth();
+      };
+      var isSameYear = function (dateStr, refDate) {
+        if (!dateStr) return false;
+        var d = new Date(dateStr.length === 10 ? dateStr + 'T00:00:00' : dateStr);
+        return !isNaN(d.getTime()) &&
+               d.getFullYear() === refDate.getFullYear();
+      };
+
       var filteredTodos = clientTodos.filter(function (t) {
-        if (!t.created_at) return true;
-        var tDate = new Date(t.created_at);
-        if (isNaN(tDate.getTime())) return true;
+        if (activeTimeframe === 'all') return true;
         if (activeTimeframe === 'day') {
-          return tDate.getFullYear() === dayRef.getFullYear() &&
-                 tDate.getMonth() === dayRef.getMonth() &&
-                 tDate.getDate() === dayRef.getDate();
+          return isSameDay(t.due, dayRef) ||
+                 isSameDay(t.completed_at, dayRef) ||
+                 isSameDay(t.updated_at, dayRef) ||
+                 isSameDay(t.created_at, dayRef);
         } else if (activeTimeframe === 'month') {
-          return tDate.getFullYear() === now.getFullYear() &&
-                 tDate.getMonth() === now.getMonth();
+          return isSameMonth(t.due, now) ||
+                 isSameMonth(t.completed_at, now) ||
+                 isSameMonth(t.updated_at, now) ||
+                 isSameMonth(t.created_at, now);
         } else if (activeTimeframe === 'year') {
-          return tDate.getFullYear() === now.getFullYear();
+          return isSameYear(t.due, now) ||
+                 isSameYear(t.completed_at, now) ||
+                 isSameYear(t.updated_at, now) ||
+                 isSameYear(t.created_at, now);
         }
         return true;
       });
@@ -938,8 +963,11 @@ OC.clients = (function () {
                 checked: t.state === 'done',
                 style: 'width:18px;height:18px;cursor:pointer;flex-shrink:0;',
                 onChange: function () {
-                  OC.store.mutate({ actor: user.id, action: 'todo.state', target: t.title }, function () {
-                    t.state = (t.state === 'done') ? 'open' : 'done';
+                  var nextState = (t.state === 'done') ? 'open' : 'done';
+                  OC.store.mutate({ actor: user.id, action: 'todo.state', target: t.title, detail: nextState, todoId: t.id }, function () {
+                    t.state = nextState;
+                    t.updated_at = new Date().toISOString();
+                    if (nextState === 'done') t.completed_at = new Date().toISOString();
                   });
                   renderClientPortal(host, client, onBack);
                 }
@@ -1545,6 +1573,9 @@ OC.clients = (function () {
   function openClientPortal(clientId) {
     activePortalClientId = clientId;
     syncPortalToUrl();
+    if (OC.app && OC.app.go) {
+      OC.app.go('clients');
+    }
     var host = document.getElementById('page');
     if (host) render(host);
   }

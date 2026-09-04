@@ -19,11 +19,16 @@ OC.store = (function () {
   var state = null;
   var listeners = [];
   var sseSource = null;
-  /* Tombstone: group IDs deleted this session so syncWithServer never
-     re-adds them from stale local state on the next sync tick. */
+  /* Tombstones: IDs deleted this session so syncWithServer never re-adds them from stale state */
   var _deletedGroupIds = {};
-  /* Track recent local client updates to protect active client edits from being clobbered by background polling */
+  var _deletedTodoIds = {};
+  var _deletedInstructionIds = {};
+  var _deletedUserIds = {};
+  /* Track recent local updates to protect active edits from being clobbered by background polling */
   var _recentClientUpdates = {};
+  var _recentTodoUpdates = {};
+  var _recentInstructionUpdates = {};
+  var _recentUserUpdates = {};
 
   /* ---- date helpers ---------------------------------------------------- */
   function iso(d) { return d.toISOString().slice(0, 10); }
@@ -225,17 +230,31 @@ OC.store = (function () {
           if (state && Array.isArray(state.users) && state.users.length > 0) {
             serverState.users = serverState.users || [];
             state.users.forEach(function (lu) {
+              if (_deletedUserIds[lu.id]) return;
               var su = serverState.users.find(function (u) { return u.id === lu.id; });
               if (su) {
-                if (lu.office_details && !su.office_details) { su.office_details = lu.office_details; needsPush = true; }
-                if (lu.personal_details && !su.personal_details) { su.personal_details = lu.personal_details; needsPush = true; }
-                if (lu.emergency_contacts && !su.emergency_contacts) { su.emergency_contacts = lu.emergency_contacts; needsPush = true; }
-                if (lu.bank_details && !su.bank_details) { su.bank_details = lu.bank_details; needsPush = true; }
-                if (lu.avatar && !su.avatar) { su.avatar = lu.avatar; needsPush = true; }
-                if (lu.scheduled_in && !su.scheduled_in) { su.scheduled_in = lu.scheduled_in; needsPush = true; }
-                if (lu.scheduled_out && !su.scheduled_out) { su.scheduled_out = lu.scheduled_out; needsPush = true; }
+                var isRecentlyUpdatedLocally = !!(_recentUserUpdates[lu.id] && (Date.now() - _recentUserUpdates[lu.id] < 15000));
+                if (isRecentlyUpdatedLocally) {
+                  Object.assign(su, lu);
+                  needsPush = true;
+                } else {
+                  if (lu.office_details && !su.office_details) { su.office_details = lu.office_details; needsPush = true; }
+                  if (lu.personal_details && !su.personal_details) { su.personal_details = lu.personal_details; needsPush = true; }
+                  if (lu.emergency_contacts && !su.emergency_contacts) { su.emergency_contacts = lu.emergency_contacts; needsPush = true; }
+                  if (lu.bank_details && !su.bank_details) { su.bank_details = lu.bank_details; needsPush = true; }
+                  if (lu.avatar && !su.avatar) { su.avatar = lu.avatar; needsPush = true; }
+                  if (lu.scheduled_in && !su.scheduled_in) { su.scheduled_in = lu.scheduled_in; needsPush = true; }
+                  if (lu.scheduled_out && !su.scheduled_out) { su.scheduled_out = lu.scheduled_out; needsPush = true; }
+                }
               }
             });
+          }
+          if (serverState.users) {
+            var tombstoneUserCount = serverState.users.filter(function (u) { return _deletedUserIds[u.id]; }).length;
+            if (tombstoneUserCount > 0) {
+              serverState.users = serverState.users.filter(function (u) { return !_deletedUserIds[u.id]; });
+              needsPush = true;
+            }
           }
           // Merge offline-created or locally-modified clients so local edits are never clobbered by background polling
           if (state && Array.isArray(state.clients) && state.clients.length > 0) {
@@ -295,25 +314,65 @@ OC.store = (function () {
               }
             });
           }
-          // Merge offline-created todos back so they survive a sync
+          // Merge offline-created or locally-modified todos so local edits are never clobbered by background polling
           if (state && Array.isArray(state.todos) && state.todos.length > 0) {
             serverState.todos = serverState.todos || [];
             state.todos.forEach(function (lt) {
-              if (!serverState.todos.some(function (st) { return st.id === lt.id; })) {
+              if (_deletedTodoIds[lt.id]) return;
+              var st = serverState.todos.find(function (t) { return t.id === lt.id; });
+              if (!st) {
                 serverState.todos.push(lt);
                 needsPush = true;
+              } else {
+                var isRecentlyUpdatedLocally = !!(_recentTodoUpdates[lt.id] && (Date.now() - _recentTodoUpdates[lt.id] < 15000));
+                var ltTime = lt.updated_at ? new Date(lt.updated_at).getTime() : 0;
+                var stTime = st.updated_at ? new Date(st.updated_at).getTime() : 0;
+                var localIsNewer = isRecentlyUpdatedLocally || (ltTime > 0 && ltTime >= stTime);
+
+                if (localIsNewer) {
+                  Object.assign(st, lt);
+                  needsPush = true;
+                }
               }
             });
           }
-          // Merge offline-created instructions back so they survive a sync
+          // Strip any tombstoned todos from serverState
+          if (serverState.todos) {
+            var tombstoneTodoCount = serverState.todos.filter(function (t) { return _deletedTodoIds[t.id]; }).length;
+            if (tombstoneTodoCount > 0) {
+              serverState.todos = serverState.todos.filter(function (t) { return !_deletedTodoIds[t.id]; });
+              needsPush = true;
+            }
+          }
+          // Merge offline-created or locally-modified instructions so local edits are never clobbered
           if (state && Array.isArray(state.instructions) && state.instructions.length > 0) {
             serverState.instructions = serverState.instructions || [];
             state.instructions.forEach(function (li) {
-              if (!serverState.instructions.some(function (si) { return si.id === li.id; })) {
+              if (_deletedInstructionIds[li.id]) return;
+              var si = serverState.instructions.find(function (i) { return i.id === li.id; });
+              if (!si) {
                 serverState.instructions.push(li);
                 needsPush = true;
+              } else {
+                var isRecentlyUpdatedLocally = !!(_recentInstructionUpdates[li.id] && (Date.now() - _recentInstructionUpdates[li.id] < 15000));
+                var liTime = li.updated_at ? new Date(li.updated_at).getTime() : 0;
+                var siTime = si.updated_at ? new Date(si.updated_at).getTime() : 0;
+                var localIsNewer = isRecentlyUpdatedLocally || (liTime > 0 && liTime >= siTime);
+
+                if (localIsNewer) {
+                  Object.assign(si, li);
+                  needsPush = true;
+                }
               }
             });
+          }
+          // Strip any tombstoned instructions from serverState
+          if (serverState.instructions) {
+            var tombstoneInsCount = serverState.instructions.filter(function (i) { return _deletedInstructionIds[i.id]; }).length;
+            if (tombstoneInsCount > 0) {
+              serverState.instructions = serverState.instructions.filter(function (i) { return !_deletedInstructionIds[i.id]; });
+              needsPush = true;
+            }
           }
           // Merge offline-queued notifications and synchronize read state
           if (state && Array.isArray(state.notifications) && state.notifications.length > 0) {
@@ -379,6 +438,30 @@ OC.store = (function () {
       })
       .then(function (data) {
         if (data && data.state && data.state.version === 1) {
+          // Preserve active local modifications from being clobbered by server echo
+          if (state && Array.isArray(state.todos)) {
+            data.state.todos = data.state.todos || [];
+            state.todos.forEach(function (lt) {
+              if (_deletedTodoIds[lt.id]) return;
+              var st = data.state.todos.find(function (t) { return t.id === lt.id; });
+              if (!st) {
+                data.state.todos.push(lt);
+              } else {
+                var isRecent = !!(_recentTodoUpdates[lt.id] && (Date.now() - _recentTodoUpdates[lt.id] < 15000));
+                if (isRecent) Object.assign(st, lt);
+              }
+            });
+            data.state.todos = data.state.todos.filter(function (t) { return !_deletedTodoIds[t.id]; });
+          }
+          if (state && Array.isArray(state.clients)) {
+            data.state.clients = data.state.clients || [];
+            state.clients.forEach(function (lc) {
+              var sc = data.state.clients.find(function (c) { return c.id === lc.id; });
+              if (sc && _recentClientUpdates[lc.id] && (Date.now() - _recentClientUpdates[lc.id] < 15000)) {
+                Object.assign(sc, lc);
+              }
+            });
+          }
           var prev = JSON.stringify(state);
           var next = JSON.stringify(data.state);
           if (prev !== next) {
@@ -610,10 +693,45 @@ OC.store = (function () {
       if (entry.clientId) {
         _recentClientUpdates[entry.clientId] = Date.now();
       }
-      if (entry.action && entry.action.indexOf('client.') === 0 && entry.target) {
-        var cl = byIdOrName(state.clients, entry.target);
-        if (cl) _recentClientUpdates[cl.id] = Date.now();
+      if (entry.todoId) {
+        _recentTodoUpdates[entry.todoId] = Date.now();
       }
+      if (entry.instructionId) {
+        _recentInstructionUpdates[entry.instructionId] = Date.now();
+      }
+      if (entry.userId) {
+        _recentUserUpdates[entry.userId] = Date.now();
+      }
+
+      if (entry.action) {
+        if (entry.action.indexOf('client.') === 0 && entry.target) {
+          var cl = byIdOrName(state.clients, entry.target);
+          if (cl) _recentClientUpdates[cl.id] = Date.now();
+        }
+        if (entry.action.indexOf('todo.') === 0) {
+          if (entry.todoId) _recentTodoUpdates[entry.todoId] = Date.now();
+          if (entry.action === 'todo.delete' && entry.todoId) _deletedTodoIds[entry.todoId] = true;
+          if (entry.target) {
+            var td = byIdOrTitle(state.todos, entry.target);
+            if (td) {
+              _recentTodoUpdates[td.id] = Date.now();
+              if (entry.action === 'todo.delete') _deletedTodoIds[td.id] = true;
+            }
+          }
+        }
+        if (entry.action.indexOf('instruction.') === 0) {
+          if (entry.instructionId) _recentInstructionUpdates[entry.instructionId] = Date.now();
+          if (entry.action === 'instruction.delete' && entry.instructionId) _deletedInstructionIds[entry.instructionId] = true;
+        }
+        if (entry.action.indexOf('user.') === 0 || entry.action.indexOf('account.') === 0) {
+          if (entry.userId) _recentUserUpdates[entry.userId] = Date.now();
+          if (entry.action === 'user.delete') {
+            var tu = (state.users || []).find(function (u) { return u.name === entry.target || u.id === entry.target; });
+            if (tu) _deletedUserIds[tu.id] = true;
+          }
+        }
+      }
+
       var clientIp = entry.ip || currentClientIp || '127.0.0.1';
       state.audit = state.audit || [];
       var isDup = false;
@@ -659,6 +777,18 @@ OC.store = (function () {
       if (item.id === key) return item;
       if (item.name && item.name.toLowerCase() === clean) return item;
       if (item.id && item.id.toLowerCase() === clean) return item;
+    }
+    return null;
+  }
+
+  function byIdOrTitle(list, key) {
+    if (!list || !key) return null;
+    var clean = String(key).trim().toLowerCase();
+    for (var i = 0; i < list.length; i++) {
+      var item = list[i];
+      if (item.id === key) return item;
+      if (item.title && item.title.toLowerCase() === clean) return item;
+      if (item.name && item.name.toLowerCase() === clean) return item;
     }
     return null;
   }

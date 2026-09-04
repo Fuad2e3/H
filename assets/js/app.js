@@ -983,6 +983,13 @@ OC.app = (function () {
      them back exactly where they were — same scroll, same field, same caret.
      OC.ui.keepingPlace does the capture and restore. */
   function renderInPlace() {
+    if (!isAuthenticated) return;
+    // If a modal or dialog is actively open (e.g. user creating/editing a client, todo, group, profile, etc.),
+    // skip rebuilding the underlying background page on this 1s tick so open user inputs are not interrupted.
+    if (typeof document !== 'undefined') {
+      var openModal = document.querySelector('dialog[open], .modal, .modal-backdrop');
+      if (openModal) return;
+    }
     if (!OC.ui.keepingPlace) { render(); return; }
     OC.ui.keepingPlace(typeof document !== 'undefined' ? document.getElementById('page') : null, render);
   }

@@ -304,8 +304,10 @@ OC.board = (function () {
       return;
     }
 
-    OC.store.mutate({ actor: user.id, action: 'todo.state', target: todo.title, detail: todo.state + ' → ' + next }, function () {
+    OC.store.mutate({ actor: user.id, action: 'todo.state', target: todo.title, detail: todo.state + ' → ' + next, todoId: todo.id }, function () {
       todo.state = next;
+      todo.updated_at = new Date().toISOString();
+      if (next === 'done') todo.completed_at = new Date().toISOString();
       if (next !== 'blocked') todo.blocked_reason = null;
 
       /* a recurring todo regenerates as a fresh instance on completion (6.2) */
@@ -488,9 +490,11 @@ OC.board = (function () {
             actor: user.id,
             action: 'todo.edit',
             target: newTitle,
+            todoId: todo.id,
             detail: 'Updated todo "' + newTitle + '"'
           }, function () {
             todo.title = newTitle;
+            todo.updated_at = new Date().toISOString();
             todo.client = primaryClient;
             todo.clients = selectedClients;
             todo.department = primaryDept;
@@ -533,6 +537,7 @@ OC.board = (function () {
               actor: user.id,
               action: 'todo.delete',
               target: todo.title,
+              todoId: todo.id,
               detail: 'Deleted todo'
             }, function () {
               OC.store.state.todos = OC.store.state.todos.filter(function (t) { return t.id !== todo.id; });

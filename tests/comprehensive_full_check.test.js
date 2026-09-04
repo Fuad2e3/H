@@ -237,7 +237,7 @@ test('store.js initializes state, lookups, and session', () => {
     { id: 'u-rifat', name: 'Rifat Chowdhury', email: 'rifat@originate.example', title: 'Outreach Associate', admin: false, departments: [{ department: 'd-outreach', level: 'member' }] }
   ];
   OC.store.state.todos = [
-    { id: 't-1', title: 'Test Todo', department: 'd-outreach', client: 'c-1', assignee_type: 'user', assignee: 'u-rifat', created_by: 'u-nadia', state: 'open' }
+    { id: 't-1', title: 'Test Todo', department: 'd-outreach', client: 'c-1', assignee_type: 'user', assignee: 'u-rifat', created_by: 'u-shohag', state: 'open' }
   ];
   OC.store.state.instructions = [
     { id: 'n-1', body: 'Outreach Protocol', client: 'c-1', department: 'd-outreach', author: 'u-nadia', posted_at: new Date().toISOString(), read_by: [], comments: [] }

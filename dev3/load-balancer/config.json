@@ -2,7 +2,7 @@
   "name": "Originate Command Enterprise Load Balancer",
   "port": 7000,
   "host": "0.0.0.0",
-  "algorithm": "round-robin",
+  "algorithm": "ip-hash",
   "autoSpawnWorkers": true,
   "workersCount": 2,
   "startWorkerPort": 7001,
@@ -29,7 +29,7 @@
     "healthyThreshold": 2
   },
   "stickySessions": {
-    "enabled": false
+    "enabled": true
   },
   "timeouts": {
     "connectionTimeoutMs": 10000,

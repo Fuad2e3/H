@@ -82,6 +82,24 @@ OC.reports = (function () {
     download('originate-command-history-' + OC.ui.today() + '.csv', csv(rows));
   }
 
+  function exportUserSummary(rows) {
+    var out = [['Person', 'Role', 'Due Today', 'Done Today', 'Total Assigned', 'Remaining', 'Done', 'Blocked', 'Overdue']];
+    rows.forEach(function (r) {
+      out.push([
+        r.person.name,
+        OC.can.roleLabel(r.person),
+        r.dueToday,
+        r.doneToday,
+        r.total,
+        r.remaining,
+        r.done,
+        r.blocked,
+        r.overdue
+      ]);
+    });
+    download('originate-command-users-' + OC.ui.today() + '.csv', csv(out));
+  }
+
   function render(host, rerender, hideHead) {
     var h = OC.ui.h;
     var user = me() || (OC.store.state.users && OC.store.state.users[0]) || { id: 'u-admin', name: 'User', admin: true };
@@ -123,84 +141,99 @@ OC.reports = (function () {
         })) return true;
         return false;
       });
-        var doneCount = theirs.filter(function (t) { return t.state === 'done'; }).length;
-        var remainingCount = theirs.filter(function (t) { return t.state !== 'done'; }).length;
-        var blockedCount = theirs.filter(function (t) { return t.state === 'blocked'; }).length;
-        var overdueCount = theirs.filter(function (t) { return t.state !== 'done' && OC.ui.daysLate(t.due) > 0; }).length;
-        return {
-          person: p,
-          total: theirs.length,
-          remaining: remainingCount,
-          done: doneCount,
-          blocked: blockedCount,
-          overdue: overdueCount
-        };
-      }).filter(function (r) { return r.total > 0; })
-        .sort(function (a, b) { return b.overdue - a.overdue || b.total - a.total; });
+      var dueTodayCount = theirs.filter(function (t) { return t.state !== 'done' && OC.ui.dueDay(t.due) === today; }).length;
+      var doneTodayCount = theirs.filter(function (t) {
+        if (t.state !== 'done') return false;
+        var compDay = OC.ui.dueDay(t.completed_at || t.updated_at || t.due);
+        return compDay === today;
+      }).length;
+      var doneCount = theirs.filter(function (t) { return t.state === 'done'; }).length;
+      var remainingCount = theirs.filter(function (t) { return t.state !== 'done'; }).length;
+      var blockedCount = theirs.filter(function (t) { return t.state === 'blocked'; }).length;
+      var overdueCount = theirs.filter(function (t) { return t.state !== 'done' && OC.ui.daysLate(t.due) > 0; }).length;
+      return {
+        person: p,
+        dueToday: dueTodayCount,
+        doneToday: doneTodayCount,
+        total: theirs.length,
+        remaining: remainingCount,
+        done: doneCount,
+        blocked: blockedCount,
+        overdue: overdueCount
+      };
+    }).filter(function (r) { return r.total > 0; })
+      .sort(function (a, b) { return b.overdue - a.overdue || b.total - a.total; });
 
-      var allAudit = OC.store.state.audit || [];
-      var limitNum = auditLimit === 'all' ? allAudit.length : (parseInt(auditLimit, 10) || 10);
-      var audit = allAudit.slice(0, limitNum);
+    var allAudit = OC.store.state.audit || [];
+    var limitNum = auditLimit === 'all' ? allAudit.length : (parseInt(auditLimit, 10) || 10);
+    var audit = allAudit.slice(0, limitNum);
 
-      OC.ui.clear(host);
-      var elements = [];
+    OC.ui.clear(host);
+    var elements = [];
 
-      if (!hideHead) {
-        elements.push(
-          h('div', { class: 'page-head' }, [
-            h('h1', {}, 'Reports'),
-            h('p', {}, 'The daily snapshot, scoped to what you may see. ' +
-              (user.admin ? 'As system admin this covers every department.'
-                          : 'As ' + OC.can.roleLabel(user) + ' this covers your department only (6.7).'))
-          ])
-        );
-      }
-
+    if (!hideHead) {
       elements.push(
-        h('div', { class: 'grid-3', style: 'margin-bottom:20px' }, [
-          h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Clients complete'), h('div', { class: 'v tabular' }, [String(clientsComplete), h('small', {}, ' / ' + Object.keys(byClient).length)])]),
-          h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks complete'), h('div', { class: 'v tabular' }, String(done.length))]),
-          h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks left'), h('div', { class: 'v tabular' }, String(left.length))]),
-          h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Due today'), h('div', { class: 'v tabular' }, String(dueToday.length))]),
-          h('div', { class: 'stat' + (overdue.length ? ' alert' : '') }, [
-            h('span', { class: 'k' }, 'Overdue'), h('div', { class: 'v tabular' }, String(overdue.length))])
-        ]),
-
-        h('div', { class: 'row', style: 'margin-bottom:14px' }, [
-          h('button', { class: 'btn', type: 'button', onClick: function () { exportTodos(todos); } },
-            [OC.icon('board'), 'Export todos to CSV'])
-        ]),
-
-        h('div', { class: 'tablewrap', style: 'margin-bottom:22px' }, [
-          h('table', {}, [
-            h('caption', {}, 'Per person status — ' + OC.ui.fmtDate(today)),
-            h('thead', {}, h('tr', {}, [
-              h('th', { scope: 'col' }, 'Person'),
-              h('th', { scope: 'col' }, 'Role'),
-              h('th', { scope: 'col' }, 'Total Assigned'),
-              h('th', { scope: 'col' }, 'Remaining'),
-              h('th', { scope: 'col' }, 'Done'),
-              h('th', { scope: 'col' }, 'Blocked'),
-              h('th', { scope: 'col' }, 'Overdue')
-            ])),
-            h('tbody', {}, rows.length ? rows.map(function (r) {
-              return h('tr', {}, [
-                h('th', { scope: 'row' }, OC.ui.person(r.person.id)),
-                h('td', {}, OC.can.roleLabel(r.person)),
-                h('td', { class: 'mono tabular' }, String(r.total)),
-                h('td', { class: 'mono tabular bold' + (r.remaining > 0 ? '' : ' muted') }, r.remaining > 0 ? String(r.remaining) : '—'),
-                h('td', { class: 'mono tabular bold', style: r.done > 0 ? 'color:var(--success, #10b981);' : '' }, String(r.done)),
-                h('td', { class: 'mono tabular' }, r.blocked ? String(r.blocked) : '—'),
-                h('td', { class: 'mono tabular', style: r.overdue ? 'color:var(--signal);font-weight:600' : '' }, r.overdue ? String(r.overdue) : '—')
-              ]);
-            }) : h('tr', {}, h('td', { colspan: '7' }, 'No assigned work in your scope.')))
-          ])
+        h('div', { class: 'page-head' }, [
+          h('h1', {}, 'Reports'),
+          h('p', {}, 'The daily snapshot, scoped to what you may see. ' +
+            (user.admin ? 'As system admin this covers every department.'
+                        : 'As ' + OC.can.roleLabel(user) + ' this covers your department only (6.7).'))
         ])
       );
+    }
 
-      OC.ui.clear(host);
+    elements.push(
+      h('div', { class: 'grid-3', style: 'margin-bottom:20px' }, [
+        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Clients complete'), h('div', { class: 'v tabular' }, [String(clientsComplete), h('small', {}, ' / ' + Object.keys(byClient).length)])]),
+        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks complete'), h('div', { class: 'v tabular' }, String(done.length))]),
+        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Tasks left'), h('div', { class: 'v tabular' }, String(left.length))]),
+        h('div', { class: 'stat' }, [h('span', { class: 'k' }, 'Due today'), h('div', { class: 'v tabular' }, String(dueToday.length))]),
+        h('div', { class: 'stat' + (overdue.length ? ' alert' : '') }, [
+          h('span', { class: 'k' }, 'Overdue'), h('div', { class: 'v tabular' }, String(overdue.length))])
+      ]),
+
+      h('div', { class: 'row', style: 'margin-bottom:14px;gap:10px;flex-wrap:wrap;' }, [
+        h('button', { class: 'btn', type: 'button', onClick: function () { exportTodos(todos); } },
+          [OC.icon('board'), 'Export todos to CSV']),
+        h('button', { class: 'btn secondary', type: 'button', onClick: function () { exportUserSummary(rows); } },
+          [OC.icon('stats'), 'Export user summary to CSV'])
+      ]),
+
+      h('div', { class: 'tablewrap', style: 'margin-bottom:22px' }, [
+        h('table', {}, [
+          h('caption', {}, 'Per person status — ' + OC.ui.fmtDate(today)),
+          h('thead', {}, h('tr', {}, [
+            h('th', { scope: 'col' }, 'Person'),
+            h('th', { scope: 'col' }, 'Role'),
+            h('th', { scope: 'col' }, "Today's Work"),
+            h('th', { scope: 'col' }, 'Total Assigned'),
+            h('th', { scope: 'col' }, 'Remaining'),
+            h('th', { scope: 'col' }, 'Done'),
+            h('th', { scope: 'col' }, 'Blocked'),
+            h('th', { scope: 'col' }, 'Overdue')
+          ])),
+          h('tbody', {}, rows.length ? rows.map(function (r) {
+            return h('tr', {}, [
+              h('th', { scope: 'row' }, OC.ui.person(r.person.id)),
+              h('td', {}, OC.can.roleLabel(r.person)),
+              h('td', { class: 'mono tabular' }, (r.dueToday > 0 || r.doneToday > 0) ? [
+                r.dueToday > 0 ? h('span', { class: 'chip state-progress', style: 'font-size:11px;padding:2px 6px;margin-right:4px;' }, String(r.dueToday) + ' due') : null,
+                r.doneToday > 0 ? h('span', { class: 'chip state-done', style: 'font-size:11px;padding:2px 6px;' }, String(r.doneToday) + ' done') : null
+              ].filter(Boolean) : h('span', { class: 'muted' }, '—')),
+              h('td', { class: 'mono tabular' }, String(r.total)),
+              h('td', { class: 'mono tabular bold' + (r.remaining > 0 ? '' : ' muted') }, r.remaining > 0 ? String(r.remaining) : '—'),
+              h('td', { class: 'mono tabular bold', style: r.done > 0 ? 'color:var(--success, #10b981);' : '' }, String(r.done)),
+              h('td', { class: 'mono tabular' }, r.blocked ? String(r.blocked) : '—'),
+              h('td', { class: 'mono tabular', style: r.overdue ? 'color:var(--signal);font-weight:600' : '' }, r.overdue ? String(r.overdue) : '—')
+            ]);
+          }) : h('tr', {}, h('td', { colspan: '8' }, 'No assigned work in your scope.')))
+        ])
+      ])
+    );
+
+    OC.ui.clear(host);
     OC.ui.append(host, elements);
   }
 
-  return { render: render, csv: csv, exportAudit: exportAudit };
+  return { render: render, csv: csv, exportAudit: exportAudit, exportUserSummary: exportUserSummary };
 })();

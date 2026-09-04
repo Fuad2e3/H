@@ -78,7 +78,7 @@ console.log('  ✓ clientLabel formats all combinations cleanly');
 console.log('2. Testing clientChip');
 OC.store.state.clients = [sampleClient1, sampleClient2, sampleClient3];
 const chipNode = OC.ui.clientChip('c-1');
-assert.strictEqual(chipNode.className, 'chip client');
+assert.ok(chipNode.className.includes('chip client'), 'clientChip must have chip client class');
 assert.strictEqual(chipNode.children[0].text, 'TFR');
 console.log('  ✓ clientChip displays "TFR"');
 

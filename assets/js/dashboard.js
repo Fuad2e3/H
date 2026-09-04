@@ -102,9 +102,11 @@ OC.dashboard = (function () {
         e.stopPropagation();
         var nextState = isDone ? 'open' : 'done';
         OC.store.mutate({
-          actor: user.id, action: 'todo.state', target: t.title, detail: nextState
+          actor: user.id, action: 'todo.state', target: t.title, detail: nextState, todoId: t.id
         }, function () {
           t.state = nextState;
+          t.updated_at = new Date().toISOString();
+          if (nextState === 'done') t.completed_at = new Date().toISOString();
         });
         OC.ui.toast(nextState === 'done' ? 'Task completed.' : 'Task reopened.');
         rerender();
@@ -150,7 +152,22 @@ OC.dashboard = (function () {
 
     var mainRow = h('div', { class: 'dashboard-todo-main-row' }, [
       checkbox,
-      clientCode ? h('span', { class: 'dashboard-client-name' }, clientCode) : null,
+      clientCode ? h('span', {
+        class: 'dashboard-client-name',
+        style: 'cursor:pointer;',
+        title: 'Open ' + clientCode + ' workspace portal',
+        onClick: function (e) {
+          e.stopPropagation();
+          var primaryCid = t.client || (Array.isArray(t.clients) ? t.clients[0] : null);
+          if (primaryCid) {
+            if (OC.clients && OC.clients.openClientPortal) {
+              OC.clients.openClientPortal(primaryCid);
+            } else {
+              window.location.hash = '#clients/' + primaryCid;
+            }
+          }
+        }
+      }, clientCode) : null,
       titleNode,
       dueNode,
       assigneeNode
@@ -159,6 +176,7 @@ OC.dashboard = (function () {
     return h('article', {
       class: 'dashboard-todo-row' + (isDone ? ' is-done' : '') + (overdue ? ' is-overdue' : ''),
       'data-id': t.id,
+      style: 'cursor:pointer;',
       onClick: openDetail
     }, [mainRow]);
   }
@@ -503,5 +521,5 @@ OC.dashboard = (function () {
     ].filter(Boolean));
   }
 
-  return { render: render };
+  return { render: render, dashboardTodoRow: dashboardTodoRow };
 })();

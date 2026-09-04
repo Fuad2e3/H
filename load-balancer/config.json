@@ -1,0 +1,31 @@
+{
+  "name": "Originate Command Enterprise Load Balancer",
+  "port": 7000,
+  "host": "0.0.0.0",
+  "algorithm": "round-robin",
+  "autoSpawnWorkers": true,
+  "workersCount": 5,
+  "startWorkerPort": 7001,
+  "backends": [
+    { "id": "backend-1", "host": "127.0.0.1", "port": 7001, "weight": 1 },
+    { "id": "backend-2", "host": "127.0.0.1", "port": 7002, "weight": 1 },
+    { "id": "backend-3", "host": "127.0.0.1", "port": 7003, "weight": 1 },
+    { "id": "backend-4", "host": "127.0.0.1", "port": 7004, "weight": 1 },
+    { "id": "backend-5", "host": "127.0.0.1", "port": 7005, "weight": 1 }
+  ],
+  "healthCheck": {
+    "enabled": true,
+    "path": "/api/health",
+    "intervalMs": 3000,
+    "timeoutMs": 1500,
+    "unhealthyThreshold": 2,
+    "healthyThreshold": 2
+  },
+  "stickySessions": {
+    "enabled": false
+  },
+  "timeouts": {
+    "connectionTimeoutMs": 10000,
+    "headersTimeoutMs": 15000
+  }
+}

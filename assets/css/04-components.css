@@ -5186,16 +5186,18 @@ dialog.modal.fallback {
 }
 
 /* =========================================================================
-   2-Column Clean Client Cards
+   1-Column Clean Client Cards (1 line a 1 ta only)
    ========================================================================= */
-.clients-grid-two {
+.clients-grid-two,
+.clients-grid-single {
   display: grid;
-  grid-template-columns: repeat(2, 1fr) !important;
-  gap: 16px;
+  grid-template-columns: 1fr !important;
+  gap: 14px;
   margin: 14px 0 24px;
 }
 @media (max-width: 768px) {
-  .clients-grid-two {
+  .clients-grid-two,
+  .clients-grid-single {
     grid-template-columns: 1fr !important;
   }
 }

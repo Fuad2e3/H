@@ -62,7 +62,8 @@ OC.groups = (function () {
               members: members, created_by: user.id, status: 'active',
               messages: [], created_at: new Date().toISOString()
             };
-            OC.store.mutate({ actor: user.id, action: 'group.create', target: group.name, detail: members.length + ' members' }, function () {
+            if (OC.store.trackGroupCreated) OC.store.trackGroupCreated(group.id);
+            OC.store.mutate({ actor: user.id, action: 'group.create', target: group.name, groupId: group.id, detail: members.length + ' members' }, function () {
               OC.store.state.groups.push(group);
             });
             OC.store.notify(members.filter(function (id) { return id !== user.id; }),
@@ -140,7 +141,7 @@ OC.groups = (function () {
         onClick: function (close) {
           OC.ui.confirm('Permanently delete group "' + group.name + '"? This will remove all group messages and cannot be undone.', function () {
             OC.store.mutate({
-              actor: user.id, action: 'group.delete', target: group.name,
+              actor: user.id, action: 'group.delete', target: group.name, groupId: group.id,
               detail: 'Deleted group'
             }, function () {
               OC.store.deleteGroup(group.id);
@@ -175,7 +176,7 @@ OC.groups = (function () {
       return;
     }
     OC.ui.confirm('Permanently delete group "' + group.name + '" and all its discussions? This cannot be undone.', function () {
-      OC.store.mutate({ actor: user.id, action: 'group.delete', target: group.name }, function () {
+      OC.store.mutate({ actor: user.id, action: 'group.delete', target: group.name, groupId: group.id, detail: 'Deleted group' }, function () {
         OC.store.deleteGroup(group.id);
       });
       OC.ui.toast('Group permanently deleted.');
@@ -534,7 +535,7 @@ OC.groups = (function () {
           : h('p', { class: 'muted group-channel-topic', style: 'font-size:13px;margin:2px 0 0;' }, currentGroup.purpose)
       ]);
 
-      msgsList = h('div', { class: 'full-page-chat-messages', 'data-autoscroll': 'bottom' });
+      msgsList = h('div', { class: 'full-page-chat-messages' });
 
       if (!currentGroup.messages.length) {
         msgsList.appendChild(h('div', { class: 'empty', style: 'padding:40px 24px;text-align:center;' }, [
@@ -779,46 +780,19 @@ OC.groups = (function () {
         });
       }
 
-      /* Setting scrollTop straight after building the list reads a scrollHeight
-         the browser has not laid out yet — and on the first render the list is
-         not even in the document, so the write goes nowhere. That is why the
-         view jumped: opening a channel landed short of the newest message, and
-         sending one threw you to the top of the history. The position is
-         applied on the following frames instead, once, with no competing
-         timers and no smooth animation for another write to interrupt. */
+      /* Deterministic scroll positioning with zero bounce:
+         Instant positioning without conflicting smooth scroll loops or multiple frame overrides. */
       function applyScroll(target) {
         if (!msgsList) return;
         var el = msgsList;
-        var toBottom = (target === 'bottom');
-        chatPinnedToBottom = toBottom;
-        var place = function () {
-          /* the list scrolls smoothly for a person, and for the jump-to-quoted
-             -message link, but pinning it after a rebuild must be instant: the
-             list has just been recreated at zero, so an animated write scrolls
-             the whole history past the reader before settling. That was the
-             bounce. */
-          var prev = el.style.scrollBehavior;
-          el.style.scrollBehavior = 'auto';
-          lastAutoScrollAt = Date.now();
-          el.scrollTop = (target === 'bottom') ? el.scrollHeight : target;
-          el.style.scrollBehavior = prev;
-        };
-        /* A message list keeps growing for a few frames after it is built —
-           the rows lay out, fonts settle, any image resolves — so a single
-           write lands short of the end. Pinning is held for a few frames
-           instead, and the reader scrolling up cancels it immediately so it
-           never fights them. */
-        place();
-        var frames = 0;
-        (function again() {
-          if (frames++ > 8) return;
-          requestAnimationFrame(function () {
-            if (!el.isConnected) return;
-            if (toBottom && !chatPinnedToBottom) return;   /* they scrolled away */
-            place();
-            again();
-          });
-        })();
+        lastAutoScrollAt = Date.now();
+        if (target === 'bottom') {
+          chatPinnedToBottom = true;
+          el.scrollTop = el.scrollHeight;
+        } else if (typeof target === 'number') {
+          chatPinnedToBottom = false;
+          el.scrollTop = target;
+        }
       }
 
       function submitGroupMessage() {
@@ -830,6 +804,8 @@ OC.groups = (function () {
         var extra = {};
         if (currentMediaAttachment) extra.media = currentMediaAttachment;
         if (activeReplyTarget) extra.reply_to = activeReplyTarget;
+
+        var preservedScroll = msgsList ? msgsList.scrollTop : chatScrollTop;
 
         OC.store.mutate({
           actor: user.id, action: 'group.message', target: currentGroup.name, detail: messageText.slice(0, 35)
@@ -884,10 +860,12 @@ OC.groups = (function () {
         msgInput.value = '';
         setReplyContext(null, null);
         setMediaAttachment(null);
-        /* the store change above already rebuilt the page; this only needs to
-           make sure the view follows the message just sent */
-        chatPinnedToBottom = true;
-        applyScroll('bottom');
+        /* User requirement: When sending a message, stay right where you are.
+           The new message sits below in chronological history, user scrolls down
+           naturally to view it, and absolutely NO bounce or sudden jump occurs. */
+        if (msgsList && typeof preservedScroll === 'number') {
+          msgsList.scrollTop = preservedScroll;
+        }
       }
 
       msgInput.addEventListener('keydown', function (e) {
@@ -916,16 +894,16 @@ OC.groups = (function () {
       if (msgsList) {
         msgsList.addEventListener('scroll', function () {
           if (!msgsList) return;
-          if (Date.now() - lastAutoScrollAt < 250) return;  /* our own write */
-          chatPinnedToBottom = (msgsList.scrollHeight - msgsList.scrollTop - msgsList.clientHeight) < 80;
+          if (Date.now() - lastAutoScrollAt < 100) return;  /* our own write */
+          chatPinnedToBottom = (msgsList.scrollHeight - msgsList.scrollTop - msgsList.clientHeight) < 60;
           chatScrollTop = msgsList.scrollTop;
         });
       }
 
-      if (isInitialGroupLoad || forceScrollBottom || wasNearBottom) {
+      if (isInitialGroupLoad || forceScrollBottom) {
         applyScroll('bottom');
       } else {
-        /* reading older messages: stay where they were */
+        /* Reading or typing: stay exactly where you were without any jumping or bouncing */
         applyScroll(prevScrollTop);
       }
       isInitialGroupLoad = false;

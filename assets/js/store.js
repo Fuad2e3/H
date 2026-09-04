@@ -19,16 +19,38 @@ OC.store = (function () {
   var state = null;
   var listeners = [];
   var sseSource = null;
-  /* Tombstones: IDs deleted this session so syncWithServer never re-adds them from stale state */
+  /* Tombstones: IDs deleted so syncWithServer never re-adds them from stale state */
   var _deletedGroupIds = {};
+  try {
+    var storedDelGroups = (typeof localStorage !== 'undefined') ? localStorage.getItem('oc_deleted_groups') : null;
+    if (storedDelGroups) {
+      _deletedGroupIds = JSON.parse(storedDelGroups) || {};
+    }
+  } catch (_) {}
   var _deletedTodoIds = {};
   var _deletedInstructionIds = {};
   var _deletedUserIds = {};
-  /* Track recent local updates to protect active edits from being clobbered by background polling */
+  /* Track recent local creations/updates to protect active edits from being clobbered by background polling */
   var _recentClientUpdates = {};
   var _recentTodoUpdates = {};
   var _recentInstructionUpdates = {};
   var _recentUserUpdates = {};
+  var _recentGroupCreations = {};
+
+  function markGroupDeleted(id) {
+    if (!id) return;
+    _deletedGroupIds[id] = true;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('oc_deleted_groups', JSON.stringify(_deletedGroupIds));
+      }
+    } catch (_) {}
+  }
+
+  function trackGroupCreated(id) {
+    if (!id) return;
+    _recentGroupCreations[id] = Date.now();
+  }
 
   /* ---- date helpers ---------------------------------------------------- */
   function iso(d) { return d.toISOString().slice(0, 10); }
@@ -185,11 +207,11 @@ OC.store = (function () {
           if (state && Array.isArray(state.groups) && state.groups.length > 0) {
             serverState.groups = serverState.groups || [];
             state.groups.forEach(function (lg) {
-              /* Only push a local group to the server when it genuinely does not
-                 exist on the server yet (offline-created).  If the group is in
-                 the _deletedGroupIds set it was intentionally removed — skip it
-                 so the deletion is not undone by the next sync tick. */
-              if (!serverState.groups.some(function (sg) { return sg.id === lg.id; })
+              /* Only push a local group to the server when it was RECENTLY created locally
+                 (within the last 30s) and genuinely does not exist on the server yet.
+                 Never resurrect an old group that the server has already deleted! */
+              var wasRecentlyCreatedLocally = !!(_recentGroupCreations[lg.id] && (Date.now() - _recentGroupCreations[lg.id] < 30000));
+              if (wasRecentlyCreatedLocally && !serverState.groups.some(function (sg) { return sg.id === lg.id; })
                   && !_deletedGroupIds[lg.id]) {
                 serverState.groups.push(lg);
                 needsPush = true;
@@ -197,16 +219,13 @@ OC.store = (function () {
             });
           }
           /* Strip any tombstoned groups from serverState before we adopt it.
-             This handles the race window where the 1-second sync fires BEFORE
-             the async delete push has reached the server, so the server still
-             returns the old group — without this strip, state = serverState
-             would put the deleted group back into local state and re-show it
-             in the UI even though the user just deleted it. */
+             This ensures that if another user deleted a group or if this device deleted it,
+             it is stripped immediately and pushed to keep database fully synchronized. */
           if (serverState.groups) {
             var tombstoneCount = serverState.groups.filter(function (g) { return _deletedGroupIds[g.id]; }).length;
             if (tombstoneCount > 0) {
               serverState.groups = serverState.groups.filter(function (g) { return !_deletedGroupIds[g.id]; });
-              needsPush = true; /* push the corrected state so server DB is updated */
+              needsPush = true;
             }
           }
           if (state && Array.isArray(state.attendance) && state.attendance.length > 0) {
@@ -708,6 +727,16 @@ OC.store = (function () {
           var cl = byIdOrName(state.clients, entry.target);
           if (cl) _recentClientUpdates[cl.id] = Date.now();
         }
+        if (entry.action.indexOf('group.') === 0) {
+          if (entry.groupId) {
+            if (entry.action === 'group.create') trackGroupCreated(entry.groupId);
+            if (entry.action === 'group.delete') markGroupDeleted(entry.groupId);
+          }
+          if (entry.action === 'group.delete' && entry.target) {
+            var grp = (state.groups || []).find(function (g) { return g.name === entry.target || g.id === entry.target; });
+            if (grp) markGroupDeleted(grp.id);
+          }
+        }
         if (entry.action.indexOf('todo.') === 0) {
           if (entry.todoId) _recentTodoUpdates[entry.todoId] = Date.now();
           if (entry.action === 'todo.delete' && entry.todoId) _deletedTodoIds[entry.todoId] = true;
@@ -918,7 +947,7 @@ OC.store = (function () {
       if (!state.groups) return;
       /* Mark as deleted so syncWithServer never re-pushes this group
          back to the server from stale local state. */
-      _deletedGroupIds[id] = true;
+      markGroupDeleted(id);
       state.groups = state.groups.filter(function (g) { return g.id !== id; });
     },
 
@@ -1076,9 +1105,13 @@ OC.store = (function () {
       };
       state.groups = state.groups || [];
       state.groups.push(convo);
+      trackGroupCreated(convo.id);
       write();
       return convo;
     },
+
+    trackGroupCreated: trackGroupCreated,
+    markGroupDeleted: markGroupDeleted,
 
     notify: function (userIds, text, ref) {
       if (!userIds) return;

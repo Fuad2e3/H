@@ -232,9 +232,19 @@ OC.store = (function () {
           if (state && Array.isArray(state.clients) && state.clients.length > 0) {
             serverState.clients = serverState.clients || [];
             state.clients.forEach(function (lc) {
-              if (!serverState.clients.some(function (sc) { return sc.id === lc.id; })) {
+              var sc = serverState.clients.find(function (c) { return c.id === lc.id; });
+              if (!sc) {
                 serverState.clients.push(lc);
                 needsPush = true;
+              } else {
+                if (lc.extended_fields && !sc.extended_fields) {
+                  sc.extended_fields = lc.extended_fields;
+                  needsPush = true;
+                }
+                if (lc.assignees && !sc.assignees) {
+                  sc.assignees = lc.assignees;
+                  needsPush = true;
+                }
               }
             });
           }

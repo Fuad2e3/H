@@ -37,6 +37,17 @@ OC.store = (function () {
   var _recentUserUpdates = {};
   var _recentGroupCreations = {};
 
+  /* Presence: array of user IDs currently connected to the server */
+  var _onlineUserIds = [];
+
+  function getSessionId() {
+    try {
+      var id = localStorage.getItem(SESSION_KEY);
+      if (id && state && byId(state.users, id)) return id;
+    } catch (e) {}
+    return 'u-shohag';
+  }
+
   function markGroupDeleted(id) {
     if (!id) return;
     _deletedGroupIds[id] = true;
@@ -252,6 +263,17 @@ OC.store = (function () {
         throw new Error('Server returned ' + res.status);
       })
       .then(function (serverState) {
+        // Also sync presence status if endpoint is accessible
+        fetch(getApiUrl('/api/presence'), { headers: { 'bypass-tunnel-reminder': 'true' } })
+          .then(function (r) { if (r.ok) return r.json(); })
+          .then(function (d) {
+            if (d && Array.isArray(d.onlineUserIds)) {
+              var changed = JSON.stringify(_onlineUserIds) !== JSON.stringify(d.onlineUserIds);
+              _onlineUserIds = d.onlineUserIds;
+              if (changed) emit();
+            }
+          })
+          .catch(function () {});
         isSyncInProgress = false;
         if (serverState && serverState.version === 1) {
           var needsPush = false;
@@ -592,10 +614,17 @@ OC.store = (function () {
     if (sseSource || !isHttp() || typeof EventSource !== 'function') return;
 
     try {
-      sseSource = new EventSource(getApiUrl('/api/events'));
+      var uid = getSessionId();
+      var sseUrl = getApiUrl('/api/events') + (uid ? '?userId=' + encodeURIComponent(uid) : '');
+      sseSource = new EventSource(sseUrl);
       sseSource.onmessage = function (event) {
         try {
           var data = JSON.parse(event.data);
+          if (data.type === 'presence' && Array.isArray(data.onlineUserIds)) {
+            _onlineUserIds = data.onlineUserIds;
+            emit(); // re-render so UI shows updated online users
+            return;
+          }
           if (data.type === 'mutate' || data.type === 'reset' || data.type === 'state_saved') {
             // If this client just modified something locally, ignore server echo to prevent bounce
             if (isMutationInProgress || (Date.now() - lastLocalMutationTime < 3500)) return;
@@ -939,14 +968,15 @@ OC.store = (function () {
 
     /* the signed-in account, held separately from the data itself */
     session: function () {
-      try {
-        var id = localStorage.getItem(SESSION_KEY);
-        if (id && byId(state.users, id)) return id;
-      } catch (e) {}
-      return 'u-shohag';
+      return getSessionId();
     },
     setSession: function (id) {
       try { localStorage.setItem(SESSION_KEY, id); } catch (e) {}
+      if (sseSource) {
+        try { sseSource.close(); } catch (_) {}
+        sseSource = null;
+        initSSE();
+      }
       emit();
     },
 
@@ -1200,6 +1230,9 @@ OC.store = (function () {
 
     trackGroupCreated: trackGroupCreated,
     markGroupDeleted: markGroupDeleted,
+
+    /* Returns array of user IDs currently connected (online) via SSE */
+    onlineUserIds: function () { return _onlineUserIds.slice(); },
 
     notify: function (userIds, text, ref) {
       if (!userIds) return;

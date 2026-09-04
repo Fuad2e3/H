@@ -964,8 +964,28 @@ OC.groups = (function () {
     }
 
     // Filter groups
+    /* Online presence — who is connected right now */
+    var onlineIds = (OC.store.onlineUserIds ? OC.store.onlineUserIds() : []);
+    if (user && user.id && onlineIds.indexOf(user.id) === -1) {
+      onlineIds = [user.id].concat(onlineIds);
+    }
+    var onlineUsers = onlineIds.map(function (uid) { return OC.store.user(uid); }).filter(Boolean);
+    /* Build label: show name of the person using the app */
+    var onlineLabel = onlineUsers.length === 0
+      ? (user ? user.name.split(' ')[0] : 'Active')
+      : onlineUsers.map(function (u) { return (u.name || '').split(' ')[0]; }).join(', ');
+
     var visible = allGroups.filter(function (g) {
-      if (filterStatus === 'active' && g.status !== 'active') return false;
+      if (filterStatus === 'active') {
+        if (onlineUsers.length > 0) {
+          var hasOnlineMember = (g.members || []).some(function (mid) {
+            return onlineIds.indexOf(mid) > -1;
+          });
+          if (!hasOnlineMember && g.status !== 'active') return false;
+        } else if (g.status !== 'active') {
+          return false;
+        }
+      }
       if (filterStatus === 'archived' && g.status !== 'archived') return false;
       if (filterStatus === 'mine' && (g.members || []).indexOf(user.id) === -1) return false;
       if (searchQuery) {
@@ -991,6 +1011,7 @@ OC.groups = (function () {
     }
 
     var activeCount = allGroups.filter(function (g) { return g.status === 'active'; }).length;
+
     /* "Mine" is the people tab: it lists who you can write to, not channels */
     var dmPeople = (OC.can.directMessageable ? OC.can.directMessageable(user) : [])
       .slice()
@@ -1025,13 +1046,14 @@ OC.groups = (function () {
           }, 100)
         }),
         h('div', { class: 'segmented', role: 'group', 'aria-label': 'Filter groups', style: 'width:100%;gap:2px;' }, [
-          ['all', 'All (' + allGroups.length + ')'],
+          ['all', 'Group name (' + allGroups.length + ')'],
           ['mine', 'Mine (' + myCount + ')'],
-          ['active', 'Active (' + activeCount + ')']
+          ['active', '🟢 ' + onlineLabel]
         ].map(function (opt) {
           return h('button', {
             type: 'button',
-            style: 'padding:3px 6px;font-size:11px;flex:1;',
+            style: 'padding:3px 6px;font-size:11px;flex:1;' + (opt[0] === 'active' ? 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' : ''),
+            title: opt[0] === 'active' ? 'Online: ' + onlineUsers.map(function(u){return u.name;}).join(', ') : opt[1],
             'aria-pressed': String(filterStatus === opt[0]),
             onClick: function () {
               filterStatus = opt[0];
